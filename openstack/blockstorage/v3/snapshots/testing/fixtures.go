@@ -9,9 +9,9 @@ import (
 	fake "github.com/gophercloud/gophercloud/testhelper/client"
 )
 
-// MockListResponse provides mock responce for list snapshot API call
+// MockListResponse provides mock response for list snapshot API call
 func MockListResponse(t *testing.T) {
-	th.Mux.HandleFunc("/snapshots", func(w http.ResponseWriter, r *http.Request) {
+	th.Mux.HandleFunc("/snapshots/detail", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
@@ -59,7 +59,7 @@ func MockListResponse(t *testing.T) {
 	})
 }
 
-// MockGetResponse provides mock responce for get snapshot API call
+// MockGetResponse provides mock response for get snapshot API call
 func MockGetResponse(t *testing.T) {
 	th.Mux.HandleFunc("/snapshots/d32019d3-bc6e-4319-9c1d-6722fc136a22", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
@@ -83,7 +83,7 @@ func MockGetResponse(t *testing.T) {
 	})
 }
 
-// MockCreateResponse provides mock responce for create snapshot API call
+// MockCreateResponse provides mock response for create snapshot API call
 func MockCreateResponse(t *testing.T) {
 	th.Mux.HandleFunc("/snapshots", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
@@ -119,7 +119,7 @@ func MockCreateResponse(t *testing.T) {
 	})
 }
 
-// MockUpdateMetadataResponse provides mock responce for update metadata snapshot API call
+// MockUpdateMetadataResponse provides mock response for update metadata snapshot API call
 func MockUpdateMetadataResponse(t *testing.T) {
 	th.Mux.HandleFunc("/snapshots/123/metadata", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
@@ -143,7 +143,7 @@ func MockUpdateMetadataResponse(t *testing.T) {
 	})
 }
 
-// MockDeleteResponse provides mock responce for delete snapshot API call
+// MockDeleteResponse provides mock response for delete snapshot API call
 func MockDeleteResponse(t *testing.T) {
 	th.Mux.HandleFunc("/snapshots/d32019d3-bc6e-4319-9c1d-6722fc136a22", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
@@ -152,7 +152,7 @@ func MockDeleteResponse(t *testing.T) {
 	})
 }
 
-// MockUpdateResponse provides mock responce for update snapshot API call
+// MockUpdateResponse provides mock response for update snapshot API call
 func MockUpdateResponse(t *testing.T) {
 	th.Mux.HandleFunc("/snapshots/d32019d3-bc6e-4319-9c1d-6722fc136a22", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
