@@ -1,15 +1,17 @@
 package instances
 
 import (
-	"github.com/gophercloud/gophercloud"
-	db "github.com/gophercloud/gophercloud/openstack/db/v1/databases"
-	"github.com/gophercloud/gophercloud/openstack/db/v1/users"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	db "github.com/gophercloud/gophercloud/v2/openstack/db/v1/databases"
+	"github.com/gophercloud/gophercloud/v2/openstack/db/v1/users"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // CreateOptsBuilder is the top-level interface for create options.
 type CreateOptsBuilder interface {
-	ToInstanceCreateMap() (map[string]interface{}, error)
+	ToInstanceCreateMap() (map[string]any, error)
 }
 
 // DatastoreOpts represents the configuration for how an instance stores data.
@@ -19,7 +21,7 @@ type DatastoreOpts struct {
 }
 
 // ToMap converts a DatastoreOpts to a map[string]string (for a request body)
-func (opts DatastoreOpts) ToMap() (map[string]interface{}, error) {
+func (opts DatastoreOpts) ToMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "")
 }
 
@@ -41,18 +43,24 @@ type NetworkOpts struct {
 }
 
 // ToMap converts a NetworkOpts to a map[string]string (for a request body)
-func (opts NetworkOpts) ToMap() (map[string]interface{}, error) {
+func (opts NetworkOpts) ToMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "")
 }
 
 // CreateOpts is the struct responsible for configuring a new database instance.
 type CreateOpts struct {
+	// The availability zone of the instance.
+	AvailabilityZone string `json:"availability_zone,omitempty"`
+	// ID of the configuration group that you want to attach to the instance.
+	Configuration string `json:"configuration,omitempty"`
 	// Either the integer UUID (in string form) of the flavor, or its URI
 	// reference as specified in the response from the List() call. Required.
 	FlavorRef string
 	// Specifies the volume size in gigabytes (GB). The value must be between 1
 	// and 300. Required.
 	Size int
+	// Specifies the volume type.
+	VolumeType string
 	// Name of the instance to create. The length of the name is limited to
 	// 255 characters and any characters are permitted. Optional.
 	Name string
@@ -68,7 +76,7 @@ type CreateOpts struct {
 }
 
 // ToInstanceCreateMap will render a JSON map.
-func (opts CreateOpts) ToInstanceCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToInstanceCreateMap() (map[string]any, error) {
 	if opts.Size > 300 || opts.Size < 1 {
 		err := gophercloud.ErrInvalidInput{}
 		err.Argument = "instances.CreateOpts.Size"
@@ -81,9 +89,16 @@ func (opts CreateOpts) ToInstanceCreateMap() (map[string]interface{}, error) {
 		return nil, gophercloud.ErrMissingInput{Argument: "instances.CreateOpts.FlavorRef"}
 	}
 
-	instance := map[string]interface{}{
-		"volume":    map[string]int{"size": opts.Size},
+	instance := map[string]any{
 		"flavorRef": opts.FlavorRef,
+	}
+
+	if opts.AvailabilityZone != "" {
+		instance["availability_zone"] = opts.AvailabilityZone
+	}
+
+	if opts.Configuration != "" {
+		instance["configuration"] = opts.Configuration
 	}
 
 	if opts.Name != "" {
@@ -112,7 +127,7 @@ func (opts CreateOpts) ToInstanceCreateMap() (map[string]interface{}, error) {
 	}
 
 	if len(opts.Networks) > 0 {
-		networks := make([]map[string]interface{}, len(opts.Networks))
+		networks := make([]map[string]any, len(opts.Networks))
 		for i, net := range opts.Networks {
 			var err error
 			networks[i], err = net.ToMap()
@@ -123,7 +138,17 @@ func (opts CreateOpts) ToInstanceCreateMap() (map[string]interface{}, error) {
 		instance["nics"] = networks
 	}
 
-	return map[string]interface{}{"instance": instance}, nil
+	volume := map[string]any{
+		"size": opts.Size,
+	}
+
+	if opts.VolumeType != "" {
+		volume["type"] = opts.VolumeType
+	}
+
+	instance["volume"] = volume
+
+	return map[string]any{"instance": instance}, nil
 }
 
 // Create asynchronously provisions a new database instance. It requires the
@@ -134,13 +159,13 @@ func (opts CreateOpts) ToInstanceCreateMap() (map[string]interface{}, error) {
 // Although this call only allows the creation of 1 instance per request, you
 // can create an instance with multiple databases and users. The default
 // binding for a MySQL instance is port 3306.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToInstanceCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(baseURL(client), &b, &r.Body, &gophercloud.RequestOpts{OkCodes: []int{200}})
+	resp, err := client.Post(ctx, baseURL(client), &b, &r.Body, &gophercloud.RequestOpts{OkCodes: []int{200}})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -153,23 +178,23 @@ func List(client *gophercloud.ServiceClient) pagination.Pager {
 }
 
 // Get retrieves the status and information for a specified database instance.
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(resourceURL(client, id), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, resourceURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Delete permanently destroys the database instance.
-func Delete(client *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := client.Delete(resourceURL(client, id), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, resourceURL(client, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // EnableRootUser enables the login from any host for the root user and
 // provides the user with a generated root password.
-func EnableRootUser(client *gophercloud.ServiceClient, id string) (r EnableRootUserResult) {
-	resp, err := client.Post(userRootURL(client, id), nil, &r.Body, &gophercloud.RequestOpts{OkCodes: []int{200}})
+func EnableRootUser(ctx context.Context, client *gophercloud.ServiceClient, id string) (r EnableRootUserResult) {
+	resp, err := client.Post(ctx, userRootURL(client, id), nil, &r.Body, &gophercloud.RequestOpts{OkCodes: []int{200}})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -177,8 +202,8 @@ func EnableRootUser(client *gophercloud.ServiceClient, id string) (r EnableRootU
 // IsRootEnabled checks an instance to see if root access is enabled. It returns
 // True if root user is enabled for the specified database instance or False
 // otherwise.
-func IsRootEnabled(client *gophercloud.ServiceClient, id string) (r IsRootEnabledResult) {
-	resp, err := client.Get(userRootURL(client, id), &r.Body, nil)
+func IsRootEnabled(ctx context.Context, client *gophercloud.ServiceClient, id string) (r IsRootEnabledResult) {
+	resp, err := client.Get(ctx, userRootURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -186,18 +211,18 @@ func IsRootEnabled(client *gophercloud.ServiceClient, id string) (r IsRootEnable
 // Restart will restart only the MySQL Instance. Restarting MySQL will
 // erase any dynamic configuration settings that you have made within MySQL.
 // The MySQL service will be unavailable until the instance restarts.
-func Restart(client *gophercloud.ServiceClient, id string) (r ActionResult) {
-	b := map[string]interface{}{"restart": struct{}{}}
-	resp, err := client.Post(actionURL(client, id), &b, nil, nil)
+func Restart(ctx context.Context, client *gophercloud.ServiceClient, id string) (r ActionResult) {
+	b := map[string]any{"restart": struct{}{}}
+	resp, err := client.Post(ctx, actionURL(client, id), &b, nil, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Resize changes the memory size of the instance, assuming a valid
 // flavorRef is provided. It will also restart the MySQL service.
-func Resize(client *gophercloud.ServiceClient, id, flavorRef string) (r ActionResult) {
-	b := map[string]interface{}{"resize": map[string]string{"flavorRef": flavorRef}}
-	resp, err := client.Post(actionURL(client, id), &b, nil, nil)
+func Resize(ctx context.Context, client *gophercloud.ServiceClient, id, flavorRef string) (r ActionResult) {
+	b := map[string]any{"resize": map[string]string{"flavorRef": flavorRef}}
+	resp, err := client.Post(ctx, actionURL(client, id), &b, nil, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -205,25 +230,25 @@ func Resize(client *gophercloud.ServiceClient, id, flavorRef string) (r ActionRe
 // ResizeVolume will resize the attached volume for an instance. It supports
 // only increasing the volume size and does not support decreasing the size.
 // The volume size is in gigabytes (GB) and must be an integer.
-func ResizeVolume(client *gophercloud.ServiceClient, id string, size int) (r ActionResult) {
-	b := map[string]interface{}{"resize": map[string]interface{}{"volume": map[string]int{"size": size}}}
-	resp, err := client.Post(actionURL(client, id), &b, nil, nil)
+func ResizeVolume(ctx context.Context, client *gophercloud.ServiceClient, id string, size int) (r ActionResult) {
+	b := map[string]any{"resize": map[string]any{"volume": map[string]int{"size": size}}}
+	resp, err := client.Post(ctx, actionURL(client, id), &b, nil, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // AttachConfigurationGroup will attach configuration group to the instance
-func AttachConfigurationGroup(client *gophercloud.ServiceClient, instanceID string, configID string) (r ConfigurationResult) {
-	b := map[string]interface{}{"instance": map[string]interface{}{"configuration": configID}}
-	resp, err := client.Put(resourceURL(client, instanceID), &b, nil, &gophercloud.RequestOpts{OkCodes: []int{202}})
+func AttachConfigurationGroup(ctx context.Context, client *gophercloud.ServiceClient, instanceID string, configID string) (r ConfigurationResult) {
+	b := map[string]any{"instance": map[string]any{"configuration": configID}}
+	resp, err := client.Put(ctx, resourceURL(client, instanceID), &b, nil, &gophercloud.RequestOpts{OkCodes: []int{202}})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // DetachConfigurationGroup will dettach configuration group from the instance
-func DetachConfigurationGroup(client *gophercloud.ServiceClient, instanceID string) (r ConfigurationResult) {
-	b := map[string]interface{}{"instance": map[string]interface{}{}}
-	resp, err := client.Put(resourceURL(client, instanceID), &b, nil, &gophercloud.RequestOpts{OkCodes: []int{202}})
+func DetachConfigurationGroup(ctx context.Context, client *gophercloud.ServiceClient, instanceID string) (r ConfigurationResult) {
+	b := map[string]any{"instance": map[string]any{}}
+	resp, err := client.Put(ctx, resourceURL(client, instanceID), &b, nil, &gophercloud.RequestOpts{OkCodes: []int{202}})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

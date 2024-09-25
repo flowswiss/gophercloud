@@ -1,8 +1,10 @@
 package regions
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOptsBuilder allows extensions to add additional parameters to
@@ -39,8 +41,8 @@ func List(client *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pa
 }
 
 // Get retrieves details on a single region, by ID.
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(getURL(client, id), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -48,7 +50,7 @@ func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
 // CreateOptsBuilder allows extensions to add additional parameters to
 // the Create request.
 type CreateOptsBuilder interface {
-	ToRegionCreateMap() (map[string]interface{}, error)
+	ToRegionCreateMap() (map[string]any, error)
 }
 
 // CreateOpts provides options used to create a region.
@@ -63,18 +65,18 @@ type CreateOpts struct {
 	ParentRegionID string `json:"parent_region_id,omitempty"`
 
 	// Extra is free-form extra key/value pairs to describe the region.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 }
 
 // ToRegionCreateMap formats a CreateOpts into a create request.
-func (opts CreateOpts) ToRegionCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToRegionCreateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "region")
 	if err != nil {
 		return nil, err
 	}
 
 	if opts.Extra != nil {
-		if v, ok := b["region"].(map[string]interface{}); ok {
+		if v, ok := b["region"].(map[string]any); ok {
 			for key, value := range opts.Extra {
 				v[key] = value
 			}
@@ -85,13 +87,13 @@ func (opts CreateOpts) ToRegionCreateMap() (map[string]interface{}, error) {
 }
 
 // Create creates a new Region.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToRegionCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -101,7 +103,7 @@ func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r Create
 // UpdateOptsBuilder allows extensions to add additional parameters to
 // the Update request.
 type UpdateOptsBuilder interface {
-	ToRegionUpdateMap() (map[string]interface{}, error)
+	ToRegionUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts provides options for updating a region.
@@ -118,12 +120,12 @@ type UpdateOpts struct {
 		// The following lines should be uncommented once the fix is merged.
 
 		// Extra is free-form extra key/value pairs to describe the region.
-		Extra map[string]interface{} `json:"-"`
+		Extra map[string]any `json:"-"`
 	*/
 }
 
 // ToRegionUpdateMap formats a UpdateOpts into an update request.
-func (opts UpdateOpts) ToRegionUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToRegionUpdateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "region")
 	if err != nil {
 		return nil, err
@@ -135,7 +137,7 @@ func (opts UpdateOpts) ToRegionUpdateMap() (map[string]interface{}, error) {
 		// The following lines should be uncommented once the fix is merged.
 
 		if opts.Extra != nil {
-			if v, ok := b["region"].(map[string]interface{}); ok {
+			if v, ok := b["region"].(map[string]any); ok {
 				for key, value := range opts.Extra {
 					v[key] = value
 				}
@@ -147,13 +149,13 @@ func (opts UpdateOpts) ToRegionUpdateMap() (map[string]interface{}, error) {
 }
 
 // Update updates an existing Region.
-func Update(client *gophercloud.ServiceClient, regionID string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, regionID string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToRegionUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Patch(updateURL(client, regionID), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Patch(ctx, updateURL(client, regionID), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -161,8 +163,8 @@ func Update(client *gophercloud.ServiceClient, regionID string, opts UpdateOptsB
 }
 
 // Delete deletes a region.
-func Delete(client *gophercloud.ServiceClient, regionID string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, regionID), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, regionID string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, regionID), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

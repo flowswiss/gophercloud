@@ -1,8 +1,10 @@
 package subnetpools
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOptsBuilder allows extensions to add additional parameters to the
@@ -69,8 +71,8 @@ func List(c *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pager {
 }
 
 // Get retrieves a specific subnetpool based on its ID.
-func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := c.Get(getURL(c, id), &r.Body, nil)
+func Get(ctx context.Context, c *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := c.Get(ctx, getURL(c, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -78,7 +80,7 @@ func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
 // CreateOptsBuilder allows to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToSubnetPoolCreateMap() (map[string]interface{}, error)
+	ToSubnetPoolCreateMap() (map[string]any, error)
 }
 
 // CreateOpts specifies parameters of a new subnetpool.
@@ -131,18 +133,18 @@ type CreateOpts struct {
 }
 
 // ToSubnetPoolCreateMap constructs a request body from CreateOpts.
-func (opts CreateOpts) ToSubnetPoolCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToSubnetPoolCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "subnetpool")
 }
 
 // Create requests the creation of a new subnetpool on the server.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToSubnetPoolCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -152,7 +154,7 @@ func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r Create
 // UpdateOptsBuilder allows extensions to add additional parameters to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToSubnetPoolUpdateMap() (map[string]interface{}, error)
+	ToSubnetPoolUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts represents options used to update a network.
@@ -202,19 +204,19 @@ type UpdateOpts struct {
 }
 
 // ToSubnetPoolUpdateMap builds a request body from UpdateOpts.
-func (opts UpdateOpts) ToSubnetPoolUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToSubnetPoolUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "subnetpool")
 }
 
 // Update accepts a UpdateOpts struct and updates an existing subnetpool using the
 // values provided.
-func Update(c *gophercloud.ServiceClient, subnetPoolID string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, c *gophercloud.ServiceClient, subnetPoolID string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToSubnetPoolUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Put(updateURL(c, subnetPoolID), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := c.Put(ctx, updateURL(c, subnetPoolID), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -222,8 +224,8 @@ func Update(c *gophercloud.ServiceClient, subnetPoolID string, opts UpdateOptsBu
 }
 
 // Delete accepts a unique ID and deletes the subnetpool associated with it.
-func Delete(c *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := c.Delete(deleteURL(c, id), nil)
+func Delete(ctx context.Context, c *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := c.Delete(ctx, deleteURL(c, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

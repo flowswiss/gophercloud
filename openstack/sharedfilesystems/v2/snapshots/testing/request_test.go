@@ -1,12 +1,13 @@
 package testing
 
 import (
+	"context"
 	"testing"
 	"time"
 
-	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/snapshots"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/openstack/sharedfilesystems/v2/snapshots"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 func TestCreate(t *testing.T) {
@@ -16,7 +17,7 @@ func TestCreate(t *testing.T) {
 	MockCreateResponse(t)
 
 	options := &snapshots.CreateOpts{ShareID: shareID, Name: "test snapshot", Description: "test description"}
-	n, err := snapshots.Create(client.ServiceClient(), options).Extract()
+	n, err := snapshots.Create(context.TODO(), client.ServiceClient(), options).Extract()
 
 	th.AssertNoErr(t, err)
 	th.AssertEquals(t, n.Name, "test snapshot")
@@ -38,7 +39,7 @@ func TestUpdate(t *testing.T) {
 		DisplayName:        &name,
 		DisplayDescription: &description,
 	}
-	n, err := snapshots.Update(client.ServiceClient(), snapshotID, options).Extract()
+	n, err := snapshots.Update(context.TODO(), client.ServiceClient(), snapshotID, options).Extract()
 
 	th.AssertNoErr(t, err)
 	th.AssertEquals(t, n.Name, "my_new_test_snapshot")
@@ -51,7 +52,7 @@ func TestDelete(t *testing.T) {
 
 	MockDeleteResponse(t)
 
-	result := snapshots.Delete(client.ServiceClient(), snapshotID)
+	result := snapshots.Delete(context.TODO(), client.ServiceClient(), snapshotID)
 	th.AssertNoErr(t, result.Err)
 }
 
@@ -61,7 +62,7 @@ func TestGet(t *testing.T) {
 
 	MockGetResponse(t)
 
-	s, err := snapshots.Get(client.ServiceClient(), snapshotID).Extract()
+	s, err := snapshots.Get(context.TODO(), client.ServiceClient(), snapshotID).Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, s, &snapshots.Snapshot{
 		ID:          snapshotID,
@@ -93,7 +94,7 @@ func TestListDetail(t *testing.T) {
 
 	MockListDetailResponse(t)
 
-	allPages, err := snapshots.ListDetail(client.ServiceClient(), &snapshots.ListOpts{}).AllPages()
+	allPages, err := snapshots.ListDetail(client.ServiceClient(), &snapshots.ListOpts{}).AllPages(context.TODO())
 
 	th.AssertNoErr(t, err)
 
@@ -124,4 +125,28 @@ func TestListDetail(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestResetStatusSuccess(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+
+	MockResetStatusResponse(t)
+
+	c := client.ServiceClient()
+
+	err := snapshots.ResetStatus(context.TODO(), c, snapshotID, &snapshots.ResetStatusOpts{Status: "error"}).ExtractErr()
+	th.AssertNoErr(t, err)
+}
+
+func TestForceDeleteSuccess(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+
+	MockForceDeleteResponse(t)
+
+	c := client.ServiceClient()
+
+	err := snapshots.ForceDelete(context.TODO(), c, snapshotID).ExtractErr()
+	th.AssertNoErr(t, err)
 }

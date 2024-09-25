@@ -1,7 +1,9 @@
 package attributestags
 
 import (
-	"github.com/gophercloud/gophercloud"
+	"net/http"
+
+	"github.com/gophercloud/gophercloud/v2"
 )
 
 type tagResult struct {
@@ -47,10 +49,8 @@ type ConfirmResult struct {
 func (r ConfirmResult) Extract() (bool, error) {
 	exists := r.Err == nil
 
-	if r.Err != nil {
-		if _, ok := r.Err.(gophercloud.ErrDefault404); ok {
-			r.Err = nil
-		}
+	if gophercloud.ResponseCodeIs(r.Err, http.StatusNotFound) {
+		r.Err = nil
 	}
 
 	return exists, r.Err

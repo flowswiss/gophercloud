@@ -1,9 +1,17 @@
 package groups
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
+
+// ListOptsBuilder allows extensions to add additional parameters to the
+// List request.
+type ListOptsBuilder interface {
+	ToSecGroupListQuery() (string, error)
+}
 
 // ListOpts allows the filtering and sorting of paginated collections through
 // the API. Filtering is achieved by passing in struct field values that map to
@@ -14,6 +22,7 @@ type ListOpts struct {
 	ID          string `q:"id"`
 	Name        string `q:"name"`
 	Description string `q:"description"`
+	Stateful    *bool  `q:"stateful"`
 	TenantID    string `q:"tenant_id"`
 	ProjectID   string `q:"project_id"`
 	Limit       int    `q:"limit"`
@@ -26,16 +35,25 @@ type ListOpts struct {
 	NotTagsAny  string `q:"not-tags-any"`
 }
 
+// ToPortListQuery formats a ListOpts into a query string.
+func (opts ListOpts) ToSecGroupListQuery() (string, error) {
+	q, err := gophercloud.BuildQueryString(opts)
+	return q.String(), err
+}
+
 // List returns a Pager which allows you to iterate over a collection of
 // security groups. It accepts a ListOpts struct, which allows you to filter
 // and sort the returned collection for greater efficiency.
-func List(c *gophercloud.ServiceClient, opts ListOpts) pagination.Pager {
-	q, err := gophercloud.BuildQueryString(&opts)
-	if err != nil {
-		return pagination.Pager{Err: err}
+func List(c *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pager {
+	url := rootURL(c)
+	if opts != nil {
+		query, err := opts.ToSecGroupListQuery()
+		if err != nil {
+			return pagination.Pager{Err: err}
+		}
+		url += query
 	}
-	u := rootURL(c) + q.String()
-	return pagination.NewPager(c, u, func(r pagination.PageResult) pagination.Page {
+	return pagination.NewPager(c, url, func(r pagination.PageResult) pagination.Page {
 		return SecGroupPage{pagination.LinkedPageBase{PageResult: r}}
 	})
 }
@@ -43,7 +61,7 @@ func List(c *gophercloud.ServiceClient, opts ListOpts) pagination.Pager {
 // CreateOptsBuilder allows extensions to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToSecGroupCreateMap() (map[string]interface{}, error)
+	ToSecGroupCreateMap() (map[string]any, error)
 }
 
 // CreateOpts contains all the values needed to create a new security group.
@@ -61,22 +79,25 @@ type CreateOpts struct {
 
 	// Describes the security group.
 	Description string `json:"description,omitempty"`
+
+	// Stateful indicates if the security group is stateful or stateless.
+	Stateful *bool `json:"stateful,omitempty"`
 }
 
 // ToSecGroupCreateMap builds a request body from CreateOpts.
-func (opts CreateOpts) ToSecGroupCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToSecGroupCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "security_group")
 }
 
 // Create is an operation which provisions a new security group with default
 // security group rules for the IPv4 and IPv6 ether types.
-func Create(c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToSecGroupCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Post(rootURL(c), b, &r.Body, nil)
+	resp, err := c.Post(ctx, rootURL(c), b, &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -84,7 +105,7 @@ func Create(c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResul
 // UpdateOptsBuilder allows extensions to add additional parameters to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToSecGroupUpdateMap() (map[string]interface{}, error)
+	ToSecGroupUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts contains all the values needed to update an existing security
@@ -95,22 +116,25 @@ type UpdateOpts struct {
 
 	// Describes the security group.
 	Description *string `json:"description,omitempty"`
+
+	// Stateful indicates if the security group is stateful or stateless.
+	Stateful *bool `json:"stateful,omitempty"`
 }
 
 // ToSecGroupUpdateMap builds a request body from UpdateOpts.
-func (opts UpdateOpts) ToSecGroupUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToSecGroupUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "security_group")
 }
 
 // Update is an operation which updates an existing security group.
-func Update(c *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, c *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToSecGroupUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 
-	resp, err := c.Put(resourceURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := c.Put(ctx, resourceURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -118,16 +142,16 @@ func Update(c *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r 
 }
 
 // Get retrieves a particular security group based on its unique ID.
-func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := c.Get(resourceURL(c, id), &r.Body, nil)
+func Get(ctx context.Context, c *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := c.Get(ctx, resourceURL(c, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Delete will permanently delete a particular security group based on its
 // unique ID.
-func Delete(c *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := c.Delete(resourceURL(c, id), nil)
+func Delete(ctx context.Context, c *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := c.Delete(ctx, resourceURL(c, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

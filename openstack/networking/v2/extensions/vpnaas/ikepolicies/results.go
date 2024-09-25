@@ -1,8 +1,8 @@
 package ikepolicies
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Policy is an IKE Policy
@@ -85,6 +85,10 @@ func (r PolicyPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a PolicyPage struct is empty.
 func (r PolicyPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractPolicies(r)
 	return len(is) == 0, err
 }

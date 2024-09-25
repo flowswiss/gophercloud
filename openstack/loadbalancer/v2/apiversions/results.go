@@ -1,6 +1,6 @@
 package apiversions
 
-import "github.com/gophercloud/gophercloud/pagination"
+import "github.com/gophercloud/gophercloud/v2/pagination"
 
 // APIVersion represents an API version for load balancer. It contains
 // the status of the API, and its unique ID.
@@ -17,6 +17,10 @@ type APIVersionPage struct {
 
 // IsEmpty checks whether an APIVersionPage struct is empty.
 func (r APIVersionPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractAPIVersions(r)
 	return len(is) == 0, err
 }

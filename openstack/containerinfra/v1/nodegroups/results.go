@@ -3,8 +3,8 @@ package nodegroups
 import (
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -86,6 +86,10 @@ func (r NodeGroupPage) NextPageURL() (string, error) {
 }
 
 func (r NodeGroupPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	s, err := ExtractNodeGroups(r)
 	return len(s) == 0, err
 }

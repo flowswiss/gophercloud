@@ -12,7 +12,7 @@ Example to create a QoS specification
 		},
 	}
 
-	test, err := qos.Create(client, createOpts).Extract()
+	test, err := qos.Create(context.TODO(), client, createOpts).Extract()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -27,7 +27,7 @@ Example to delete a QoS specification
 		Force: false,
 	}
 
-	err = qos.Delete(client, qosID, deleteOpts).ExtractErr()
+	err = qos.Delete(context.TODO(), client, qosID, deleteOpts).ExtractErr()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -36,7 +36,7 @@ Example to list QoS specifications
 
 	listOpts := qos.ListOpts{}
 
-	allPages, err := qos.List(client, listOpts).AllPages()
+	allPages, err := qos.List(client, listOpts).AllPages(context.TODO())
 	if err != nil {
 		panic(err)
 	}
@@ -54,7 +54,7 @@ Example to get a single QoS specification
 
 	qosID := "de075d5e-8afc-4e23-9388-b84a5183d1c0"
 
-	singleQos, err := qos.Get(client, test.ID).Extract()
+	singleQos, err := qos.Get(context.TODO(), client, test.ID).Extract()
 	if err != nil {
 		panic(err)
 	}
@@ -72,19 +72,18 @@ Example of updating QoSSpec
 		},
 	}
 
-	specs, err := qos.Update(client, qosID, updateOpts).Extract()
+	specs, err := qos.Update(context.TODO(), client, qosID, updateOpts).Extract()
 	if err != nil {
 		panic(err)
 	}
 	fmt.Printf("%+v\n", specs)
-
 
 Example of deleting specific keys/specs from a QoS
 
 	qosID := "de075d5e-8afc-4e23-9388-b84a5183d1c0"
 
 	keysToDelete := qos.DeleteKeysOpts{"read_iops_sec"}
-	err = qos.DeleteKeys(client, qosID, keysToDelete).ExtractErr()
+	err = qos.DeleteKeys(context.TODO(), client, qosID, keysToDelete).ExtractErr()
 	if err != nil {
 		panic(err)
 	}
@@ -98,7 +97,7 @@ Example of associating a QoS with a volume type
 		VolumeTypeID: volID,
 	}
 
-	err = qos.Associate(client, qosID, associateOpts).ExtractErr()
+	err = qos.Associate(context.TODO(), client, qosID, associateOpts).ExtractErr()
 	if err != nil {
 		panic(err)
 	}
@@ -112,7 +111,7 @@ Example of disassociating a QoS from a volume type
 		VolumeTypeID: volID,
 	}
 
-	err = qos.Disassociate(client, qosID, disassociateOpts).ExtractErr()
+	err = qos.Disassociate(context.TODO(), client, qosID, disassociateOpts).ExtractErr()
 	if err != nil {
 		panic(err)
 	}
@@ -121,7 +120,7 @@ Example of disaassociating a Qos from all volume types
 
 	qosID := "de075d5e-8afc-4e23-9388-b84a5183d1c0"
 
-	err = qos.DisassociateAll(client, qosID).ExtractErr()
+	err = qos.DisassociateAll(context.TODO(), client, qosID).ExtractErr()
 	if err != nil {
 		panic(err)
 	}
@@ -130,7 +129,7 @@ Example of listing all associations of a QoS
 
 	qosID := "de075d5e-8afc-4e23-9388-b84a5183d1c0"
 
-	allQosAssociations, err := qos.ListAssociations(client, qosID).AllPages()
+	allQosAssociations, err := qos.ListAssociations(client, qosID).AllPages(context.TODO())
 	if err != nil {
 		panic(err)
 	}
@@ -143,6 +142,5 @@ Example of listing all associations of a QoS
 	for _, association := range allAssociations {
 		fmt.Printf("Association: %+v\n", association)
 	}
-
 */
 package qos

@@ -1,13 +1,14 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
 
-	"github.com/gophercloud/gophercloud/pagination"
-	"github.com/gophercloud/gophercloud/testhelper"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	"github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 // LinkedPager sample and test cases.
@@ -29,7 +30,7 @@ func ExtractLinkedInts(r pagination.Page) ([]int, error) {
 	return s.Ints, err
 }
 
-func createLinked(t *testing.T) pagination.Pager {
+func createLinked() pagination.Pager {
 	testhelper.SetupHTTP()
 
 	testhelper.Mux.HandleFunc("/page1", func(w http.ResponseWriter, r *http.Request) {
@@ -57,11 +58,11 @@ func createLinked(t *testing.T) pagination.Pager {
 }
 
 func TestEnumerateLinked(t *testing.T) {
-	pager := createLinked(t)
+	pager := createLinked()
 	defer testhelper.TeardownHTTP()
 
 	callCount := 0
-	err := pager.EachPage(func(page pagination.Page) (bool, error) {
+	err := pager.EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		actual, err := ExtractLinkedInts(page)
 		if err != nil {
 			return false, err
@@ -99,10 +100,10 @@ func TestEnumerateLinked(t *testing.T) {
 }
 
 func TestAllPagesLinked(t *testing.T) {
-	pager := createLinked(t)
+	pager := createLinked()
 	defer testhelper.TeardownHTTP()
 
-	page, err := pager.AllPages()
+	page, err := pager.AllPages(context.TODO())
 	testhelper.AssertNoErr(t, err)
 
 	expected := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
@@ -14,7 +13,7 @@ import (
 
 // DefaultUserAgent is the default User-Agent string set in the request header.
 const (
-	DefaultUserAgent         = "gophercloud/2.0.0"
+	DefaultUserAgent         = "gophercloud/v3.0.0-UNRELEASED"
 	DefaultMaxBackoffRetries = 60
 )
 
@@ -82,14 +81,11 @@ type ProviderClient struct {
 	// ReauthFunc is the function used to re-authenticate the user if the request
 	// fails with a 401 HTTP response code. This a needed because there may be multiple
 	// authentication functions for different Identity service versions.
-	ReauthFunc func() error
+	ReauthFunc func(context.Context) error
 
 	// Throwaway determines whether if this client is a throw-away client. It's a copy of user's provider client
 	// with the token and reauth func zeroed. Such client can be used to perform reauthorization.
 	Throwaway bool
-
-	// Context is the context passed to the HTTP request.
-	Context context.Context
 
 	// Retry backoff func is called when rate limited.
 	RetryBackoffFunc RetryBackoffFunc
@@ -269,13 +265,13 @@ func (client *ProviderClient) SetThrowaway(v bool) {
 // this case, the reauthentication can be skipped if another thread has already
 // reauthenticated in the meantime. If no previous token is known, an empty
 // string should be passed instead to force unconditional reauthentication.
-func (client *ProviderClient) Reauthenticate(previousToken string) error {
+func (client *ProviderClient) Reauthenticate(ctx context.Context, previousToken string) error {
 	if client.ReauthFunc == nil {
 		return nil
 	}
 
 	if client.reauthmut == nil {
-		return client.ReauthFunc()
+		return client.ReauthFunc(ctx)
 	}
 
 	future := newReauthFuture()
@@ -296,7 +292,7 @@ func (client *ProviderClient) Reauthenticate(previousToken string) error {
 	// Perform the actual reauthentication.
 	var err error
 	if previousToken == "" || client.TokenID == previousToken {
-		err = client.ReauthFunc()
+		err = client.ReauthFunc(ctx)
 	} else {
 		err = nil
 	}
@@ -315,13 +311,13 @@ type RequestOpts struct {
 	// JSONBody, if provided, will be encoded as JSON and used as the body of the HTTP request. The
 	// content type of the request will default to "application/json" unless overridden by MoreHeaders.
 	// It's an error to specify both a JSONBody and a RawBody.
-	JSONBody interface{}
+	JSONBody any
 	// RawBody contains an io.Reader that will be consumed by the request directly. No content-type
 	// will be set unless one is provided explicitly by MoreHeaders.
 	RawBody io.Reader
 	// JSONResponse, if provided, will be populated with the contents of the response body parsed as
 	// JSON.
-	JSONResponse interface{}
+	JSONResponse any
 	// OkCodes contains a list of numeric HTTP status codes that should be interpreted as success. If
 	// the response has a different code, an error will be returned.
 	OkCodes []int
@@ -331,9 +327,6 @@ type RequestOpts struct {
 	// OmitHeaders specifies the HTTP headers which should be omitted.
 	// OmitHeaders will override MoreHeaders
 	OmitHeaders []string
-	// ErrorContext specifies the resource error type to return if an error is encountered.
-	// This lets resources override default error messages based on the response status code.
-	ErrorContext error
 	// KeepResponseBody specifies whether to keep the HTTP response body. Usually used, when the HTTP
 	// response body is considered for further use. Valid when JSONResponse is nil.
 	KeepResponseBody bool
@@ -352,15 +345,15 @@ type requestState struct {
 
 var applicationJSON = "application/json"
 
-// Request performs an HTTP request using the ProviderClient's current HTTPClient. An authentication
-// header will automatically be provided.
-func (client *ProviderClient) Request(method, url string, options *RequestOpts) (*http.Response, error) {
-	return client.doRequest(method, url, options, &requestState{
+// Request performs an HTTP request using the ProviderClient's
+// current HTTPClient. An authentication header will automatically be provided.
+func (client *ProviderClient) Request(ctx context.Context, method, url string, options *RequestOpts) (*http.Response, error) {
+	return client.doRequest(ctx, method, url, options, &requestState{
 		hasReauthenticated: false,
 	})
 }
 
-func (client *ProviderClient) doRequest(method, url string, options *RequestOpts, state *requestState) (*http.Response, error) {
+func (client *ProviderClient) doRequest(ctx context.Context, method, url string, options *RequestOpts, state *requestState) (*http.Response, error) {
 	var body io.Reader
 	var contentType *string
 
@@ -389,13 +382,9 @@ func (client *ProviderClient) doRequest(method, url string, options *RequestOpts
 		body = options.RawBody
 	}
 
-	// Construct the http.Request.
-	req, err := http.NewRequest(method, url, body)
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, err
-	}
-	if client.Context != nil {
-		req = req.WithContext(client.Context)
 	}
 
 	// Populate the request headers.
@@ -432,12 +421,12 @@ func (client *ProviderClient) doRequest(method, url string, options *RequestOpts
 		if client.RetryFunc != nil {
 			var e error
 			state.retries = state.retries + 1
-			e = client.RetryFunc(client.Context, method, url, options, err, state.retries)
+			e = client.RetryFunc(ctx, method, url, options, err, state.retries)
 			if e != nil {
 				return nil, e
 			}
 
-			return client.doRequest(method, url, options, state)
+			return client.doRequest(ctx, method, url, options, state)
 		}
 		return nil, err
 	}
@@ -458,7 +447,7 @@ func (client *ProviderClient) doRequest(method, url string, options *RequestOpts
 	}
 
 	if !ok {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		respErr := ErrUnexpectedResponseCode{
 			URL:            url,
@@ -469,16 +458,10 @@ func (client *ProviderClient) doRequest(method, url string, options *RequestOpts
 			ResponseHeader: resp.Header,
 		}
 
-		errType := options.ErrorContext
 		switch resp.StatusCode {
-		case http.StatusBadRequest:
-			err = ErrDefault400{respErr}
-			if error400er, ok := errType.(Err400er); ok {
-				err = error400er.Error400(respErr)
-			}
 		case http.StatusUnauthorized:
 			if client.ReauthFunc != nil && !state.hasReauthenticated {
-				err = client.Reauthenticate(prereqtok)
+				err = client.Reauthenticate(ctx, prereqtok)
 				if err != nil {
 					e := &ErrUnableToReauthenticate{}
 					e.ErrOriginal = respErr
@@ -487,60 +470,28 @@ func (client *ProviderClient) doRequest(method, url string, options *RequestOpts
 				}
 				if options.RawBody != nil {
 					if seeker, ok := options.RawBody.(io.Seeker); ok {
-						seeker.Seek(0, 0)
+						if _, err := seeker.Seek(0, 0); err != nil {
+							return nil, err
+						}
 					}
 				}
 				state.hasReauthenticated = true
-				resp, err = client.doRequest(method, url, options, state)
+				resp, err = client.doRequest(ctx, method, url, options, state)
 				if err != nil {
-					switch err.(type) {
+					switch e := err.(type) {
 					case *ErrUnexpectedResponseCode:
-						e := &ErrErrorAfterReauthentication{}
-						e.ErrOriginal = err.(*ErrUnexpectedResponseCode)
-						return nil, e
+						err := &ErrErrorAfterReauthentication{}
+						err.ErrOriginal = e
+						return nil, err
 					default:
-						e := &ErrErrorAfterReauthentication{}
-						e.ErrOriginal = err
-						return nil, e
+						err := &ErrErrorAfterReauthentication{}
+						err.ErrOriginal = e
+						return nil, err
 					}
 				}
 				return resp, nil
 			}
-			err = ErrDefault401{respErr}
-			if error401er, ok := errType.(Err401er); ok {
-				err = error401er.Error401(respErr)
-			}
-		case http.StatusForbidden:
-			err = ErrDefault403{respErr}
-			if error403er, ok := errType.(Err403er); ok {
-				err = error403er.Error403(respErr)
-			}
-		case http.StatusNotFound:
-			err = ErrDefault404{respErr}
-			if error404er, ok := errType.(Err404er); ok {
-				err = error404er.Error404(respErr)
-			}
-		case http.StatusMethodNotAllowed:
-			err = ErrDefault405{respErr}
-			if error405er, ok := errType.(Err405er); ok {
-				err = error405er.Error405(respErr)
-			}
-		case http.StatusRequestTimeout:
-			err = ErrDefault408{respErr}
-			if error408er, ok := errType.(Err408er); ok {
-				err = error408er.Error408(respErr)
-			}
-		case http.StatusConflict:
-			err = ErrDefault409{respErr}
-			if error409er, ok := errType.(Err409er); ok {
-				err = error409er.Error409(respErr)
-			}
 		case http.StatusTooManyRequests, 498:
-			err = ErrDefault429{respErr}
-			if error429er, ok := errType.(Err429er); ok {
-				err = error429er.Error429(respErr)
-			}
-
 			maxTries := client.MaxBackoffRetries
 			if maxTries == 0 {
 				maxTries = DefaultMaxBackoffRetries
@@ -550,33 +501,13 @@ func (client *ProviderClient) doRequest(method, url string, options *RequestOpts
 				var e error
 
 				state.retries = state.retries + 1
-				e = f(client.Context, &respErr, err, state.retries)
+				e = f(ctx, &respErr, err, state.retries)
 
 				if e != nil {
 					return resp, e
 				}
 
-				return client.doRequest(method, url, options, state)
-			}
-		case http.StatusInternalServerError:
-			err = ErrDefault500{respErr}
-			if error500er, ok := errType.(Err500er); ok {
-				err = error500er.Error500(respErr)
-			}
-		case http.StatusBadGateway:
-			err = ErrDefault502{respErr}
-			if error502er, ok := errType.(Err502er); ok {
-				err = error502er.Error502(respErr)
-			}
-		case http.StatusServiceUnavailable:
-			err = ErrDefault503{respErr}
-			if error503er, ok := errType.(Err503er); ok {
-				err = error503er.Error503(respErr)
-			}
-		case http.StatusGatewayTimeout:
-			err = ErrDefault504{respErr}
-			if error504er, ok := errType.(Err504er); ok {
-				err = error504er.Error504(respErr)
+				return client.doRequest(ctx, method, url, options, state)
 			}
 		}
 
@@ -587,12 +518,12 @@ func (client *ProviderClient) doRequest(method, url string, options *RequestOpts
 		if err != nil && client.RetryFunc != nil {
 			var e error
 			state.retries = state.retries + 1
-			e = client.RetryFunc(client.Context, method, url, options, err, state.retries)
+			e = client.RetryFunc(ctx, method, url, options, err, state.retries)
 			if e != nil {
 				return resp, e
 			}
 
-			return client.doRequest(method, url, options, state)
+			return client.doRequest(ctx, method, url, options, state)
 		}
 
 		return resp, err
@@ -604,19 +535,19 @@ func (client *ProviderClient) doRequest(method, url string, options *RequestOpts
 		// Don't decode JSON when there is no content
 		if resp.StatusCode == http.StatusNoContent {
 			// read till EOF, otherwise the connection will be closed and cannot be reused
-			_, err = io.Copy(ioutil.Discard, resp.Body)
+			_, err = io.Copy(io.Discard, resp.Body)
 			return resp, err
 		}
 		if err := json.NewDecoder(resp.Body).Decode(options.JSONResponse); err != nil {
 			if client.RetryFunc != nil {
 				var e error
 				state.retries = state.retries + 1
-				e = client.RetryFunc(client.Context, method, url, options, err, state.retries)
+				e = client.RetryFunc(ctx, method, url, options, err, state.retries)
 				if e != nil {
 					return resp, e
 				}
 
-				return client.doRequest(method, url, options, state)
+				return client.doRequest(ctx, method, url, options, state)
 			}
 			return nil, err
 		}
@@ -626,7 +557,7 @@ func (client *ProviderClient) doRequest(method, url string, options *RequestOpts
 	if !options.KeepResponseBody && options.JSONResponse == nil {
 		defer resp.Body.Close()
 		// read till EOF, otherwise the connection will be closed and cannot be reused
-		if _, err := io.Copy(ioutil.Discard, resp.Body); err != nil {
+		if _, err := io.Copy(io.Discard, resp.Body); err != nil {
 			return nil, err
 		}
 	}

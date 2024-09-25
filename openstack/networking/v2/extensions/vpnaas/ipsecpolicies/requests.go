@@ -1,8 +1,10 @@
 package ipsecpolicies
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type TransformProtocol string
@@ -36,7 +38,7 @@ const (
 // CreateOptsBuilder allows extensions to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToPolicyCreateMap() (map[string]interface{}, error)
+	ToPolicyCreateMap() (map[string]any, error)
 }
 
 // CreateOpts contains all the values needed to create a new IPSec policy
@@ -96,34 +98,34 @@ type LifetimeCreateOpts struct {
 }
 
 // ToPolicyCreateMap casts a CreateOpts struct to a map.
-func (opts CreateOpts) ToPolicyCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToPolicyCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "ipsecpolicy")
 }
 
 // Create accepts a CreateOpts struct and uses the values to create a new
 // IPSec policy
-func Create(c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToPolicyCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Post(rootURL(c), b, &r.Body, nil)
+	resp, err := c.Post(ctx, rootURL(c), b, &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Delete will permanently delete a particular IPSec policy based on its
 // unique ID.
-func Delete(c *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := c.Delete(resourceURL(c, id), nil)
+func Delete(ctx context.Context, c *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := c.Delete(ctx, resourceURL(c, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Get retrieves a particular IPSec policy based on its unique ID.
-func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := c.Get(resourceURL(c, id), &r.Body, nil)
+func Get(ctx context.Context, c *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := c.Get(ctx, resourceURL(c, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -175,7 +177,7 @@ func List(c *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pager {
 // UpdateOptsBuilder allows extensions to add additional parameters to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToPolicyUpdateMap() (map[string]interface{}, error)
+	ToPolicyUpdateMap() (map[string]any, error)
 }
 
 type LifetimeUpdateOpts struct {
@@ -196,18 +198,18 @@ type UpdateOpts struct {
 }
 
 // ToPolicyUpdateMap casts an UpdateOpts struct to a map.
-func (opts UpdateOpts) ToPolicyUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToPolicyUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "ipsecpolicy")
 }
 
 // Update allows IPSec policies to be updated.
-func Update(c *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, c *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToPolicyUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Put(resourceURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := c.Put(ctx, resourceURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

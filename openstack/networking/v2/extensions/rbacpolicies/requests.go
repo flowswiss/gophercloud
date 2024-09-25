@@ -1,8 +1,10 @@
 package rbacpolicies
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOptsBuilder allows extensions to add additional parameters to the
@@ -58,8 +60,8 @@ func List(c *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pager {
 }
 
 // Get retrieves a specific rbac policy based on its unique ID.
-func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := c.Get(getURL(c, id), &r.Body, nil)
+func Get(ctx context.Context, c *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := c.Get(ctx, getURL(c, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -79,7 +81,7 @@ const (
 // CreateOptsBuilder allows extensions to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToRBACPolicyCreateMap() (map[string]interface{}, error)
+	ToRBACPolicyCreateMap() (map[string]any, error)
 }
 
 // CreateOpts represents options used to create a rbac-policy.
@@ -91,7 +93,7 @@ type CreateOpts struct {
 }
 
 // ToRBACPolicyCreateMap builds a request body from CreateOpts.
-func (opts CreateOpts) ToRBACPolicyCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToRBACPolicyCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "rbac_policy")
 }
 
@@ -100,20 +102,20 @@ func (opts CreateOpts) ToRBACPolicyCreateMap() (map[string]interface{}, error) {
 //
 // The tenant ID that is contained in the URI is the tenant that creates the
 // rbac-policy.
-func Create(c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToRBACPolicyCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Post(createURL(c), b, &r.Body, nil)
+	resp, err := c.Post(ctx, createURL(c), b, &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Delete accepts a unique ID and deletes the rbac-policy associated with it.
-func Delete(c *gophercloud.ServiceClient, rbacPolicyID string) (r DeleteResult) {
-	resp, err := c.Delete(deleteURL(c, rbacPolicyID), nil)
+func Delete(ctx context.Context, c *gophercloud.ServiceClient, rbacPolicyID string) (r DeleteResult) {
+	resp, err := c.Delete(ctx, deleteURL(c, rbacPolicyID), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -121,7 +123,7 @@ func Delete(c *gophercloud.ServiceClient, rbacPolicyID string) (r DeleteResult) 
 // UpdateOptsBuilder allows extensions to add additional parameters to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToRBACPolicyUpdateMap() (map[string]interface{}, error)
+	ToRBACPolicyUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts represents options used to update a rbac-policy.
@@ -130,19 +132,19 @@ type UpdateOpts struct {
 }
 
 // ToRBACPolicyUpdateMap builds a request body from UpdateOpts.
-func (opts UpdateOpts) ToRBACPolicyUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToRBACPolicyUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "rbac_policy")
 }
 
 // Update accepts a UpdateOpts struct and updates an existing rbac-policy using the
 // values provided.
-func Update(c *gophercloud.ServiceClient, rbacPolicyID string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, c *gophercloud.ServiceClient, rbacPolicyID string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToRBACPolicyUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Put(updateURL(c, rbacPolicyID), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := c.Put(ctx, updateURL(c, rbacPolicyID), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200, 201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

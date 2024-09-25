@@ -1,13 +1,14 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/policies"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/policies"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 func TestListPolicies(t *testing.T) {
@@ -16,7 +17,7 @@ func TestListPolicies(t *testing.T) {
 	HandleListPoliciesSuccessfully(t)
 
 	count := 0
-	err := policies.List(client.ServiceClient(), nil).EachPage(func(page pagination.Page) (bool, error) {
+	err := policies.List(client.ServiceClient(), nil).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 
 		actual, err := policies.ExtractPolicies(page)
@@ -35,7 +36,7 @@ func TestListPoliciesAllPages(t *testing.T) {
 	defer th.TeardownHTTP()
 	HandleListPoliciesSuccessfully(t)
 
-	allPages, err := policies.List(client.ServiceClient(), nil).AllPages()
+	allPages, err := policies.List(client.ServiceClient(), nil).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 	actual, err := policies.ExtractPolicies(allPages)
 	th.AssertNoErr(t, err)
@@ -50,7 +51,7 @@ func TestListPoliciesWithFilter(t *testing.T) {
 	listOpts := policies.ListOpts{
 		Type: "application/json",
 	}
-	allPages, err := policies.List(client.ServiceClient(), listOpts).AllPages()
+	allPages, err := policies.List(client.ServiceClient(), listOpts).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 	actual, err := policies.ExtractPolicies(allPages)
 	th.AssertNoErr(t, err)
@@ -97,12 +98,12 @@ func TestCreatePolicy(t *testing.T) {
 	createOpts := policies.CreateOpts{
 		Type: "application/json",
 		Blob: []byte("{'bar_user': 'role:network-user'}"),
-		Extra: map[string]interface{}{
+		Extra: map[string]any{
 			"description": "policy for bar_user",
 		},
 	}
 
-	actual, err := policies.Create(client.ServiceClient(), createOpts).Extract()
+	actual, err := policies.Create(context.TODO(), client.ServiceClient(), createOpts).Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, SecondPolicy, *actual)
 }
@@ -156,7 +157,7 @@ func TestGetPolicy(t *testing.T) {
 	HandleGetPolicySuccessfully(t)
 
 	id := "b49884da9d31494ea02aff38d4b4e701"
-	actual, err := policies.Get(client.ServiceClient(), id).Extract()
+	actual, err := policies.Get(context.TODO(), client.ServiceClient(), id).Extract()
 
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, SecondPolicy, *actual)
@@ -168,13 +169,13 @@ func TestUpdatePolicy(t *testing.T) {
 	HandleUpdatePolicySuccessfully(t)
 
 	updateOpts := policies.UpdateOpts{
-		Extra: map[string]interface{}{
+		Extra: map[string]any{
 			"description": "updated policy for bar_user",
 		},
 	}
 
 	id := "b49884da9d31494ea02aff38d4b4e701"
-	actual, err := policies.Update(client.ServiceClient(), id, updateOpts).Extract()
+	actual, err := policies.Update(context.TODO(), client.ServiceClient(), id, updateOpts).Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, SecondPolicyUpdated, *actual)
 }
@@ -224,6 +225,6 @@ func TestDeletePolicy(t *testing.T) {
 	defer th.TeardownHTTP()
 	HandleDeletePolicySuccessfully(t)
 
-	res := policies.Delete(client.ServiceClient(), "9fe1d3")
+	res := policies.Delete(context.TODO(), client.ServiceClient(), "9fe1d3")
 	th.AssertNoErr(t, res.Err)
 }

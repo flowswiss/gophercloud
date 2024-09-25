@@ -1,12 +1,13 @@
 package testing
 
 import (
+	"context"
 	"testing"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/identity/v2/tokens"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/identity/v2/tokens"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 func tokenPost(t *testing.T, options gophercloud.AuthOptions, requestJSON string) tokens.CreateResult {
@@ -14,7 +15,7 @@ func tokenPost(t *testing.T, options gophercloud.AuthOptions, requestJSON string
 	defer th.TeardownHTTP()
 	HandleTokenPost(t, requestJSON)
 
-	return tokens.Create(client.ServiceClient(), options)
+	return tokens.Create(context.TODO(), client.ServiceClient(), options)
 }
 
 func tokenPostErr(t *testing.T, options gophercloud.AuthOptions, expectedErr error) {
@@ -22,7 +23,7 @@ func tokenPostErr(t *testing.T, options gophercloud.AuthOptions, expectedErr err
 	defer th.TeardownHTTP()
 	HandleTokenPost(t, "")
 
-	actualErr := tokens.Create(client.ServiceClient(), options).Err
+	actualErr := tokens.Create(context.TODO(), client.ServiceClient(), options).Err
 	th.CheckDeepEquals(t, expectedErr, actualErr)
 }
 
@@ -96,7 +97,7 @@ func tokenGet(t *testing.T, tokenId string) tokens.GetResult {
 	th.SetupHTTP()
 	defer th.TeardownHTTP()
 	HandleTokenGet(t, tokenId)
-	return tokens.Get(client.ServiceClient(), tokenId)
+	return tokens.Get(context.TODO(), client.ServiceClient(), tokenId)
 }
 
 func TestGetWithToken(t *testing.T) {

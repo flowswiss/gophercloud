@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gophercloud/gophercloud/openstack/common/extensions"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/openstack/common/extensions"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 // ListOutput provides a single page of Extension results.
@@ -43,7 +43,7 @@ const GetOutput = `
 var ListedExtension = extensions.Extension{
 	Updated:     "2013-01-20T00:00:00-00:00",
 	Name:        "Neutron Service Type Management",
-	Links:       []interface{}{},
+	Links:       []any{},
 	Namespace:   "http://docs.openstack.org/ext/neutron/service-type/api/v1.0",
 	Alias:       "service-type",
 	Description: "API for retrieving service providers for Neutron advanced services",
@@ -56,7 +56,7 @@ var ExpectedExtensions = []extensions.Extension{ListedExtension}
 var SingleExtension = &extensions.Extension{
 	Updated:     "2013-02-03T10:00:00-00:00",
 	Name:        "agent",
-	Links:       []interface{}{},
+	Links:       []any{},
 	Namespace:   "http://docs.openstack.org/ext/agent/api/v2.0",
 	Alias:       "agent",
 	Description: "The agent management extension.",

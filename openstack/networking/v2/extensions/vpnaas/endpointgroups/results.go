@@ -1,8 +1,8 @@
 package endpointgroups
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // EndpointGroup is an endpoint group.
@@ -64,6 +64,10 @@ func (r EndpointGroupPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether an EndpointGroupPage struct is empty.
 func (r EndpointGroupPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractEndpointGroups(r)
 	return len(is) == 0, err
 }

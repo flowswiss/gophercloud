@@ -1,6 +1,7 @@
 package gophercloud
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"strings"
@@ -47,7 +48,7 @@ func (client *ServiceClient) ServiceURL(parts ...string) string {
 	return client.ResourceBaseURL() + strings.Join(parts, "/")
 }
 
-func (client *ServiceClient) initReqOpts(url string, JSONBody interface{}, JSONResponse interface{}, opts *RequestOpts) {
+func (client *ServiceClient) initReqOpts(JSONBody any, JSONResponse any, opts *RequestOpts) {
 	if v, ok := (JSONBody).(io.Reader); ok {
 		opts.RawBody = v
 	} else if JSONBody != nil {
@@ -57,68 +58,60 @@ func (client *ServiceClient) initReqOpts(url string, JSONBody interface{}, JSONR
 	if JSONResponse != nil {
 		opts.JSONResponse = JSONResponse
 	}
-
-	if opts.MoreHeaders == nil {
-		opts.MoreHeaders = make(map[string]string)
-	}
-
-	if client.Microversion != "" {
-		client.setMicroversionHeader(opts)
-	}
 }
 
 // Get calls `Request` with the "GET" HTTP verb.
-func (client *ServiceClient) Get(url string, JSONResponse interface{}, opts *RequestOpts) (*http.Response, error) {
+func (client *ServiceClient) Get(ctx context.Context, url string, JSONResponse any, opts *RequestOpts) (*http.Response, error) {
 	if opts == nil {
 		opts = new(RequestOpts)
 	}
-	client.initReqOpts(url, nil, JSONResponse, opts)
-	return client.Request("GET", url, opts)
+	client.initReqOpts(nil, JSONResponse, opts)
+	return client.Request(ctx, "GET", url, opts)
 }
 
 // Post calls `Request` with the "POST" HTTP verb.
-func (client *ServiceClient) Post(url string, JSONBody interface{}, JSONResponse interface{}, opts *RequestOpts) (*http.Response, error) {
+func (client *ServiceClient) Post(ctx context.Context, url string, JSONBody any, JSONResponse any, opts *RequestOpts) (*http.Response, error) {
 	if opts == nil {
 		opts = new(RequestOpts)
 	}
-	client.initReqOpts(url, JSONBody, JSONResponse, opts)
-	return client.Request("POST", url, opts)
+	client.initReqOpts(JSONBody, JSONResponse, opts)
+	return client.Request(ctx, "POST", url, opts)
 }
 
 // Put calls `Request` with the "PUT" HTTP verb.
-func (client *ServiceClient) Put(url string, JSONBody interface{}, JSONResponse interface{}, opts *RequestOpts) (*http.Response, error) {
+func (client *ServiceClient) Put(ctx context.Context, url string, JSONBody any, JSONResponse any, opts *RequestOpts) (*http.Response, error) {
 	if opts == nil {
 		opts = new(RequestOpts)
 	}
-	client.initReqOpts(url, JSONBody, JSONResponse, opts)
-	return client.Request("PUT", url, opts)
+	client.initReqOpts(JSONBody, JSONResponse, opts)
+	return client.Request(ctx, "PUT", url, opts)
 }
 
 // Patch calls `Request` with the "PATCH" HTTP verb.
-func (client *ServiceClient) Patch(url string, JSONBody interface{}, JSONResponse interface{}, opts *RequestOpts) (*http.Response, error) {
+func (client *ServiceClient) Patch(ctx context.Context, url string, JSONBody any, JSONResponse any, opts *RequestOpts) (*http.Response, error) {
 	if opts == nil {
 		opts = new(RequestOpts)
 	}
-	client.initReqOpts(url, JSONBody, JSONResponse, opts)
-	return client.Request("PATCH", url, opts)
+	client.initReqOpts(JSONBody, JSONResponse, opts)
+	return client.Request(ctx, "PATCH", url, opts)
 }
 
 // Delete calls `Request` with the "DELETE" HTTP verb.
-func (client *ServiceClient) Delete(url string, opts *RequestOpts) (*http.Response, error) {
+func (client *ServiceClient) Delete(ctx context.Context, url string, opts *RequestOpts) (*http.Response, error) {
 	if opts == nil {
 		opts = new(RequestOpts)
 	}
-	client.initReqOpts(url, nil, nil, opts)
-	return client.Request("DELETE", url, opts)
+	client.initReqOpts(nil, nil, opts)
+	return client.Request(ctx, "DELETE", url, opts)
 }
 
 // Head calls `Request` with the "HEAD" HTTP verb.
-func (client *ServiceClient) Head(url string, opts *RequestOpts) (*http.Response, error) {
+func (client *ServiceClient) Head(ctx context.Context, url string, opts *RequestOpts) (*http.Response, error) {
 	if opts == nil {
 		opts = new(RequestOpts)
 	}
-	client.initReqOpts(url, nil, nil, opts)
-	return client.Request("HEAD", url, opts)
+	client.initReqOpts(nil, nil, opts)
+	return client.Request(ctx, "HEAD", url, opts)
 }
 
 func (client *ServiceClient) setMicroversionHeader(opts *RequestOpts) {
@@ -141,16 +134,25 @@ func (client *ServiceClient) setMicroversionHeader(opts *RequestOpts) {
 }
 
 // Request carries out the HTTP operation for the service client
-func (client *ServiceClient) Request(method, url string, options *RequestOpts) (*http.Response, error) {
+func (client *ServiceClient) Request(ctx context.Context, method, url string, options *RequestOpts) (*http.Response, error) {
+	if options.MoreHeaders == nil {
+		options.MoreHeaders = make(map[string]string)
+	}
+
+	if client.Microversion != "" {
+		client.setMicroversionHeader(options)
+	}
+
 	if len(client.MoreHeaders) > 0 {
 		if options == nil {
 			options = new(RequestOpts)
 		}
+
 		for k, v := range client.MoreHeaders {
 			options.MoreHeaders[k] = v
 		}
 	}
-	return client.ProviderClient.Request(method, url, options)
+	return client.ProviderClient.Request(ctx, method, url, options)
 }
 
 // ParseResponse is a helper function to parse http.Response to constituents.

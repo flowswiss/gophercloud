@@ -1,12 +1,13 @@
 package testing
 
 import (
+	"context"
 	"testing"
 
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/catalog"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/catalog"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 func TestListCatalog(t *testing.T) {
@@ -15,7 +16,7 @@ func TestListCatalog(t *testing.T) {
 	HandleListCatalogSuccessfully(t)
 
 	count := 0
-	err := catalog.List(client.ServiceClient()).EachPage(func(page pagination.Page) (bool, error) {
+	err := catalog.List(client.ServiceClient()).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 
 		actual, err := catalog.ExtractServiceCatalog(page)

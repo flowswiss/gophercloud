@@ -1,8 +1,8 @@
 package users
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // User represents a user resource that exists on the API.
@@ -48,6 +48,10 @@ type RolePage struct {
 
 // IsEmpty determines whether or not a page of Users contains any results.
 func (r UserPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	users, err := ExtractUsers(r)
 	return len(users) == 0, err
 }
@@ -63,6 +67,10 @@ func ExtractUsers(r pagination.Page) ([]User, error) {
 
 // IsEmpty determines whether or not a page of Roles contains any results.
 func (r RolePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	users, err := ExtractRoles(r)
 	return len(users) == 0, err
 }

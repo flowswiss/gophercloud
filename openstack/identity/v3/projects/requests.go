@@ -1,11 +1,12 @@
 package projects
 
 import (
+	"context"
 	"net/url"
 	"strings"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOptsBuilder allows extensions to add additional parameters to
@@ -94,8 +95,8 @@ func ListAvailable(client *gophercloud.ServiceClient) pagination.Pager {
 }
 
 // Get retrieves details on a single project, by ID.
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(getURL(client, id), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -103,7 +104,7 @@ func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
 // CreateOptsBuilder allows extensions to add additional parameters to
 // the Create request.
 type CreateOptsBuilder interface {
-	ToProjectCreateMap() (map[string]interface{}, error)
+	ToProjectCreateMap() (map[string]any, error)
 }
 
 // CreateOpts represents parameters used to create a project.
@@ -130,14 +131,14 @@ type CreateOpts struct {
 	Tags []string `json:"tags,omitempty"`
 
 	// Extra is free-form extra key/value pairs to describe the project.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 
 	// Options are defined options in the API to enable certain features.
-	Options map[Option]interface{} `json:"options,omitempty"`
+	Options map[Option]any `json:"options,omitempty"`
 }
 
 // ToProjectCreateMap formats a CreateOpts into a create request.
-func (opts CreateOpts) ToProjectCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToProjectCreateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "project")
 
 	if err != nil {
@@ -145,7 +146,7 @@ func (opts CreateOpts) ToProjectCreateMap() (map[string]interface{}, error) {
 	}
 
 	if opts.Extra != nil {
-		if v, ok := b["project"].(map[string]interface{}); ok {
+		if v, ok := b["project"].(map[string]any); ok {
 			for key, value := range opts.Extra {
 				v[key] = value
 			}
@@ -156,20 +157,20 @@ func (opts CreateOpts) ToProjectCreateMap() (map[string]interface{}, error) {
 }
 
 // Create creates a new Project.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToProjectCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), &b, &r.Body, nil)
+	resp, err := client.Post(ctx, createURL(client), &b, &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Delete deletes a project.
-func Delete(client *gophercloud.ServiceClient, projectID string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, projectID), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, projectID string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, projectID), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -177,7 +178,7 @@ func Delete(client *gophercloud.ServiceClient, projectID string) (r DeleteResult
 // UpdateOptsBuilder allows extensions to add additional parameters to
 // the Update request.
 type UpdateOptsBuilder interface {
-	ToProjectUpdateMap() (map[string]interface{}, error)
+	ToProjectUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts represents parameters to update a project.
@@ -204,14 +205,14 @@ type UpdateOpts struct {
 	Tags *[]string `json:"tags,omitempty"`
 
 	// Extra is free-form extra key/value pairs to describe the project.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 
 	// Options are defined options in the API to enable certain features.
-	Options map[Option]interface{} `json:"options,omitempty"`
+	Options map[Option]any `json:"options,omitempty"`
 }
 
 // ToUpdateCreateMap formats a UpdateOpts into an update request.
-func (opts UpdateOpts) ToProjectUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToProjectUpdateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "project")
 
 	if err != nil {
@@ -219,7 +220,7 @@ func (opts UpdateOpts) ToProjectUpdateMap() (map[string]interface{}, error) {
 	}
 
 	if opts.Extra != nil {
-		if v, ok := b["project"].(map[string]interface{}); ok {
+		if v, ok := b["project"].(map[string]any); ok {
 			for key, value := range opts.Extra {
 				v[key] = value
 			}
@@ -230,14 +231,69 @@ func (opts UpdateOpts) ToProjectUpdateMap() (map[string]interface{}, error) {
 }
 
 // Update modifies the attributes of a project.
-func Update(client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToProjectUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Patch(updateURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Patch(ctx, updateURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// CheckTags lists tags for a project.
+func ListTags(ctx context.Context, client *gophercloud.ServiceClient, projectID string) (r ListTagsResult) {
+	resp, err := client.Get(ctx, listTagsURL(client, projectID), &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{200},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// Tags represents a list of Tags object.
+type ModifyTagsOpts struct {
+	// Tags is the list of tags associated with the project.
+	Tags []string `json:"tags,omitempty"`
+}
+
+// ModifyTagsOptsBuilder allows extensions to add additional parameters to
+// the Modify request.
+type ModifyTagsOptsBuilder interface {
+	ToModifyTagsCreateMap() (map[string]any, error)
+}
+
+// ToModifyTagsCreateMap formats a ModifyTagsOpts into a Modify tags request.
+func (opts ModifyTagsOpts) ToModifyTagsCreateMap() (map[string]any, error) {
+	b, err := gophercloud.BuildRequestBody(opts, "")
+
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// ModifyTags deletes all tags of a project and adds new ones.
+func ModifyTags(ctx context.Context, client *gophercloud.ServiceClient, projectID string, opts ModifyTagsOpts) (r ModifyTagsResult) {
+
+	b, err := opts.ToModifyTagsCreateMap()
+	if err != nil {
+		r.Err = err
+		return
+	}
+	resp, err := client.Put(ctx, modifyTagsURL(client, projectID), b, &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{200},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// DeleteTag deletes a tag from a project.
+func DeleteTags(ctx context.Context, client *gophercloud.ServiceClient, projectID string) (r DeleteTagsResult) {
+	resp, err := client.Delete(ctx, deleteTagsURL(client, projectID), &gophercloud.RequestOpts{
+		OkCodes: []int{204},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return

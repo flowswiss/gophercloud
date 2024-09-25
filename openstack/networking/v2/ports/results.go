@@ -1,8 +1,11 @@
 package ports
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"encoding/json"
+	"time"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -16,7 +19,7 @@ func (r commonResult) Extract() (*Port, error) {
 	return &s, err
 }
 
-func (r commonResult) ExtractInto(v interface{}) error {
+func (r commonResult) ExtractInto(v any) error {
 	return r.Result.ExtractIntoStructPtr(v, "port")
 }
 
@@ -107,6 +110,56 @@ type Port struct {
 
 	// Tags optionally set via extensions/attributestags
 	Tags []string `json:"tags"`
+
+	// PropagateUplinkStatus enables/disables propagate uplink status on the port.
+	PropagateUplinkStatus bool `json:"propagate_uplink_status"`
+
+	// RevisionNumber optionally set via extensions/standard-attr-revisions
+	RevisionNumber int `json:"revision_number"`
+
+	// Timestamp when the port was created
+	CreatedAt time.Time `json:"created_at"`
+
+	// Timestamp when the port was last updated
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (r *Port) UnmarshalJSON(b []byte) error {
+	type tmp Port
+
+	// Support for older neutron time format
+	var s1 struct {
+		tmp
+		CreatedAt gophercloud.JSONRFC3339NoZ `json:"created_at"`
+		UpdatedAt gophercloud.JSONRFC3339NoZ `json:"updated_at"`
+	}
+
+	err := json.Unmarshal(b, &s1)
+	if err == nil {
+		*r = Port(s1.tmp)
+		r.CreatedAt = time.Time(s1.CreatedAt)
+		r.UpdatedAt = time.Time(s1.UpdatedAt)
+
+		return nil
+	}
+
+	// Support for newer neutron time format
+	var s2 struct {
+		tmp
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+	}
+
+	err = json.Unmarshal(b, &s2)
+	if err != nil {
+		return err
+	}
+
+	*r = Port(s2.tmp)
+	r.CreatedAt = time.Time(s2.CreatedAt)
+	r.UpdatedAt = time.Time(s2.UpdatedAt)
+
+	return nil
 }
 
 // PortPage is the page returned by a pager when traversing over a collection
@@ -131,6 +184,10 @@ func (r PortPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a PortPage struct is empty.
 func (r PortPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractPorts(r)
 	return len(is) == 0, err
 }
@@ -144,6 +201,6 @@ func ExtractPorts(r pagination.Page) ([]Port, error) {
 	return s, err
 }
 
-func ExtractPortsInto(r pagination.Page, v interface{}) error {
+func ExtractPortsInto(r pagination.Page, v any) error {
 	return r.(PortPage).Result.ExtractIntoSlicePtr(v, "ports")
 }

@@ -1,12 +1,13 @@
 package testing
 
 import (
+	"context"
 	"testing"
 	"time"
 
-	"github.com/gophercloud/gophercloud/openstack/blockstorage/apiversions"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/openstack/blockstorage/apiversions"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 func TestListVersions(t *testing.T) {
@@ -15,7 +16,7 @@ func TestListVersions(t *testing.T) {
 
 	MockListResponse(t)
 
-	allVersions, err := apiversions.List(client.ServiceClient()).AllPages()
+	allVersions, err := apiversions.List(client.ServiceClient()).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 	actual, err := apiversions.ExtractAPIVersions(allVersions)
 	th.AssertNoErr(t, err)
@@ -49,7 +50,7 @@ func TestListOldVersions(t *testing.T) {
 
 	MockListOldResponse(t)
 
-	allVersions, err := apiversions.List(client.ServiceClient()).AllPages()
+	allVersions, err := apiversions.List(client.ServiceClient()).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 	actual, err := apiversions.ExtractAPIVersions(allVersions)
 	th.AssertNoErr(t, err)
@@ -76,7 +77,7 @@ func TestGetVersion(t *testing.T) {
 
 	MockListResponse(t)
 
-	allVersions, err := apiversions.List(client.ServiceClient()).AllPages()
+	allVersions, err := apiversions.List(client.ServiceClient()).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 	actual, err := apiversions.ExtractAPIVersion(allVersions, "v3.0")
 	th.AssertNoErr(t, err)
@@ -100,7 +101,7 @@ func TestGetOldVersion(t *testing.T) {
 
 	MockListOldResponse(t)
 
-	allVersions, err := apiversions.List(client.ServiceClient()).AllPages()
+	allVersions, err := apiversions.List(client.ServiceClient()).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 	actual, err := apiversions.ExtractAPIVersion(allVersions, "v2.0")
 	th.AssertNoErr(t, err)

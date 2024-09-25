@@ -3,7 +3,7 @@ package tokens
 import (
 	"time"
 
-	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/v2"
 )
 
 // Endpoint represents a single API endpoint offered by a service.
@@ -74,6 +74,18 @@ type Project struct {
 	Domain Domain `json:"domain"`
 	ID     string `json:"id"`
 	Name   string `json:"name"`
+}
+
+type TrustUser struct {
+	ID string `json:"id"`
+}
+
+// Trust provides information about trust with which User is authorized.
+type Trust struct {
+	ID            string    `json:"id"`
+	Impersonation bool      `json:"impersonation"`
+	TrusteeUserID TrustUser `json:"trustee_user"`
+	TrustorUserID TrustUser `json:"trustor_user"`
 }
 
 // commonResult is the response from a request. A commonResult has various
@@ -160,6 +172,15 @@ func (r commonResult) ExtractDomain() (*Domain, error) {
 	return s.Domain, err
 }
 
+// ExtractTrust returns Trust to which User is authorized.
+func (r commonResult) ExtractTrust() (*Trust, error) {
+	var s struct {
+		Trust *Trust `json:"OS-TRUST:trust"`
+	}
+	err := r.ExtractInto(&s)
+	return s.Trust, err
+}
+
 // CreateResult is the response from a Create request. Use ExtractToken()
 // to interpret it as a Token, or ExtractServiceCatalog() to interpret it
 // as a service catalog.
@@ -189,6 +210,6 @@ type Token struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
-func (r commonResult) ExtractInto(v interface{}) error {
+func (r commonResult) ExtractInto(v any) error {
 	return r.ExtractIntoStructPtr(v, "token")
 }

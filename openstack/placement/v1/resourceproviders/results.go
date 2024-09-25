@@ -1,8 +1,8 @@
 package resourceproviders
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type ResourceProviderLinks struct {
@@ -110,6 +110,10 @@ type ResourceProvidersPage struct {
 
 // IsEmpty determines if a ResourceProvidersPage contains any results.
 func (page ResourceProvidersPage) IsEmpty() (bool, error) {
+	if page.StatusCode == 204 {
+		return true, nil
+	}
+
 	resourceProviders, err := ExtractResourceProviders(page)
 	return len(resourceProviders) == 0, err
 }

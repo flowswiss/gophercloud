@@ -1,14 +1,16 @@
 package services
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // CreateOptsBuilder allows extensions to add additional parameters to
 // the Create request.
 type CreateOptsBuilder interface {
-	ToServiceCreateMap() (map[string]interface{}, error)
+	ToServiceCreateMap() (map[string]any, error)
 }
 
 // CreateOpts provides options used to create a service.
@@ -20,18 +22,18 @@ type CreateOpts struct {
 	Enabled *bool `json:"enabled,omitempty"`
 
 	// Extra is free-form extra key/value pairs to describe the service.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 }
 
 // ToServiceCreateMap formats a CreateOpts into a create request.
-func (opts CreateOpts) ToServiceCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToServiceCreateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "service")
 	if err != nil {
 		return nil, err
 	}
 
 	if opts.Extra != nil {
-		if v, ok := b["service"].(map[string]interface{}); ok {
+		if v, ok := b["service"].(map[string]any); ok {
 			for key, value := range opts.Extra {
 				v[key] = value
 			}
@@ -42,13 +44,13 @@ func (opts CreateOpts) ToServiceCreateMap() (map[string]interface{}, error) {
 }
 
 // Create adds a new service of the requested type to the catalog.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToServiceCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -92,8 +94,8 @@ func List(client *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pa
 }
 
 // Get returns additional information about a service, given its ID.
-func Get(client *gophercloud.ServiceClient, serviceID string) (r GetResult) {
-	resp, err := client.Get(serviceURL(client, serviceID), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, serviceID string) (r GetResult) {
+	resp, err := client.Get(ctx, serviceURL(client, serviceID), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -101,7 +103,7 @@ func Get(client *gophercloud.ServiceClient, serviceID string) (r GetResult) {
 // UpdateOptsBuilder allows extensions to add additional parameters to
 // the Update request.
 type UpdateOptsBuilder interface {
-	ToServiceUpdateMap() (map[string]interface{}, error)
+	ToServiceUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts provides options for updating a service.
@@ -113,18 +115,18 @@ type UpdateOpts struct {
 	Enabled *bool `json:"enabled,omitempty"`
 
 	// Extra is free-form extra key/value pairs to describe the service.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 }
 
 // ToServiceUpdateMap formats a UpdateOpts into an update request.
-func (opts UpdateOpts) ToServiceUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToServiceUpdateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "service")
 	if err != nil {
 		return nil, err
 	}
 
 	if opts.Extra != nil {
-		if v, ok := b["service"].(map[string]interface{}); ok {
+		if v, ok := b["service"].(map[string]any); ok {
 			for key, value := range opts.Extra {
 				v[key] = value
 			}
@@ -135,13 +137,13 @@ func (opts UpdateOpts) ToServiceUpdateMap() (map[string]interface{}, error) {
 }
 
 // Update updates an existing Service.
-func Update(client *gophercloud.ServiceClient, serviceID string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, serviceID string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToServiceUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Patch(updateURL(client, serviceID), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Patch(ctx, updateURL(client, serviceID), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -151,8 +153,8 @@ func Update(client *gophercloud.ServiceClient, serviceID string, opts UpdateOpts
 // Delete removes an existing service.
 // It either deletes all associated endpoints, or fails until all endpoints
 // are deleted.
-func Delete(client *gophercloud.ServiceClient, serviceID string) (r DeleteResult) {
-	resp, err := client.Delete(serviceURL(client, serviceID), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, serviceID string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, serviceURL(client, serviceID), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

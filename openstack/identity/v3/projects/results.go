@@ -3,8 +3,8 @@ package projects
 import (
 	"encoding/json"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Option is a specific option defined at the API to enable features
@@ -70,17 +70,17 @@ type Project struct {
 	Tags []string `json:"tags,omitempty"`
 
 	// Extra is free-form extra key/value pairs to describe the project.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 
 	// Options are defined options in the API to enable certain features.
-	Options map[Option]interface{} `json:"options,omitempty"`
+	Options map[Option]any `json:"options,omitempty"`
 }
 
 func (r *Project) UnmarshalJSON(b []byte) error {
 	type tmp Project
 	var s struct {
 		tmp
-		Extra map[string]interface{} `json:"extra"`
+		Extra map[string]any `json:"extra"`
 	}
 	err := json.Unmarshal(b, &s)
 	if err != nil {
@@ -93,12 +93,12 @@ func (r *Project) UnmarshalJSON(b []byte) error {
 	if s.Extra != nil {
 		r.Extra = s.Extra
 	} else {
-		var result interface{}
+		var result any
 		err := json.Unmarshal(b, &result)
 		if err != nil {
 			return err
 		}
-		if resultMap, ok := result.(map[string]interface{}); ok {
+		if resultMap, ok := result.(map[string]any); ok {
 			r.Extra = gophercloud.RemainingKeys(Project{}, resultMap)
 		}
 	}
@@ -113,6 +113,10 @@ type ProjectPage struct {
 
 // IsEmpty determines whether or not a page of Projects contains any results.
 func (r ProjectPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	projects, err := ExtractProjects(r)
 	return len(projects) == 0, err
 }
@@ -149,4 +153,50 @@ func (r projectResult) Extract() (*Project, error) {
 	}
 	err := r.ExtractInto(&s)
 	return s.Project, err
+}
+
+// Tags represents a list of Tags object.
+type Tags struct {
+	// Tags is the list of tags associated with the project.
+	Tags []string `json:"tags,omitempty"`
+}
+
+// ListTagsResult is the result of a List Tags request. Call its Extract method to
+// interpret it as a list of tags.
+type ListTagsResult struct {
+	gophercloud.Result
+}
+
+// Extract interprets any ListTagsResult as a Tags Object.
+func (r ListTagsResult) Extract() (*Tags, error) {
+	var s = &Tags{}
+	err := r.ExtractInto(&s)
+	return s, err
+}
+
+// ProjectTags represents a list of Tags object.
+type ProjectTags struct {
+	// Tags is the list of tags associated with the project.
+	Projects []Project `json:"projects,omitempty"`
+	// Links contains referencing links to the implied_role.
+	Links map[string]any `json:"links"`
+}
+
+// ModifyTagsResLinksult is the result of a  Tags request. Call its Extract method to
+// interpret it as a project of tags.
+type ModifyTagsResult struct {
+	gophercloud.Result
+}
+
+// Extract interprets any ModifyTags as a Tags Object.
+func (r ModifyTagsResult) Extract() (*ProjectTags, error) {
+	var s = &ProjectTags{}
+	err := r.ExtractInto(&s)
+	return s, err
+}
+
+// DeleteTagsResult is the result of a Delete Tags request. Call its ExtractErr method to
+// determine if the request succeeded or failed.
+type DeleteTagsResult struct {
+	gophercloud.ErrResult
 }

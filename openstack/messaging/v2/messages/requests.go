@@ -1,8 +1,10 @@
 package messages
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOptsBuilder allows extensions to add additional parameters to the
@@ -53,7 +55,7 @@ func List(client *gophercloud.ServiceClient, queueName string, opts ListOptsBuil
 
 // CreateOptsBuilder Builder.
 type CreateOptsBuilder interface {
-	ToMessageCreateMap() (map[string]interface{}, error)
+	ToMessageCreateMap() (map[string]any, error)
 }
 
 // BatchCreateOpts is an array of CreateOpts.
@@ -69,12 +71,12 @@ type CreateOpts struct {
 	Delay int `json:"delay,omitempty"`
 
 	// Body specifies an arbitrary document that constitutes the body of the message being sent.
-	Body map[string]interface{} `json:"body" required:"true"`
+	Body map[string]any `json:"body" required:"true"`
 }
 
 // ToMessageCreateMap constructs a request body from BatchCreateOpts.
-func (opts BatchCreateOpts) ToMessageCreateMap() (map[string]interface{}, error) {
-	messages := make([]map[string]interface{}, len(opts))
+func (opts BatchCreateOpts) ToMessageCreateMap() (map[string]any, error) {
+	messages := make([]map[string]any, len(opts))
 	for i, message := range opts {
 		messageMap, err := message.ToMap()
 		if err != nil {
@@ -82,23 +84,23 @@ func (opts BatchCreateOpts) ToMessageCreateMap() (map[string]interface{}, error)
 		}
 		messages[i] = messageMap
 	}
-	return map[string]interface{}{"messages": messages}, nil
+	return map[string]any{"messages": messages}, nil
 }
 
 // ToMap constructs a request body from UpdateOpts.
-func (opts CreateOpts) ToMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "")
 }
 
 // Create creates a message on a specific queue based of off queue name.
-func Create(client *gophercloud.ServiceClient, queueName string, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, queueName string, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToMessageCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 
-	resp, err := client.Post(createURL(client, queueName), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client, queueName), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -123,7 +125,7 @@ func (opts DeleteMessagesOpts) ToMessagesDeleteQuery() (string, error) {
 }
 
 // DeleteMessages deletes multiple messages based off of ID.
-func DeleteMessages(client *gophercloud.ServiceClient, queueName string, opts DeleteMessagesOptsBuilder) (r DeleteResult) {
+func DeleteMessages(ctx context.Context, client *gophercloud.ServiceClient, queueName string, opts DeleteMessagesOptsBuilder) (r DeleteResult) {
 	url := deleteURL(client, queueName)
 	if opts != nil {
 		query, err := opts.ToMessagesDeleteQuery()
@@ -133,7 +135,7 @@ func DeleteMessages(client *gophercloud.ServiceClient, queueName string, opts De
 		}
 		url += query
 	}
-	resp, err := client.Delete(url, &gophercloud.RequestOpts{
+	resp, err := client.Delete(ctx, url, &gophercloud.RequestOpts{
 		OkCodes: []int{200, 204},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -158,7 +160,7 @@ func (opts PopMessagesOpts) ToMessagesPopQuery() (string, error) {
 }
 
 // PopMessages deletes and returns multiple messages based off of number of messages.
-func PopMessages(client *gophercloud.ServiceClient, queueName string, opts PopMessagesOptsBuilder) (r PopResult) {
+func PopMessages(ctx context.Context, client *gophercloud.ServiceClient, queueName string, opts PopMessagesOptsBuilder) (r PopResult) {
 	url := deleteURL(client, queueName)
 	if opts != nil {
 		query, err := opts.ToMessagesPopQuery()
@@ -168,7 +170,7 @@ func PopMessages(client *gophercloud.ServiceClient, queueName string, opts PopMe
 		}
 		url += query
 	}
-	resp, err := client.Delete(url, &gophercloud.RequestOpts{
+	resp, err := client.Delete(ctx, url, &gophercloud.RequestOpts{
 		JSONResponse: &r.Body,
 		OkCodes:      []int{200, 204},
 	})
@@ -194,7 +196,7 @@ func (opts GetMessagesOpts) ToGetMessagesListQuery() (string, error) {
 }
 
 // GetMessages requests details on a multiple messages, by IDs.
-func GetMessages(client *gophercloud.ServiceClient, queueName string, opts GetMessagesOptsBuilder) (r GetMessagesResult) {
+func GetMessages(ctx context.Context, client *gophercloud.ServiceClient, queueName string, opts GetMessagesOptsBuilder) (r GetMessagesResult) {
 	url := getURL(client, queueName)
 	if opts != nil {
 		query, err := opts.ToGetMessagesListQuery()
@@ -204,7 +206,7 @@ func GetMessages(client *gophercloud.ServiceClient, queueName string, opts GetMe
 		}
 		url += query
 	}
-	resp, err := client.Get(url, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Get(ctx, url, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -212,8 +214,8 @@ func GetMessages(client *gophercloud.ServiceClient, queueName string, opts GetMe
 }
 
 // Get requests details on a single message, by ID.
-func Get(client *gophercloud.ServiceClient, queueName string, messageID string) (r GetResult) {
-	resp, err := client.Get(messageURL(client, queueName, messageID), &r.Body, &gophercloud.RequestOpts{
+func Get(ctx context.Context, client *gophercloud.ServiceClient, queueName string, messageID string) (r GetResult) {
+	resp, err := client.Get(ctx, messageURL(client, queueName, messageID), &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -239,7 +241,7 @@ func (opts DeleteOpts) ToMessageDeleteQuery() (string, error) {
 }
 
 // Delete deletes a specific message from the queue.
-func Delete(client *gophercloud.ServiceClient, queueName string, messageID string, opts DeleteOptsBuilder) (r DeleteResult) {
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, queueName string, messageID string, opts DeleteOptsBuilder) (r DeleteResult) {
 	url := DeleteMessageURL(client, queueName, messageID)
 	if opts != nil {
 		query, err := opts.ToMessageDeleteQuery()
@@ -249,7 +251,7 @@ func Delete(client *gophercloud.ServiceClient, queueName string, messageID strin
 		}
 		url += query
 	}
-	resp, err := client.Delete(url, &gophercloud.RequestOpts{
+	resp, err := client.Delete(ctx, url, &gophercloud.RequestOpts{
 		OkCodes: []int{204},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

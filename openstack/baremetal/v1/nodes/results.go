@@ -1,8 +1,14 @@
 package nodes
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/baremetal/inventory"
+	"github.com/gophercloud/gophercloud/v2/openstack/baremetalintrospection/v1/introspection"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type nodeResult struct {
@@ -40,11 +46,11 @@ func (r ValidateResult) Extract() (*NodeValidation, error) {
 	return &s, err
 }
 
-func (r nodeResult) ExtractInto(v interface{}) error {
+func (r nodeResult) ExtractInto(v any) error {
 	return r.Result.ExtractIntoStructPtr(v, "")
 }
 
-func ExtractNodesInto(r pagination.Page, v interface{}) error {
+func ExtractNodesInto(r pagination.Page, v any) error {
 	return r.(NodePage).Result.ExtractIntoSlicePtr(v, "nodes")
 }
 
@@ -138,19 +144,19 @@ type Node struct {
 
 	// The metadata required by the driver to manage this Node. List of fields varies between drivers, and can be
 	// retrieved from the /v1/drivers/<DRIVER_NAME>/properties resource.
-	DriverInfo map[string]interface{} `json:"driver_info"`
+	DriverInfo map[string]any `json:"driver_info"`
 
 	// Metadata set and stored by the Node’s driver. This field is read-only.
-	DriverInternalInfo map[string]interface{} `json:"driver_internal_info"`
+	DriverInternalInfo map[string]any `json:"driver_internal_info"`
 
 	// Characteristics of this Node. Populated by ironic-inspector during inspection. May be edited via the REST
 	// API at any time.
-	Properties map[string]interface{} `json:"properties"`
+	Properties map[string]any `json:"properties"`
 
 	// Used to customize the deployed image. May include root partition size, a base 64 encoded config drive, and other
 	// metadata. Note that this field is erased automatically when the instance is deleted (this is done by requesting
 	// the Node provision state be changed to DELETED).
-	InstanceInfo map[string]interface{} `json:"instance_info"`
+	InstanceInfo map[string]any `json:"instance_info"`
 
 	// ID of the Nova instance associated with this Node.
 	InstanceUUID string `json:"instance_uuid"`
@@ -159,23 +165,26 @@ type Node struct {
 	ChassisUUID string `json:"chassis_uuid"`
 
 	// Set of one or more arbitrary metadata key and value pairs.
-	Extra map[string]interface{} `json:"extra"`
+	Extra map[string]any `json:"extra"`
 
 	// Whether console access is enabled or disabled on this node.
 	ConsoleEnabled bool `json:"console_enabled"`
 
 	// The current RAID configuration of the node. Introduced with the cleaning feature.
-	RAIDConfig map[string]interface{} `json:"raid_config"`
+	RAIDConfig map[string]any `json:"raid_config"`
 
 	// The requested RAID configuration of the node, which will be applied when the Node next transitions
 	// through the CLEANING state. Introduced with the cleaning feature.
-	TargetRAIDConfig map[string]interface{} `json:"target_raid_config"`
+	TargetRAIDConfig map[string]any `json:"target_raid_config"`
 
 	// Current clean step. Introduced with the cleaning feature.
-	CleanStep map[string]interface{} `json:"clean_step"`
+	CleanStep map[string]any `json:"clean_step"`
 
 	// Current deploy step.
-	DeployStep map[string]interface{} `json:"deploy_step"`
+	DeployStep map[string]any `json:"deploy_step"`
+
+	// Current service step.
+	ServiceStep map[string]any `json:"service_step"`
 
 	// String which can be used by external schedulers to identify this Node as a unit of a specific type of resource.
 	// For more details, see: https://docs.openstack.org/ironic/latest/install/configure-nova-flavors.html
@@ -192,6 +201,9 @@ type Node struct {
 
 	// Deploy interface for a node, e.g. “iscsi”.
 	DeployInterface string `json:"deploy_interface"`
+
+	// Firmware interface for a node, e.g. “redfish”.
+	FirmwareInterface string `json:"firmware_interface"`
 
 	// Interface used for node inspection, e.g. “no-inspect”.
 	InspectInterface string `json:"inspect_interface"`
@@ -233,7 +245,29 @@ type Node struct {
 	Owner string `json:"owner"`
 
 	// Static network configuration to use during deployment and cleaning.
-	NetworkData map[string]interface{} `json:"network_data"`
+	NetworkData map[string]any `json:"network_data"`
+
+	// The UTC date and time when the resource was created, ISO 8601 format.
+	CreatedAt time.Time `json:"created_at"`
+
+	// The UTC date and time when the resource was updated, ISO 8601 format. May be “null”.
+	UpdatedAt time.Time `json:"updated_at"`
+
+	// The UTC date and time when the provision state was updated, ISO 8601 format. May be “null”.
+	ProvisionUpdatedAt time.Time `json:"provision_updated_at"`
+
+	// The UTC date and time when the last inspection was started, ISO 8601 format. May be “null” if inspection hasn't been started yet.
+	InspectionStartedAt *time.Time `json:"inspection_started_at"`
+
+	// The UTC date and time when the last inspection was finished, ISO 8601 format. May be “null” if inspection hasn't been finished yet.
+	InspectionFinishedAt *time.Time `json:"inspection_finished_at"`
+
+	// Whether the node is retired. A Node tagged as retired will prevent any further
+	// scheduling of instances, but will still allow for other operations, such as cleaning, to happen
+	Retired bool `json:"retired"`
+
+	// Reason the node is marked as retired.
+	RetiredReason string `json:"retired_reason"`
 }
 
 // NodePage abstracts the raw results of making a List() request against
@@ -246,6 +280,10 @@ type NodePage struct {
 
 // IsEmpty returns true if a page contains no Node results.
 func (r NodePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	s, err := ExtractNodes(r)
 	return len(s) == 0, err
 }
@@ -373,13 +411,14 @@ type DriverValidation struct {
 	Reason string `json:"reason"`
 }
 
-//  Ironic validates whether the Node’s driver has enough information to manage the Node. This polls each interface on
-//  the driver, and returns the status of that interface as an DriverValidation struct.
+// Ironic validates whether the Node’s driver has enough information to manage the Node. This polls each interface on
+// the driver, and returns the status of that interface as an DriverValidation struct.
 type NodeValidation struct {
 	BIOS       DriverValidation `json:"bios"`
 	Boot       DriverValidation `json:"boot"`
 	Console    DriverValidation `json:"console"`
 	Deploy     DriverValidation `json:"deploy"`
+	Firmware   DriverValidation `json:"firmware"`
 	Inspect    DriverValidation `json:"inspect"`
 	Management DriverValidation `json:"management"`
 	Network    DriverValidation `json:"network"`
@@ -505,5 +544,119 @@ type SubscriptionVendorPassthru struct {
 // SetMaintenanceResult is the response from a SetMaintenance operation. Call its ExtractErr
 // method to determine if the call succeeded or failed.
 type SetMaintenanceResult struct {
+	gophercloud.ErrResult
+}
+
+// PluginData is an abstraction around plugin-specific data from inspection.
+// The format of PluginData is different between ironic-inspector and the native in-band inspection in Ironic.
+// We may need an opaque structure that can be extracted in two (or more) ways.
+type PluginData struct {
+	// Raw JSON data.
+	json.RawMessage
+}
+
+// Interpret plugin data as a free-form mapping.
+func (pd PluginData) AsMap() (result map[string]any, err error) {
+	err = json.Unmarshal(pd.RawMessage, &result)
+	return
+}
+
+// AsStandardData interprets plugin data as coming from ironic native inspection.
+func (pd PluginData) AsStandardData() (result inventory.StandardPluginData, err error) {
+	err = json.Unmarshal(pd.RawMessage, &result)
+	return
+}
+
+// AsInspectorData interprets plugin data as coming from ironic-inspector.
+func (pd PluginData) AsInspectorData() (result introspection.Data, err error) {
+	err = json.Unmarshal(pd.RawMessage, &result)
+	return
+}
+
+// GuessFormat tries to guess which format the data is in. Unless there is
+// an error while parsing, one result will be valid, the other - nil.
+// Unknown (but still parseable) format defaults to standard.
+func (pd PluginData) GuessFormat() (*inventory.StandardPluginData, *introspection.Data, error) {
+	// Ironic and Inspector formats are compatible, don't expect an error in either case
+	ironic, err := pd.AsStandardData()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// The valid_interfaces field only exists in the Ironic data (it's called just interfaces in Inspector)
+	if len(ironic.ValidInterfaces) > 0 {
+		return &ironic, nil, nil
+	}
+
+	inspector, err := pd.AsInspectorData()
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot interpret PluginData as coming from inspector on conversion: %w", err)
+	}
+
+	// If the format does not match anything (but still parses), assume a heavily customized deployment
+	if len(inspector.Interfaces) == 0 {
+		return &ironic, nil, nil
+	}
+
+	return nil, &inspector, nil
+}
+
+// InventoryData is the full node inventory.
+type InventoryData struct {
+	// Formally specified bare metal node inventory.
+	Inventory inventory.InventoryType `json:"inventory"`
+	// Data from inspection plugins.
+	PluginData PluginData `json:"plugin_data"`
+}
+
+// InventoryResult is the response from a GetInventory operation.
+type InventoryResult struct {
+	gophercloud.Result
+}
+
+// Extract interprets a InventoryResult as a InventoryData struct, if possible.
+func (r InventoryResult) Extract() (*InventoryData, error) {
+	var data InventoryData
+	err := r.ExtractInto(&data)
+	return &data, err
+}
+
+// ListFirmwareResult is the response from a ListFirmware operation. Call its Extract method
+// to interpret it as an array of FirmwareComponent structs.
+type ListFirmwareResult struct {
+	gophercloud.Result
+}
+
+// A particular Firmware Component for a node
+type FirmwareComponent struct {
+	// The UTC date and time when the resource was created, ISO 8601 format.
+	CreatedAt time.Time `json:"created_at"`
+	// The UTC date and time when the resource was updated, ISO 8601 format. May be “null”.
+	UpdatedAt *time.Time `json:"updated_at"`
+	// The Component name
+	Component string `json:"component"`
+	// The initial version of the firmware component.
+	InitialVersion string `json:"initial_version"`
+	// The current version of the firmware component.
+	CurrentVersion string `json:"current_version"`
+	// The last firmware version updated for the component.
+	LastVersionFlashed string `json:"last_version_flashed,omitempty"`
+}
+
+// Extract interprets a ListFirmwareResult as an array of FirmwareComponent structs, if possible.
+func (r ListFirmwareResult) Extract() ([]FirmwareComponent, error) {
+	var s struct {
+		Components []FirmwareComponent `json:"firmware"`
+	}
+
+	err := r.ExtractInto(&s)
+	return s.Components, err
+}
+
+type VirtualMediaAttachResult struct {
+	gophercloud.ErrResult
+}
+
+type VirtualMediaDetachResult struct {
 	gophercloud.ErrResult
 }

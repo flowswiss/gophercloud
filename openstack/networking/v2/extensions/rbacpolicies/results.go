@@ -1,8 +1,8 @@
 package rbacpolicies
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -16,7 +16,7 @@ func (r commonResult) Extract() (*RBACPolicy, error) {
 	return &s, err
 }
 
-func (r commonResult) ExtractInto(v interface{}) error {
+func (r commonResult) ExtractInto(v any) error {
 	return r.Result.ExtractIntoStructPtr(v, "rbac_policy")
 }
 
@@ -82,6 +82,10 @@ type RBACPolicyPage struct {
 
 // IsEmpty checks whether a RBACPolicyPage struct is empty.
 func (r RBACPolicyPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractRBACPolicies(r)
 	return len(is) == 0, err
 }
@@ -96,6 +100,6 @@ func ExtractRBACPolicies(r pagination.Page) ([]RBACPolicy, error) {
 }
 
 // ExtractRBACPolicesInto extracts the elements into a slice of RBAC Policy structs.
-func ExtractRBACPolicesInto(r pagination.Page, v interface{}) error {
+func ExtractRBACPolicesInto(r pagination.Page, v any) error {
 	return r.(RBACPolicyPage).Result.ExtractIntoSlicePtr(v, "rbac_policies")
 }

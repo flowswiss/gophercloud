@@ -3,8 +3,8 @@ package policies
 import (
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // QoSPolicyExt represents additional resource attributes available with the QoS extension.
@@ -83,7 +83,7 @@ type Policy struct {
 	RevisionNumber int `json:"revision_number"`
 
 	// Rules represents QoS rules of the policy.
-	Rules []map[string]interface{} `json:"rules"`
+	Rules []map[string]any `json:"rules"`
 
 	// Tags optionally set via extensions/attributestags
 	Tags []string `json:"tags"`
@@ -110,6 +110,10 @@ func (r PolicyPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a PolicyPage is empty.
 func (r PolicyPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractPolicies(r)
 	return len(is) == 0, err
 }
@@ -122,6 +126,6 @@ func ExtractPolicies(r pagination.Page) ([]Policy, error) {
 }
 
 // ExtractPoliciesInto extracts the elements into a slice of RBAC Policy structs.
-func ExtractPolicysInto(r pagination.Page, v interface{}) error {
+func ExtractPolicysInto(r pagination.Page, v any) error {
 	return r.(PolicyPage).Result.ExtractIntoSlicePtr(v, "policies")
 }

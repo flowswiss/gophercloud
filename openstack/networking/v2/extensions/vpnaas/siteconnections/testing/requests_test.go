@@ -1,15 +1,16 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/gophercloud/gophercloud"
-	fake "github.com/gophercloud/gophercloud/openstack/networking/v2/common"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/vpnaas/siteconnections"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	"github.com/gophercloud/gophercloud/v2"
+	fake "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/common"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/vpnaas/siteconnections"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestCreate(t *testing.T) {
@@ -91,7 +92,7 @@ func TestCreate(t *testing.T) {
 		PeerAddress:    "172.24.4.233",
 		PeerID:         "172.24.4.233",
 	}
-	actual, err := siteconnections.Create(fake.ServiceClient(), options).Extract()
+	actual, err := siteconnections.Create(context.TODO(), fake.ServiceClient(), options).Extract()
 	th.AssertNoErr(t, err)
 	expectedDPD := siteconnections.DPD{
 		Action:   "hold",
@@ -134,7 +135,7 @@ func TestDelete(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	res := siteconnections.Delete(fake.ServiceClient(), "5c561d9d-eaea-45f6-ae3e-08d1a7080828")
+	res := siteconnections.Delete(context.TODO(), fake.ServiceClient(), "5c561d9d-eaea-45f6-ae3e-08d1a7080828")
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -182,7 +183,7 @@ func TestGet(t *testing.T) {
         `)
 	})
 
-	actual, err := siteconnections.Get(fake.ServiceClient(), "5c561d9d-eaea-45f6-ae3e-08d1a7080828").Extract()
+	actual, err := siteconnections.Get(context.TODO(), fake.ServiceClient(), "5c561d9d-eaea-45f6-ae3e-08d1a7080828").Extract()
 	th.AssertNoErr(t, err)
 	expectedDPD := siteconnections.DPD{
 		Action:   "hold",
@@ -262,7 +263,7 @@ func TestList(t *testing.T) {
 
 	count := 0
 
-	siteconnections.List(fake.ServiceClient(), siteconnections.ListOpts{}).EachPage(func(page pagination.Page) (bool, error) {
+	err := siteconnections.List(fake.ServiceClient(), siteconnections.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := siteconnections.ExtractConnections(page)
 		if err != nil {
@@ -305,6 +306,7 @@ func TestList(t *testing.T) {
 
 		return true, nil
 	})
+	th.AssertNoErr(t, err)
 
 	if count != 1 {
 		t.Errorf("Expected 1 page, got %d", count)
@@ -377,7 +379,7 @@ func TestUpdate(t *testing.T) {
 		PSK:         "updatedsecret",
 	}
 
-	actual, err := siteconnections.Update(fake.ServiceClient(), "5c561d9d-eaea-45f6-ae3e-08d1a7080828", options).Extract()
+	actual, err := siteconnections.Update(context.TODO(), fake.ServiceClient(), "5c561d9d-eaea-45f6-ae3e-08d1a7080828", options).Extract()
 	th.AssertNoErr(t, err)
 
 	expectedDPD := siteconnections.DPD{

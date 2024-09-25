@@ -1,6 +1,6 @@
 package nodes
 
-import "github.com/gophercloud/gophercloud"
+import "github.com/gophercloud/gophercloud/v2"
 
 func createURL(client *gophercloud.ServiceClient) string {
 	return client.ServiceURL("nodes")
@@ -76,4 +76,16 @@ func vendorPassthruCallURL(client *gophercloud.ServiceClient, id string) string 
 
 func maintenanceURL(client *gophercloud.ServiceClient, id string) string {
 	return client.ServiceURL("nodes", id, "maintenance")
+}
+
+func inventoryURL(client *gophercloud.ServiceClient, id string) string {
+	return client.ServiceURL("nodes", id, "inventory")
+}
+
+func firmwareListURL(client *gophercloud.ServiceClient, id string) string {
+	return client.ServiceURL("nodes", id, "firmware")
+}
+
+func virtualMediaURL(client *gophercloud.ServiceClient, id string) string {
+	return client.ServiceURL("nodes", id, "vmedia")
 }

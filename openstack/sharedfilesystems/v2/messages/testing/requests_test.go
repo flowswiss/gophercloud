@@ -1,12 +1,13 @@
 package testing
 
 import (
+	"context"
 	"testing"
 	"time"
 
-	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/messages"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/openstack/sharedfilesystems/v2/messages"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 // Verifies that message deletion works
@@ -16,7 +17,7 @@ func TestDelete(t *testing.T) {
 
 	MockDeleteResponse(t)
 
-	res := messages.Delete(client.ServiceClient(), "messageID")
+	res := messages.Delete(context.TODO(), client.ServiceClient(), "messageID")
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -27,7 +28,7 @@ func TestList(t *testing.T) {
 
 	MockListResponse(t)
 
-	allPages, err := messages.List(client.ServiceClient(), &messages.ListOpts{}).AllPages()
+	allPages, err := messages.List(client.ServiceClient(), &messages.ListOpts{}).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 	actual, err := messages.ExtractMessages(allPages)
 	th.AssertNoErr(t, err)
@@ -74,7 +75,7 @@ func TestFilteredList(t *testing.T) {
 		RequestID: "req-21767eee-22ca-40a4-b6c0-ae7d35cd434f",
 	}
 
-	allPages, err := messages.List(client.ServiceClient(), options).AllPages()
+	allPages, err := messages.List(client.ServiceClient(), options).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 	actual, err := messages.ExtractMessages(allPages)
 	th.AssertNoErr(t, err)
@@ -118,7 +119,7 @@ func TestGet(t *testing.T) {
 		ActionID:     "002",
 	}
 
-	n, err := messages.Get(client.ServiceClient(), "2076373e-13a7-4b84-9e67-15ce8cceaff8").Extract()
+	n, err := messages.Get(context.TODO(), client.ServiceClient(), "2076373e-13a7-4b84-9e67-15ce8cceaff8").Extract()
 	th.AssertNoErr(t, err)
 
 	th.CheckDeepEquals(t, &expected, n)

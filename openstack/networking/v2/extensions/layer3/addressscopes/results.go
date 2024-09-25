@@ -1,8 +1,8 @@
 package addressscopes
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -84,6 +84,10 @@ func (r AddressScopePage) NextPageURL() (string, error) {
 
 // IsEmpty determines whether or not a AddressScopePage is empty.
 func (r AddressScopePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	addressScopes, err := ExtractAddressScopes(r)
 	return len(addressScopes) == 0, err
 }

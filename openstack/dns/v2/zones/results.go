@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -52,6 +52,10 @@ type ZonePage struct {
 
 // IsEmpty returns true if the page contains no results.
 func (r ZonePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	s, err := ExtractZones(r)
 	return len(s) == 0, err
 }
@@ -124,7 +128,7 @@ type Zone struct {
 
 	// Links includes HTTP references to the itself, useful for passing along
 	// to other APIs that might want a server reference.
-	Links map[string]interface{} `json:"links"`
+	Links map[string]any `json:"links"`
 }
 
 func (r *Zone) UnmarshalJSON(b []byte) error {
@@ -134,7 +138,7 @@ func (r *Zone) UnmarshalJSON(b []byte) error {
 		CreatedAt     gophercloud.JSONRFC3339MilliNoZ `json:"created_at"`
 		UpdatedAt     gophercloud.JSONRFC3339MilliNoZ `json:"updated_at"`
 		TransferredAt gophercloud.JSONRFC3339MilliNoZ `json:"transferred_at"`
-		Serial        interface{}                     `json:"serial"`
+		Serial        any                             `json:"serial"`
 	}
 	err := json.Unmarshal(b, &s)
 	if err != nil {

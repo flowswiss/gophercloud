@@ -4,25 +4,25 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Resource represents a stack resource.
 type Resource struct {
-	Attributes     map[string]interface{} `json:"attributes"`
-	CreationTime   time.Time              `json:"-"`
-	Description    string                 `json:"description"`
-	Links          []gophercloud.Link     `json:"links"`
-	LogicalID      string                 `json:"logical_resource_id"`
-	Name           string                 `json:"resource_name"`
-	ParentResource string                 `json:"parent_resource"`
-	PhysicalID     string                 `json:"physical_resource_id"`
-	RequiredBy     []interface{}          `json:"required_by"`
-	Status         string                 `json:"resource_status"`
-	StatusReason   string                 `json:"resource_status_reason"`
-	Type           string                 `json:"resource_type"`
-	UpdatedTime    time.Time              `json:"-"`
+	Attributes     map[string]any     `json:"attributes"`
+	CreationTime   time.Time          `json:"-"`
+	Description    string             `json:"description"`
+	Links          []gophercloud.Link `json:"links"`
+	LogicalID      string             `json:"logical_resource_id"`
+	Name           string             `json:"resource_name"`
+	ParentResource string             `json:"parent_resource"`
+	PhysicalID     string             `json:"physical_resource_id"`
+	RequiredBy     []any              `json:"required_by"`
+	Status         string             `json:"resource_status"`
+	StatusReason   string             `json:"resource_status_reason"`
+	Type           string             `json:"resource_type"`
+	UpdatedTime    time.Time          `json:"-"`
 }
 
 func (r *Resource) UnmarshalJSON(b []byte) error {
@@ -89,6 +89,10 @@ type ResourcePage struct {
 
 // IsEmpty returns true if a page contains no Server results.
 func (r ResourcePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	resources, err := ExtractResources(r)
 	return len(resources) == 0, err
 }
@@ -141,6 +145,10 @@ type ResourceTypePage struct {
 
 // IsEmpty returns true if a ResourceTypePage contains no resource types.
 func (r ResourceTypePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	rts, err := ExtractResourceTypes(r)
 	return len(rts) == 0, err
 }
@@ -172,10 +180,10 @@ func ExtractResourceTypes(r pagination.Page) (ResourceTypes, error) {
 
 // TypeSchema represents a stack resource schema.
 type TypeSchema struct {
-	Attributes    map[string]interface{} `json:"attributes"`
-	Properties    map[string]interface{} `json:"properties"`
-	ResourceType  string                 `json:"resource_type"`
-	SupportStatus map[string]interface{} `json:"support_status"`
+	Attributes    map[string]any `json:"attributes"`
+	Properties    map[string]any `json:"properties"`
+	ResourceType  string         `json:"resource_type"`
+	SupportStatus map[string]any `json:"support_status"`
 }
 
 // SchemaResult represents the result of a Schema operation.

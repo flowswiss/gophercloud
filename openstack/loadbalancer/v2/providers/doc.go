@@ -4,7 +4,7 @@ at OpenStack Octavia Load Balancing service.
 
 Example to List Providers
 
-	allPages, err := providers.List(lbClient).AllPages()
+	allPages, err := providers.List(lbClient).AllPages(context.TODO())
 	if err != nil {
 		panic(err)
 	}
@@ -17,6 +17,5 @@ Example to List Providers
 	for _, p := range allProviders {
 		fmt.Printf("%+v\n", p)
 	}
-
 */
 package providers

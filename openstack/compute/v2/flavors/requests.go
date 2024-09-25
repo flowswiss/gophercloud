@@ -1,8 +1,10 @@
 package flavors
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOptsBuilder allows extensions to add additional parameters to the
@@ -12,12 +14,12 @@ type ListOptsBuilder interface {
 }
 
 /*
-	AccessType maps to OpenStack's Flavor.is_public field. Although the is_public
-	field is boolean, the request options are ternary, which is why AccessType is
-	a string. The following values are allowed:
+AccessType maps to OpenStack's Flavor.is_public field. Although the is_public
+field is boolean, the request options are ternary, which is why AccessType is
+a string. The following values are allowed:
 
-	The AccessType arguement is optional, and if it is not supplied, OpenStack
-	returns the PublicAccess flavors.
+The AccessType arguement is optional, and if it is not supplied, OpenStack
+returns the PublicAccess flavors.
 */
 type AccessType string
 
@@ -35,12 +37,12 @@ const (
 )
 
 /*
-	ListOpts filters the results returned by the List() function.
-	For example, a flavor with a minDisk field of 10 will not be returned if you
-	specify MinDisk set to 20.
+ListOpts filters the results returned by the List() function.
+For example, a flavor with a minDisk field of 10 will not be returned if you
+specify MinDisk set to 20.
 
-	Typically, software will use the last ID of the previous call to List to set
-	the Marker for the current call.
+Typically, software will use the last ID of the previous call to List to set
+the Marker for the current call.
 */
 type ListOpts struct {
 	// ChangesSince, if provided, instructs List to return only those things which
@@ -97,7 +99,7 @@ func ListDetail(client *gophercloud.ServiceClient, opts ListOptsBuilder) paginat
 }
 
 type CreateOptsBuilder interface {
-	ToFlavorCreateMap() (map[string]interface{}, error)
+	ToFlavorCreateMap() (map[string]any, error)
 }
 
 // CreateOpts specifies parameters used for creating a flavor.
@@ -128,22 +130,58 @@ type CreateOpts struct {
 
 	// Ephemeral is the amount of ephemeral disk space, measured in GB.
 	Ephemeral *int `json:"OS-FLV-EXT-DATA:ephemeral,omitempty"`
+
+	// Description is a free form description of the flavor. Limited to
+	// 65535 characters in length. Only printable characters are allowed.
+	// New in version 2.55
+	Description string `json:"description,omitempty"`
 }
 
 // ToFlavorCreateMap constructs a request body from CreateOpts.
-func (opts CreateOpts) ToFlavorCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToFlavorCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "flavor")
 }
 
 // Create requests the creation of a new flavor.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToFlavorCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200, 201},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+type UpdateOptsBuilder interface {
+	ToFlavorUpdateMap() (map[string]any, error)
+}
+
+// UpdateOpts specifies parameters used for updating a flavor.
+type UpdateOpts struct {
+	// Description is a free form description of the flavor. Limited to
+	// 65535 characters in length. Only printable characters are allowed.
+	// New in version 2.55
+	Description string `json:"description,omitempty"`
+}
+
+// ToFlavorUpdateMap constructs a request body from UpdateOpts.
+func (opts UpdateOpts) ToFlavorUpdateMap() (map[string]any, error) {
+	return gophercloud.BuildRequestBody(opts, "flavor")
+}
+
+// Update requests the update of a new flavor.
+func Update(ctx context.Context, client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
+	b, err := opts.ToFlavorUpdateMap()
+	if err != nil {
+		r.Err = err
+		return
+	}
+	resp, err := client.Put(ctx, updateURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
@@ -151,15 +189,15 @@ func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r Create
 
 // Get retrieves details of a single flavor. Use Extract to convert its
 // result into a Flavor.
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(getURL(client, id), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Delete deletes the specified flavor ID.
-func Delete(client *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, id), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -176,7 +214,7 @@ func ListAccesses(client *gophercloud.ServiceClient, id string) pagination.Pager
 // AddAccessOptsBuilder allows extensions to add additional parameters to the
 // AddAccess requests.
 type AddAccessOptsBuilder interface {
-	ToFlavorAddAccessMap() (map[string]interface{}, error)
+	ToFlavorAddAccessMap() (map[string]any, error)
 }
 
 // AddAccessOpts represents options for adding access to a flavor.
@@ -186,18 +224,18 @@ type AddAccessOpts struct {
 }
 
 // ToFlavorAddAccessMap constructs a request body from AddAccessOpts.
-func (opts AddAccessOpts) ToFlavorAddAccessMap() (map[string]interface{}, error) {
+func (opts AddAccessOpts) ToFlavorAddAccessMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "addTenantAccess")
 }
 
 // AddAccess grants a tenant/project access to a flavor.
-func AddAccess(client *gophercloud.ServiceClient, id string, opts AddAccessOptsBuilder) (r AddAccessResult) {
+func AddAccess(ctx context.Context, client *gophercloud.ServiceClient, id string, opts AddAccessOptsBuilder) (r AddAccessResult) {
 	b, err := opts.ToFlavorAddAccessMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(accessActionURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, accessActionURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -207,7 +245,7 @@ func AddAccess(client *gophercloud.ServiceClient, id string, opts AddAccessOptsB
 // RemoveAccessOptsBuilder allows extensions to add additional parameters to the
 // RemoveAccess requests.
 type RemoveAccessOptsBuilder interface {
-	ToFlavorRemoveAccessMap() (map[string]interface{}, error)
+	ToFlavorRemoveAccessMap() (map[string]any, error)
 }
 
 // RemoveAccessOpts represents options for removing access to a flavor.
@@ -217,18 +255,18 @@ type RemoveAccessOpts struct {
 }
 
 // ToFlavorRemoveAccessMap constructs a request body from RemoveAccessOpts.
-func (opts RemoveAccessOpts) ToFlavorRemoveAccessMap() (map[string]interface{}, error) {
+func (opts RemoveAccessOpts) ToFlavorRemoveAccessMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "removeTenantAccess")
 }
 
 // RemoveAccess removes/revokes a tenant/project access to a flavor.
-func RemoveAccess(client *gophercloud.ServiceClient, id string, opts RemoveAccessOptsBuilder) (r RemoveAccessResult) {
+func RemoveAccess(ctx context.Context, client *gophercloud.ServiceClient, id string, opts RemoveAccessOptsBuilder) (r RemoveAccessResult) {
 	b, err := opts.ToFlavorRemoveAccessMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(accessActionURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, accessActionURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -236,14 +274,14 @@ func RemoveAccess(client *gophercloud.ServiceClient, id string, opts RemoveAcces
 }
 
 // ExtraSpecs requests all the extra-specs for the given flavor ID.
-func ListExtraSpecs(client *gophercloud.ServiceClient, flavorID string) (r ListExtraSpecsResult) {
-	resp, err := client.Get(extraSpecsListURL(client, flavorID), &r.Body, nil)
+func ListExtraSpecs(ctx context.Context, client *gophercloud.ServiceClient, flavorID string) (r ListExtraSpecsResult) {
+	resp, err := client.Get(ctx, extraSpecsListURL(client, flavorID), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
-func GetExtraSpec(client *gophercloud.ServiceClient, flavorID string, key string) (r GetExtraSpecResult) {
-	resp, err := client.Get(extraSpecsGetURL(client, flavorID, key), &r.Body, nil)
+func GetExtraSpec(ctx context.Context, client *gophercloud.ServiceClient, flavorID string, key string) (r GetExtraSpecResult) {
+	resp, err := client.Get(ctx, extraSpecsGetURL(client, flavorID, key), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -251,7 +289,7 @@ func GetExtraSpec(client *gophercloud.ServiceClient, flavorID string, key string
 // CreateExtraSpecsOptsBuilder allows extensions to add additional parameters to the
 // CreateExtraSpecs requests.
 type CreateExtraSpecsOptsBuilder interface {
-	ToFlavorExtraSpecsCreateMap() (map[string]interface{}, error)
+	ToFlavorExtraSpecsCreateMap() (map[string]any, error)
 }
 
 // ExtraSpecsOpts is a map that contains key-value pairs.
@@ -259,19 +297,19 @@ type ExtraSpecsOpts map[string]string
 
 // ToFlavorExtraSpecsCreateMap assembles a body for a Create request based on
 // the contents of ExtraSpecsOpts.
-func (opts ExtraSpecsOpts) ToFlavorExtraSpecsCreateMap() (map[string]interface{}, error) {
-	return map[string]interface{}{"extra_specs": opts}, nil
+func (opts ExtraSpecsOpts) ToFlavorExtraSpecsCreateMap() (map[string]any, error) {
+	return map[string]any{"extra_specs": opts}, nil
 }
 
 // CreateExtraSpecs will create or update the extra-specs key-value pairs for
 // the specified Flavor.
-func CreateExtraSpecs(client *gophercloud.ServiceClient, flavorID string, opts CreateExtraSpecsOptsBuilder) (r CreateExtraSpecsResult) {
+func CreateExtraSpecs(ctx context.Context, client *gophercloud.ServiceClient, flavorID string, opts CreateExtraSpecsOptsBuilder) (r CreateExtraSpecsResult) {
 	b, err := opts.ToFlavorExtraSpecsCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(extraSpecsCreateURL(client, flavorID), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, extraSpecsCreateURL(client, flavorID), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -304,13 +342,13 @@ func (opts ExtraSpecsOpts) ToFlavorExtraSpecUpdateMap() (map[string]string, stri
 
 // UpdateExtraSpec will updates the value of the specified flavor's extra spec
 // for the key in opts.
-func UpdateExtraSpec(client *gophercloud.ServiceClient, flavorID string, opts UpdateExtraSpecOptsBuilder) (r UpdateExtraSpecResult) {
+func UpdateExtraSpec(ctx context.Context, client *gophercloud.ServiceClient, flavorID string, opts UpdateExtraSpecOptsBuilder) (r UpdateExtraSpecResult) {
 	b, key, err := opts.ToFlavorExtraSpecUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Put(extraSpecUpdateURL(client, flavorID, key), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Put(ctx, extraSpecUpdateURL(client, flavorID, key), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -319,8 +357,8 @@ func UpdateExtraSpec(client *gophercloud.ServiceClient, flavorID string, opts Up
 
 // DeleteExtraSpec will delete the key-value pair with the given key for the given
 // flavor ID.
-func DeleteExtraSpec(client *gophercloud.ServiceClient, flavorID, key string) (r DeleteExtraSpecResult) {
-	resp, err := client.Delete(extraSpecDeleteURL(client, flavorID, key), &gophercloud.RequestOpts{
+func DeleteExtraSpec(ctx context.Context, client *gophercloud.ServiceClient, flavorID, key string) (r DeleteExtraSpecResult) {
+	resp, err := client.Delete(ctx, extraSpecDeleteURL(client, flavorID, key), &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

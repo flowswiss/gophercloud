@@ -1,8 +1,8 @@
 package monitors
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type PoolID struct {
@@ -60,12 +60,18 @@ type Monitor struct {
 	// The HTTP method that the monitor uses for requests.
 	HTTPMethod string `json:"http_method"`
 
+	// The HTTP version that the monitor uses for requests.
+	HTTPVersion string `json:"http_version"`
+
 	// The HTTP path of the request sent by the monitor to test the health of a
 	// member. Must be a string beginning with a forward slash (/).
 	URLPath string `json:"url_path" `
 
 	// Expected HTTP codes for a passing HTTP(S) monitor.
 	ExpectedCodes string `json:"expected_codes"`
+
+	// The HTTP host header that the monitor uses for requests.
+	DomainName string `json:"domain_name"`
 
 	// The administrative state of the health monitor, which is up (true) or
 	// down (false).
@@ -84,6 +90,10 @@ type Monitor struct {
 
 	// The operating status of the monitor.
 	OperatingStatus string `json:"operating_status"`
+
+	// Tags is a list of resource tags. Tags are arbitrarily defined strings
+	// attached to the resource. New in version 2.5
+	Tags []string `json:"tags"`
 }
 
 // MonitorPage is the page returned by a pager when traversing over a
@@ -110,6 +120,10 @@ func (r MonitorPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a MonitorPage struct is empty.
 func (r MonitorPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractMonitors(r)
 	return len(is) == 0, err
 }

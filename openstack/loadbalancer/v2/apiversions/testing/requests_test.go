@@ -1,11 +1,12 @@
 package testing
 
 import (
+	"context"
 	"testing"
 
-	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/apiversions"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/apiversions"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 func TestListVersions(t *testing.T) {
@@ -14,7 +15,7 @@ func TestListVersions(t *testing.T) {
 
 	MockListResponse(t)
 
-	allVersions, err := apiversions.List(client.ServiceClient()).AllPages()
+	allVersions, err := apiversions.List(client.ServiceClient()).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 
 	actual, err := apiversions.ExtractAPIVersions(allVersions)

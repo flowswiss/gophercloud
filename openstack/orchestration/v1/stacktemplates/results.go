@@ -3,7 +3,7 @@ package stacktemplates
 import (
 	"encoding/json"
 
-	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/v2"
 )
 
 // GetResult represents the result of a Get operation.
@@ -25,9 +25,9 @@ func (r GetResult) Extract() ([]byte, error) {
 
 // ValidatedTemplate represents the parsed object returned from a Validate request.
 type ValidatedTemplate struct {
-	Description     string                 `json:"Description"`
-	Parameters      map[string]interface{} `json:"Parameters"`
-	ParameterGroups map[string]interface{} `json:"ParameterGroups"`
+	Description     string         `json:"Description"`
+	Parameters      map[string]any `json:"Parameters"`
+	ParameterGroups map[string]any `json:"ParameterGroups"`
 }
 
 // ValidateResult represents the result of a Validate operation.

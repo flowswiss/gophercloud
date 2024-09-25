@@ -1,12 +1,13 @@
 package testing
 
 import (
+	"context"
 	"testing"
 
-	"github.com/gophercloud/gophercloud/openstack/baremetal/v1/drivers"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/openstack/baremetal/v1/drivers"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 func TestListDrivers(t *testing.T) {
@@ -15,7 +16,7 @@ func TestListDrivers(t *testing.T) {
 	HandleListDriversSuccessfully(t)
 
 	pages := 0
-	err := drivers.ListDrivers(client.ServiceClient(), drivers.ListDriversOpts{}).EachPage(func(page pagination.Page) (bool, error) {
+	err := drivers.ListDrivers(client.ServiceClient(), drivers.ListDriversOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		pages++
 
 		actual, err := drivers.ExtractDrivers(page)
@@ -47,7 +48,7 @@ func TestGetDriverDetails(t *testing.T) {
 	HandleGetDriverDetailsSuccessfully(t)
 
 	c := client.ServiceClient()
-	actual, err := drivers.GetDriverDetails(c, "ipmi").Extract()
+	actual, err := drivers.GetDriverDetails(context.TODO(), c, "ipmi").Extract()
 	if err != nil {
 		t.Fatalf("Unexpected Get error: %v", err)
 	}
@@ -61,7 +62,7 @@ func TestGetDriverProperties(t *testing.T) {
 	HandleGetDriverPropertiesSuccessfully(t)
 
 	c := client.ServiceClient()
-	actual, err := drivers.GetDriverProperties(c, "agent_ipmitool").Extract()
+	actual, err := drivers.GetDriverProperties(context.TODO(), c, "agent_ipmitool").Extract()
 	if err != nil {
 		t.Fatalf("Unexpected Get error: %v", err)
 	}
@@ -75,7 +76,7 @@ func TestGetDriverDiskProperties(t *testing.T) {
 	HandleGetDriverDiskPropertiesSuccessfully(t)
 
 	c := client.ServiceClient()
-	actual, err := drivers.GetDriverDiskProperties(c, "agent_ipmitool").Extract()
+	actual, err := drivers.GetDriverDiskProperties(context.TODO(), c, "agent_ipmitool").Extract()
 	if err != nil {
 		t.Fatalf("Unexpected Get error: %v", err)
 	}

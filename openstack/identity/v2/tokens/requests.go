@@ -1,6 +1,10 @@
 package tokens
 
-import "github.com/gophercloud/gophercloud"
+import (
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+)
 
 // PasswordCredentialsV2 represents the required options to authenticate
 // with a username and password.
@@ -37,7 +41,8 @@ type AuthOptionsV2 struct {
 type AuthOptionsBuilder interface {
 	// ToTokenCreateMap assembles the Create request body, returning an error
 	// if parameters are missing or inconsistent.
-	ToTokenV2CreateMap() (map[string]interface{}, error)
+	ToTokenV2CreateMap() (map[string]any, error)
+	CanReauth() bool
 }
 
 // AuthOptions are the valid options for Openstack Identity v2 authentication.
@@ -53,7 +58,7 @@ type AuthOptions struct {
 }
 
 // ToTokenV2CreateMap builds a token request body from the given AuthOptions.
-func (opts AuthOptions) ToTokenV2CreateMap() (map[string]interface{}, error) {
+func (opts AuthOptions) ToTokenV2CreateMap() (map[string]any, error) {
 	v2Opts := AuthOptionsV2{
 		TenantID:   opts.TenantID,
 		TenantName: opts.TenantName,
@@ -77,17 +82,21 @@ func (opts AuthOptions) ToTokenV2CreateMap() (map[string]interface{}, error) {
 	return b, nil
 }
 
+func (opts AuthOptions) CanReauth() bool {
+	return opts.AllowReauth
+}
+
 // Create authenticates to the identity service and attempts to acquire a Token.
 // Generally, rather than interact with this call directly, end users should
 // call openstack.AuthenticatedClient(), which abstracts all of the gory details
 // about navigating service catalogs and such.
-func Create(client *gophercloud.ServiceClient, auth AuthOptionsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, auth AuthOptionsBuilder) (r CreateResult) {
 	b, err := auth.ToTokenV2CreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(CreateURL(client), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, CreateURL(client), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes:     []int{200, 203},
 		OmitHeaders: []string{"X-Auth-Token"},
 	})
@@ -96,8 +105,8 @@ func Create(client *gophercloud.ServiceClient, auth AuthOptionsBuilder) (r Creat
 }
 
 // Get validates and retrieves information for user's token.
-func Get(client *gophercloud.ServiceClient, token string) (r GetResult) {
-	resp, err := client.Get(GetURL(client, token), &r.Body, &gophercloud.RequestOpts{
+func Get(ctx context.Context, client *gophercloud.ServiceClient, token string) (r GetResult) {
+	resp, err := client.Get(ctx, GetURL(client, token), &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200, 203},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

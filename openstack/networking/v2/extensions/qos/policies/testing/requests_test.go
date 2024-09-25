@@ -1,17 +1,18 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 	"time"
 
-	fake "github.com/gophercloud/gophercloud/openstack/networking/v2/common"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/qos/policies"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	fake "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/common"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/qos/policies"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/ports"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestGetPort(t *testing.T) {
@@ -33,7 +34,7 @@ func TestGetPort(t *testing.T) {
 		ports.Port
 		policies.QoSPolicyExt
 	}
-	err := ports.Get(fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d").ExtractInto(&p)
+	err := ports.Get(context.TODO(), fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d").ExtractInto(&p)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, p.ID, "65c0ee9f-d634-4522-8954-51021b570b0d")
@@ -69,7 +70,7 @@ func TestCreatePort(t *testing.T) {
 		CreateOptsBuilder: portCreateOpts,
 		QoSPolicyID:       "591e0597-39a6-4665-8149-2111d8de9a08",
 	}
-	err := ports.Create(fake.ServiceClient(), createOpts).ExtractInto(&p)
+	err := ports.Create(context.TODO(), fake.ServiceClient(), createOpts).ExtractInto(&p)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, p.NetworkID, "a87cc70a-3e15-4acf-8205-9b711a3531b7")
@@ -107,7 +108,7 @@ func TestUpdatePortWithPolicy(t *testing.T) {
 		UpdateOptsBuilder: portUpdateOpts,
 		QoSPolicyID:       &policyID,
 	}
-	err := ports.Update(fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d", updateOpts).ExtractInto(&p)
+	err := ports.Update(context.TODO(), fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d", updateOpts).ExtractInto(&p)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, p.NetworkID, "a87cc70a-3e15-4acf-8205-9b711a3531b7")
@@ -145,7 +146,7 @@ func TestUpdatePortWithoutPolicy(t *testing.T) {
 		UpdateOptsBuilder: portUpdateOpts,
 		QoSPolicyID:       &policyID,
 	}
-	err := ports.Update(fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d", updateOpts).ExtractInto(&p)
+	err := ports.Update(context.TODO(), fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d", updateOpts).ExtractInto(&p)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, p.NetworkID, "a87cc70a-3e15-4acf-8205-9b711a3531b7")
@@ -173,7 +174,7 @@ func TestGetNetwork(t *testing.T) {
 		networks.Network
 		policies.QoSPolicyExt
 	}
-	err := networks.Get(fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d").ExtractInto(&n)
+	err := networks.Get(context.TODO(), fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d").ExtractInto(&n)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, n.ID, "65c0ee9f-d634-4522-8954-51021b570b0d")
@@ -209,7 +210,7 @@ func TestCreateNetwork(t *testing.T) {
 		CreateOptsBuilder: networkCreateOpts,
 		QoSPolicyID:       "591e0597-39a6-4665-8149-2111d8de9a08",
 	}
-	err := networks.Create(fake.ServiceClient(), createOpts).ExtractInto(&n)
+	err := networks.Create(context.TODO(), fake.ServiceClient(), createOpts).ExtractInto(&n)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, n.TenantID, "4fd44f30292945e481c7b8a0c8908869")
@@ -249,7 +250,7 @@ func TestUpdateNetworkWithPolicy(t *testing.T) {
 		UpdateOptsBuilder: networkUpdateOpts,
 		QoSPolicyID:       &policyID,
 	}
-	err := networks.Update(fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d", updateOpts).ExtractInto(&n)
+	err := networks.Update(context.TODO(), fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d", updateOpts).ExtractInto(&n)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, n.TenantID, "4fd44f30292945e481c7b8a0c8908869")
@@ -287,7 +288,7 @@ func TestUpdateNetworkWithoutPolicy(t *testing.T) {
 		UpdateOptsBuilder: networkUpdateOpts,
 		QoSPolicyID:       &policyID,
 	}
-	err := networks.Update(fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d", updateOpts).ExtractInto(&n)
+	err := networks.Update(context.TODO(), fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d", updateOpts).ExtractInto(&n)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, n.TenantID, "4fd44f30292945e481c7b8a0c8908869")
@@ -311,7 +312,7 @@ func TestListPolicies(t *testing.T) {
 
 	count := 0
 
-	err := policies.List(fake.ServiceClient(), policies.ListOpts{}).EachPage(func(page pagination.Page) (bool, error) {
+	err := policies.List(fake.ServiceClient(), policies.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := policies.ExtractPolicies(page)
 		if err != nil {
@@ -349,12 +350,12 @@ func TestGetPolicy(t *testing.T) {
 		fmt.Fprintf(w, GetPolicyResponse)
 	})
 
-	p, err := policies.Get(fake.ServiceClient(), "30a57f4a-336b-4382-8275-d708babd2241").Extract()
+	p, err := policies.Get(context.TODO(), fake.ServiceClient(), "30a57f4a-336b-4382-8275-d708babd2241").Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, "bw-limiter", p.Name)
 	th.AssertDeepEquals(t, []string{}, p.Tags)
-	th.AssertDeepEquals(t, []map[string]interface{}{
+	th.AssertDeepEquals(t, []map[string]any{
 		{
 			"max_kbps":       float64(3000),
 			"direction":      "egress",
@@ -395,7 +396,7 @@ func TestCreatePolicy(t *testing.T) {
 		IsDefault:   true,
 		Description: "use-me",
 	}
-	p, err := policies.Create(fake.ServiceClient(), opts).Extract()
+	p, err := policies.Create(context.TODO(), fake.ServiceClient(), opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, "shared-default-policy", p.Name)
@@ -434,7 +435,7 @@ func TestUpdatePolicy(t *testing.T) {
 		Shared:      &shared,
 		Description: &description,
 	}
-	p, err := policies.Update(fake.ServiceClient(), "d6ae28ce-fcb5-4180-aa62-d260a27e09ae", opts).Extract()
+	p, err := policies.Update(context.TODO(), fake.ServiceClient(), "d6ae28ce-fcb5-4180-aa62-d260a27e09ae", opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, "new-name", p.Name)
@@ -459,6 +460,6 @@ func TestDeletePolicy(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	res := policies.Delete(fake.ServiceClient(), "d6ae28ce-fcb5-4180-aa62-d260a27e09ae")
+	res := policies.Delete(context.TODO(), fake.ServiceClient(), "d6ae28ce-fcb5-4180-aa62-d260a27e09ae")
 	th.AssertNoErr(t, res.Err)
 }

@@ -3,8 +3,8 @@ package apiversions
 import (
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // APIVersion represents an API version for the Shared File System service.
@@ -33,6 +33,10 @@ type APIVersionPage struct {
 
 // IsEmpty checks whether an APIVersionPage struct is empty.
 func (r APIVersionPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractAPIVersions(r)
 	return len(is) == 0, err
 }

@@ -1,9 +1,9 @@
 package users
 
 import (
-	"github.com/gophercloud/gophercloud"
-	db "github.com/gophercloud/gophercloud/openstack/db/v1/databases"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	db "github.com/gophercloud/gophercloud/v2/openstack/db/v1/databases"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // User represents a database user
@@ -35,6 +35,10 @@ type UserPage struct {
 
 // IsEmpty checks to see whether the collection is empty.
 func (page UserPage) IsEmpty() (bool, error) {
+	if page.StatusCode == 204 {
+		return true, nil
+	}
+
 	users, err := ExtractUsers(page)
 	return len(users) == 0, err
 }

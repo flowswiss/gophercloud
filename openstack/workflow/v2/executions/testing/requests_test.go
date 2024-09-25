@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -8,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gophercloud/gophercloud/openstack/workflow/v2/executions"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	fake "github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/openstack/workflow/v2/executions"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	fake "github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 func TestCreateExecution(t *testing.T) {
@@ -47,13 +48,13 @@ func TestCreateExecution(t *testing.T) {
 
 	opts := &executions.CreateOpts{
 		WorkflowID: "6656c143-a009-4bcb-9814-cc100a20bbfa",
-		Input: map[string]interface{}{
+		Input: map[string]any{
 			"msg": "Hello",
 		},
 		Description: "description",
 	}
 
-	actual, err := executions.Create(fake.ServiceClient(), opts).Extract()
+	actual, err := executions.Create(context.TODO(), fake.ServiceClient(), opts).Extract()
 	if err != nil {
 		t.Fatalf("Unable to create execution: %v", err)
 	}
@@ -61,14 +62,14 @@ func TestCreateExecution(t *testing.T) {
 	expected := &executions.Execution{
 		ID:          "50bb59f1-eb77-4017-a77f-6d575b002667",
 		Description: "description",
-		Input: map[string]interface{}{
+		Input: map[string]any{
 			"msg": "Hello",
 		},
-		Params: map[string]interface{}{
+		Params: map[string]any{
 			"namespace": "",
-			"env":       map[string]interface{}{},
+			"env":       map[string]any{},
 		},
-		Output:       map[string]interface{}{},
+		Output:       map[string]any{},
 		ProjectID:    "778c0f25df0d492a9a868ee9e2fbb513",
 		State:        "SUCCESS",
 		WorkflowID:   "6656c143-a009-4bcb-9814-cc100a20bbfa",
@@ -112,7 +113,7 @@ func TestGetExecution(t *testing.T) {
 		`)
 	})
 
-	actual, err := executions.Get(fake.ServiceClient(), "50bb59f1-eb77-4017-a77f-6d575b002667").Extract()
+	actual, err := executions.Get(context.TODO(), fake.ServiceClient(), "50bb59f1-eb77-4017-a77f-6d575b002667").Extract()
 	if err != nil {
 		t.Fatalf("Unable to get execution: %v", err)
 	}
@@ -120,14 +121,14 @@ func TestGetExecution(t *testing.T) {
 	expected := &executions.Execution{
 		ID:          "50bb59f1-eb77-4017-a77f-6d575b002667",
 		Description: "description",
-		Input: map[string]interface{}{
+		Input: map[string]any{
 			"msg": "Hello",
 		},
-		Params: map[string]interface{}{
+		Params: map[string]any{
 			"namespace": "",
-			"env":       map[string]interface{}{},
+			"env":       map[string]any{},
 		},
-		Output:       map[string]interface{}{},
+		Output:       map[string]any{},
 		ProjectID:    "778c0f25df0d492a9a868ee9e2fbb513",
 		State:        "SUCCESS",
 		WorkflowID:   "6656c143-a009-4bcb-9814-cc100a20bbfa",
@@ -149,7 +150,7 @@ func TestDeleteExecution(t *testing.T) {
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.WriteHeader(http.StatusAccepted)
 	})
-	res := executions.Delete(fake.ServiceClient(), "1")
+	res := executions.Delete(context.TODO(), fake.ServiceClient(), "1")
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -160,7 +161,9 @@ func TestListExecutions(t *testing.T) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.Header().Add("Content-Type", "application/json")
-		r.ParseForm()
+		if err := r.ParseForm(); err != nil {
+			t.Errorf("Failed to parse request form %v", err)
+		}
 		marker := r.Form.Get("marker")
 		switch marker {
 		case "":
@@ -193,7 +196,7 @@ func TestListExecutions(t *testing.T) {
 	})
 	pages := 0
 	// Get all executions
-	err := executions.List(fake.ServiceClient(), nil).EachPage(func(page pagination.Page) (bool, error) {
+	err := executions.List(fake.ServiceClient(), nil).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		pages++
 		actual, err := executions.ExtractExecutions(page)
 		if err != nil {
@@ -204,12 +207,12 @@ func TestListExecutions(t *testing.T) {
 			{
 				ID:          "50bb59f1-eb77-4017-a77f-6d575b002667",
 				Description: "description",
-				Input: map[string]interface{}{
+				Input: map[string]any{
 					"msg": "Hello",
 				},
-				Params: map[string]interface{}{
+				Params: map[string]any{
 					"namespace": "",
-					"env":       map[string]interface{}{},
+					"env":       map[string]any{},
 				},
 				ProjectID:    "778c0f25df0d492a9a868ee9e2fbb513",
 				State:        "SUCCESS",
@@ -236,7 +239,7 @@ func TestListExecutions(t *testing.T) {
 func TestToExecutionListQuery(t *testing.T) {
 	for expected, opts := range map[string]*executions.ListOpts{
 		newValue("input", `{"msg":"Hello"}`): {
-			Input: map[string]interface{}{
+			Input: map[string]any{
 				"msg": "Hello",
 			},
 		},

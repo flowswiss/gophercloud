@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Event represents a stack event.
@@ -27,7 +27,7 @@ type Event struct {
 	// The event ID.
 	ID string `json:"id"`
 	// Properties of the stack resource.
-	ResourceProperties map[string]interface{} `json:"resource_properties"`
+	ResourceProperties map[string]any `json:"resource_properties"`
 }
 
 func (r *Event) UnmarshalJSON(b []byte) error {
@@ -82,6 +82,10 @@ type EventPage struct {
 
 // IsEmpty returns true if a page contains no Server results.
 func (r EventPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	events, err := ExtractEvents(r)
 	return len(events) == 0, err
 }

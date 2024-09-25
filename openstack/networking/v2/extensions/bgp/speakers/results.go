@@ -1,8 +1,8 @@
 package speakers
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 const jroot = "bgp_speaker"
@@ -18,7 +18,7 @@ func (r commonResult) Extract() (*BGPSpeaker, error) {
 	return &s, err
 }
 
-func (r commonResult) ExtractInto(v interface{}) error {
+func (r commonResult) ExtractInto(v any) error {
 	return r.Result.ExtractIntoStructPtr(v, jroot)
 }
 
@@ -63,6 +63,10 @@ type BGPSpeakerPage struct {
 
 // IsEmpty checks whether a BGPSpeakerPage struct is empty.
 func (r BGPSpeakerPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractBGPSpeakers(r)
 	return len(is) == 0, err
 }
@@ -76,10 +80,10 @@ func ExtractBGPSpeakers(r pagination.Page) ([]BGPSpeaker, error) {
 	return s, err
 }
 
-// ExtractBGPSpeakersInto accepts a Page struct and an interface{}. The former contains
+// ExtractBGPSpeakersInto accepts a Page struct and an any. The former contains
 // a list of BGPSpeaker and the later should be used to store the result that would be
 // extracted from the former.
-func ExtractBGPSpeakersInto(r pagination.Page, v interface{}) error {
+func ExtractBGPSpeakersInto(r pagination.Page, v any) error {
 	return r.(BGPSpeakerPage).Result.ExtractIntoSlicePtr(v, "bgp_speakers")
 }
 
@@ -119,7 +123,7 @@ func (r AddBGPPeerResult) Extract() (*AddBGPPeerOpts, error) {
 	return &s, err
 }
 
-func (r AddBGPPeerResult) ExtractInto(v interface{}) error {
+func (r AddBGPPeerResult) ExtractInto(v any) error {
 	return r.Result.ExtractIntoStructPtr(v, "")
 }
 
@@ -145,6 +149,10 @@ type AdvertisedRoutePage struct {
 
 // IsEmpty checks whether a AdvertisedRoutePage struct is empty.
 func (r AdvertisedRoutePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractAdvertisedRoutes(r)
 	return len(is) == 0, err
 }
@@ -158,7 +166,7 @@ func ExtractAdvertisedRoutes(r pagination.Page) ([]AdvertisedRoute, error) {
 }
 
 // ExtractAdvertisedRoutesInto extract the advertised routes from the first param into the 2nd
-func ExtractAdvertisedRoutesInto(r pagination.Page, v interface{}) error {
+func ExtractAdvertisedRoutesInto(r pagination.Page, v any) error {
 	return r.(AdvertisedRoutePage).Result.ExtractIntoSlicePtr(v, "advertised_routes")
 }
 

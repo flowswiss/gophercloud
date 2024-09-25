@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/v2"
 )
 
 // EndpointOpts specifies a "http_basic" Ironic Inspector Endpoint.
@@ -39,7 +39,7 @@ func NewBareMetalIntrospectionHTTPBasic(eo EndpointOpts) (*gophercloud.ServiceCl
 		return nil, err
 	}
 
-	sc.Type = "baremetal-inspector"
+	sc.Type = "baremetal-introspection"
 
 	return sc, nil
 }

@@ -1,8 +1,8 @@
 package domains
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // A Domain is a collection of projects, users, and roles.
@@ -17,7 +17,7 @@ type Domain struct {
 	ID string `json:"id"`
 
 	// Links contains referencing links to the domain.
-	Links map[string]interface{} `json:"links"`
+	Links map[string]any `json:"links"`
 
 	// Name is the name of the domain.
 	Name string `json:"name"`
@@ -58,6 +58,10 @@ type DomainPage struct {
 
 // IsEmpty determines whether or not a page of Domains contains any results.
 func (r DomainPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	domains, err := ExtractDomains(r)
 	return len(domains) == 0, err
 }

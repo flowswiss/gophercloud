@@ -1,14 +1,16 @@
 package users
 
 import (
-	"github.com/gophercloud/gophercloud"
-	db "github.com/gophercloud/gophercloud/openstack/db/v1/databases"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	db "github.com/gophercloud/gophercloud/v2/openstack/db/v1/databases"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // CreateOptsBuilder is the top-level interface for creating JSON maps.
 type CreateOptsBuilder interface {
-	ToUserCreateMap() (map[string]interface{}, error)
+	ToUserCreateMap() (map[string]any, error)
 }
 
 // CreateOpts is the struct responsible for configuring a new user; often in the
@@ -34,7 +36,7 @@ type CreateOpts struct {
 }
 
 // ToMap is a convenience function for creating sub-maps for individual users.
-func (opts CreateOpts) ToMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToMap() (map[string]any, error) {
 	if opts.Name == "root" {
 		err := gophercloud.ErrInvalidInput{}
 		err.Argument = "users.CreateOpts.Name"
@@ -49,8 +51,8 @@ func (opts CreateOpts) ToMap() (map[string]interface{}, error) {
 type BatchCreateOpts []CreateOpts
 
 // ToUserCreateMap will generate a JSON map.
-func (opts BatchCreateOpts) ToUserCreateMap() (map[string]interface{}, error) {
-	users := make([]map[string]interface{}, len(opts))
+func (opts BatchCreateOpts) ToUserCreateMap() (map[string]any, error) {
+	users := make([]map[string]any, len(opts))
 	for i, opt := range opts {
 		user, err := opt.ToMap()
 		if err != nil {
@@ -58,20 +60,20 @@ func (opts BatchCreateOpts) ToUserCreateMap() (map[string]interface{}, error) {
 		}
 		users[i] = user
 	}
-	return map[string]interface{}{"users": users}, nil
+	return map[string]any{"users": users}, nil
 }
 
 // Create asynchronously provisions a new user for the specified database
 // instance based on the configuration defined in CreateOpts. If databases are
 // assigned for a particular user, the user will be granted all privileges
 // for those specified databases. "root" is a reserved name and cannot be used.
-func Create(client *gophercloud.ServiceClient, instanceID string, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, instanceID string, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToUserCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(baseURL(client, instanceID), &b, nil, nil)
+	resp, err := client.Post(ctx, baseURL(client, instanceID), &b, nil, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -86,8 +88,8 @@ func List(client *gophercloud.ServiceClient, instanceID string) pagination.Pager
 }
 
 // Delete will permanently delete a user from a specified database instance.
-func Delete(client *gophercloud.ServiceClient, instanceID, userName string) (r DeleteResult) {
-	resp, err := client.Delete(userURL(client, instanceID, userName), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, instanceID, userName string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, userURL(client, instanceID, userName), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

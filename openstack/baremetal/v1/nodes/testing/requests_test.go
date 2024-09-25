@@ -1,13 +1,15 @@
 package testing
 
 import (
+	"context"
+	"net/http"
 	"testing"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/baremetal/v1/nodes"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/baremetal/v1/nodes"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 func TestListDetailNodes(t *testing.T) {
@@ -16,7 +18,7 @@ func TestListDetailNodes(t *testing.T) {
 	HandleNodeListDetailSuccessfully(t)
 
 	pages := 0
-	err := nodes.ListDetail(client.ServiceClient(), nodes.ListOpts{}).EachPage(func(page pagination.Page) (bool, error) {
+	err := nodes.ListDetail(client.ServiceClient(), nodes.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		pages++
 
 		actual, err := nodes.ExtractNodes(page)
@@ -47,7 +49,7 @@ func TestListNodes(t *testing.T) {
 	HandleNodeListSuccessfully(t)
 
 	pages := 0
-	err := nodes.List(client.ServiceClient(), nodes.ListOpts{}).EachPage(func(page pagination.Page) (bool, error) {
+	err := nodes.List(client.ServiceClient(), nodes.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		pages++
 
 		actual, err := nodes.ExtractNodes(page)
@@ -83,7 +85,7 @@ func TestListOpts(t *testing.T) {
 
 	// Regular ListOpts can
 	query, err := opts.ToNodeListQuery()
-	th.AssertEquals(t, query, "?fields=name&fields=uuid")
+	th.AssertEquals(t, "?fields=name%2Cuuid", query)
 	th.AssertNoErr(t, err)
 }
 
@@ -92,11 +94,11 @@ func TestCreateNode(t *testing.T) {
 	defer th.TeardownHTTP()
 	HandleNodeCreationSuccessfully(t, SingleNodeBody)
 
-	actual, err := nodes.Create(client.ServiceClient(), nodes.CreateOpts{
+	actual, err := nodes.Create(context.TODO(), client.ServiceClient(), nodes.CreateOpts{
 		Name:          "foo",
 		Driver:        "ipmi",
 		BootInterface: "pxe",
-		DriverInfo: map[string]interface{}{
+		DriverInfo: map[string]any{
 			"ipmi_port":      "6230",
 			"ipmi_username":  "admin",
 			"deploy_kernel":  "http://172.22.0.1/images/tinyipa-stable-rocky.vmlinuz",
@@ -104,6 +106,7 @@ func TestCreateNode(t *testing.T) {
 			"deploy_ramdisk": "http://172.22.0.1/images/tinyipa-stable-rocky.gz",
 			"ipmi_password":  "admin",
 		},
+		FirmwareInterface: "no-firmware",
 	}).Extract()
 	th.AssertNoErr(t, err)
 
@@ -115,7 +118,7 @@ func TestDeleteNode(t *testing.T) {
 	defer th.TeardownHTTP()
 	HandleNodeDeletionSuccessfully(t)
 
-	res := nodes.Delete(client.ServiceClient(), "asdfasdfasdf")
+	res := nodes.Delete(context.TODO(), client.ServiceClient(), "asdfasdfasdf")
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -125,7 +128,7 @@ func TestGetNode(t *testing.T) {
 	HandleNodeGetSuccessfully(t)
 
 	c := client.ServiceClient()
-	actual, err := nodes.Get(c, "1234asdf").Extract()
+	actual, err := nodes.Get(context.TODO(), c, "1234asdf").Extract()
 	if err != nil {
 		t.Fatalf("Unexpected Get error: %v", err)
 	}
@@ -139,11 +142,11 @@ func TestUpdateNode(t *testing.T) {
 	HandleNodeUpdateSuccessfully(t, SingleNodeBody)
 
 	c := client.ServiceClient()
-	actual, err := nodes.Update(c, "1234asdf", nodes.UpdateOpts{
+	actual, err := nodes.Update(context.TODO(), c, "1234asdf", nodes.UpdateOpts{
 		nodes.UpdateOperation{
 			Op:   nodes.ReplaceOp,
 			Path: "/properties",
-			Value: map[string]interface{}{
+			Value: map[string]any{
 				"root_gb": 25,
 			},
 		},
@@ -157,7 +160,7 @@ func TestUpdateNode(t *testing.T) {
 
 func TestUpdateRequiredOp(t *testing.T) {
 	c := client.ServiceClient()
-	_, err := nodes.Update(c, "1234asdf", nodes.UpdateOpts{
+	_, err := nodes.Update(context.TODO(), c, "1234asdf", nodes.UpdateOpts{
 		nodes.UpdateOperation{
 			Path:  "/driver",
 			Value: "new-driver",
@@ -172,7 +175,7 @@ func TestUpdateRequiredOp(t *testing.T) {
 
 func TestUpdateRequiredPath(t *testing.T) {
 	c := client.ServiceClient()
-	_, err := nodes.Update(c, "1234asdf", nodes.UpdateOpts{
+	_, err := nodes.Update(context.TODO(), c, "1234asdf", nodes.UpdateOpts{
 		nodes.UpdateOperation{
 			Op:    nodes.ReplaceOp,
 			Value: "new-driver",
@@ -190,7 +193,7 @@ func TestValidateNode(t *testing.T) {
 	HandleNodeValidateSuccessfully(t)
 
 	c := client.ServiceClient()
-	actual, err := nodes.Validate(c, "1234asdf").Extract()
+	actual, err := nodes.Validate(context.TODO(), c, "1234asdf").Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, NodeFooValidation, *actual)
 }
@@ -201,7 +204,7 @@ func TestInjectNMI(t *testing.T) {
 	HandleInjectNMISuccessfully(t)
 
 	c := client.ServiceClient()
-	err := nodes.InjectNMI(c, "1234asdf").ExtractErr()
+	err := nodes.InjectNMI(context.TODO(), c, "1234asdf").ExtractErr()
 	th.AssertNoErr(t, err)
 }
 
@@ -211,7 +214,7 @@ func TestSetBootDevice(t *testing.T) {
 	HandleSetBootDeviceSuccessfully(t)
 
 	c := client.ServiceClient()
-	err := nodes.SetBootDevice(c, "1234asdf", nodes.BootDeviceOpts{
+	err := nodes.SetBootDevice(context.TODO(), c, "1234asdf", nodes.BootDeviceOpts{
 		BootDevice: "pxe",
 		Persistent: false,
 	}).ExtractErr()
@@ -224,7 +227,7 @@ func TestGetBootDevice(t *testing.T) {
 	HandleGetBootDeviceSuccessfully(t)
 
 	c := client.ServiceClient()
-	bootDevice, err := nodes.GetBootDevice(c, "1234asdf").Extract()
+	bootDevice, err := nodes.GetBootDevice(context.TODO(), c, "1234asdf").Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, NodeBootDevice, *bootDevice)
 }
@@ -235,7 +238,7 @@ func TestGetSupportedBootDevices(t *testing.T) {
 	HandleGetSupportedBootDeviceSuccessfully(t)
 
 	c := client.ServiceClient()
-	bootDevices, err := nodes.GetSupportedBootDevices(c, "1234asdf").Extract()
+	bootDevices, err := nodes.GetSupportedBootDevices(context.TODO(), c, "1234asdf").Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, NodeSupportedBootDevice, bootDevices)
 }
@@ -246,7 +249,7 @@ func TestNodeChangeProvisionStateActive(t *testing.T) {
 	HandleNodeChangeProvisionStateActive(t)
 
 	c := client.ServiceClient()
-	err := nodes.ChangeProvisionState(c, "1234asdf", nodes.ProvisionStateOpts{
+	err := nodes.ChangeProvisionState(context.TODO(), c, "1234asdf", nodes.ProvisionStateOpts{
 		Target:      nodes.TargetActive,
 		ConfigDrive: "http://127.0.0.1/images/test-node-config-drive.iso.gz",
 	}).ExtractErr()
@@ -260,15 +263,15 @@ func TestNodeChangeProvisionStateActiveWithSteps(t *testing.T) {
 	HandleNodeChangeProvisionStateActiveWithSteps(t)
 
 	c := client.ServiceClient()
-	err := nodes.ChangeProvisionState(c, "1234asdf", nodes.ProvisionStateOpts{
+	err := nodes.ChangeProvisionState(context.TODO(), c, "1234asdf", nodes.ProvisionStateOpts{
 		Target: nodes.TargetActive,
 		DeploySteps: []nodes.DeployStep{
 			{
 				Interface: nodes.InterfaceDeploy,
 				Step:      "inject_files",
 				Priority:  50,
-				Args: map[string]interface{}{
-					"files": []interface{}{},
+				Args: map[string]any{
+					"files": []any{},
 				},
 			},
 		},
@@ -285,7 +288,7 @@ func TestHandleNodeChangeProvisionStateConfigDrive(t *testing.T) {
 
 	c := client.ServiceClient()
 
-	err := nodes.ChangeProvisionState(c, "1234asdf", nodes.ProvisionStateOpts{
+	err := nodes.ChangeProvisionState(context.TODO(), c, "1234asdf", nodes.ProvisionStateOpts{
 		Target:      nodes.TargetActive,
 		ConfigDrive: ConfigDriveMap,
 	}).ExtractErr()
@@ -299,13 +302,13 @@ func TestNodeChangeProvisionStateClean(t *testing.T) {
 	HandleNodeChangeProvisionStateClean(t)
 
 	c := client.ServiceClient()
-	err := nodes.ChangeProvisionState(c, "1234asdf", nodes.ProvisionStateOpts{
+	err := nodes.ChangeProvisionState(context.TODO(), c, "1234asdf", nodes.ProvisionStateOpts{
 		Target: nodes.TargetClean,
 		CleanSteps: []nodes.CleanStep{
 			{
 				Interface: nodes.InterfaceDeploy,
 				Step:      "upgrade_firmware",
-				Args: map[string]interface{}{
+				Args: map[string]any{
 					"force": "True",
 				},
 			},
@@ -321,32 +324,32 @@ func TestNodeChangeProvisionStateCleanWithConflict(t *testing.T) {
 	HandleNodeChangeProvisionStateCleanWithConflict(t)
 
 	c := client.ServiceClient()
-	err := nodes.ChangeProvisionState(c, "1234asdf", nodes.ProvisionStateOpts{
+	err := nodes.ChangeProvisionState(context.TODO(), c, "1234asdf", nodes.ProvisionStateOpts{
 		Target: nodes.TargetClean,
 		CleanSteps: []nodes.CleanStep{
 			{
 				Interface: nodes.InterfaceDeploy,
 				Step:      "upgrade_firmware",
-				Args: map[string]interface{}{
+				Args: map[string]any{
 					"force": "True",
 				},
 			},
 		},
 	}).ExtractErr()
 
-	if _, ok := err.(gophercloud.ErrDefault409); !ok {
-		t.Fatal("ErrDefault409 was expected to occur")
+	if !gophercloud.ResponseCodeIs(err, http.StatusConflict) {
+		t.Fatalf("expected 409 response, but got %s", err.Error())
 	}
 }
 
 func TestCleanStepRequiresInterface(t *testing.T) {
 	c := client.ServiceClient()
-	err := nodes.ChangeProvisionState(c, "1234asdf", nodes.ProvisionStateOpts{
+	err := nodes.ChangeProvisionState(context.TODO(), c, "1234asdf", nodes.ProvisionStateOpts{
 		Target: nodes.TargetClean,
 		CleanSteps: []nodes.CleanStep{
 			{
 				Step: "upgrade_firmware",
-				Args: map[string]interface{}{
+				Args: map[string]any{
 					"force": "True",
 				},
 			},
@@ -360,12 +363,12 @@ func TestCleanStepRequiresInterface(t *testing.T) {
 
 func TestCleanStepRequiresStep(t *testing.T) {
 	c := client.ServiceClient()
-	err := nodes.ChangeProvisionState(c, "1234asdf", nodes.ProvisionStateOpts{
+	err := nodes.ChangeProvisionState(context.TODO(), c, "1234asdf", nodes.ProvisionStateOpts{
 		Target: nodes.TargetClean,
 		CleanSteps: []nodes.CleanStep{
 			{
 				Interface: nodes.InterfaceDeploy,
-				Args: map[string]interface{}{
+				Args: map[string]any{
 					"force": "True",
 				},
 			},
@@ -375,6 +378,28 @@ func TestCleanStepRequiresStep(t *testing.T) {
 	if _, ok := err.(gophercloud.ErrMissingInput); !ok {
 		t.Fatal("ErrMissingInput was expected to occur")
 	}
+}
+
+func TestNodeChangeProvisionStateService(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleNodeChangeProvisionStateService(t)
+
+	c := client.ServiceClient()
+	err := nodes.ChangeProvisionState(context.TODO(), c, "1234asdf", nodes.ProvisionStateOpts{
+		Target: nodes.TargetService,
+		ServiceSteps: []nodes.ServiceStep{
+			{
+				Interface: nodes.InterfaceBIOS,
+				Step:      "apply_configuration",
+				Args: map[string]any{
+					"settings": []string{},
+				},
+			},
+		},
+	}).ExtractErr()
+
+	th.AssertNoErr(t, err)
 }
 
 func TestChangePowerState(t *testing.T) {
@@ -388,7 +413,7 @@ func TestChangePowerState(t *testing.T) {
 	}
 
 	c := client.ServiceClient()
-	err := nodes.ChangePowerState(c, "1234asdf", opts).ExtractErr()
+	err := nodes.ChangePowerState(context.TODO(), c, "1234asdf", opts).ExtractErr()
 	th.AssertNoErr(t, err)
 }
 
@@ -403,9 +428,9 @@ func TestChangePowerStateWithConflict(t *testing.T) {
 	}
 
 	c := client.ServiceClient()
-	err := nodes.ChangePowerState(c, "1234asdf", opts).ExtractErr()
-	if _, ok := err.(gophercloud.ErrDefault409); !ok {
-		t.Fatal("ErrDefault409 was expected to occur")
+	err := nodes.ChangePowerState(context.TODO(), c, "1234asdf", opts).ExtractErr()
+	if !gophercloud.ResponseCodeIs(err, http.StatusConflict) {
+		t.Fatalf("expected 409 response, but got %s", err.Error())
 	}
 }
 
@@ -428,7 +453,7 @@ func TestSetRAIDConfig(t *testing.T) {
 	}
 
 	c := client.ServiceClient()
-	err := nodes.SetRAIDConfig(c, "1234asdf", config).ExtractErr()
+	err := nodes.SetRAIDConfig(context.TODO(), c, "1234asdf", config).ExtractErr()
 	th.AssertNoErr(t, err)
 }
 
@@ -450,7 +475,7 @@ func TestSetRAIDConfigMaxSize(t *testing.T) {
 	}
 
 	c := client.ServiceClient()
-	err := nodes.SetRAIDConfig(c, "1234asdf", config).ExtractErr()
+	err := nodes.SetRAIDConfig(context.TODO(), c, "1234asdf", config).ExtractErr()
 	th.AssertNoErr(t, err)
 }
 
@@ -458,12 +483,12 @@ func TestToRAIDConfigMap(t *testing.T) {
 	cases := []struct {
 		name     string
 		opts     nodes.RAIDConfigOpts
-		expected map[string]interface{}
+		expected map[string]any
 	}{
 		{
 			name: "LogicalDisks is empty",
 			opts: nodes.RAIDConfigOpts{},
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"logical_disks": nil,
 			},
 		},
@@ -472,7 +497,7 @@ func TestToRAIDConfigMap(t *testing.T) {
 			opts: nodes.RAIDConfigOpts{
 				LogicalDisks: nil,
 			},
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"logical_disks": nil,
 			},
 		},
@@ -483,17 +508,17 @@ func TestToRAIDConfigMap(t *testing.T) {
 					{
 						RAIDLevel:     "0",
 						VolumeName:    "root",
-						PhysicalDisks: []interface{}{"6I:1:5", "6I:1:6", "6I:1:7"},
+						PhysicalDisks: []any{"6I:1:5", "6I:1:6", "6I:1:7"},
 					},
 				},
 			},
-			expected: map[string]interface{}{
-				"logical_disks": []map[string]interface{}{
+			expected: map[string]any{
+				"logical_disks": []map[string]any{
 					{
 						"raid_level":     "0",
 						"size_gb":        "MAX",
 						"volume_name":    "root",
-						"physical_disks": []interface{}{"6I:1:5", "6I:1:6", "6I:1:7"},
+						"physical_disks": []any{"6I:1:5", "6I:1:6", "6I:1:7"},
 					},
 				},
 			},
@@ -506,7 +531,7 @@ func TestToRAIDConfigMap(t *testing.T) {
 						RAIDLevel:  "0",
 						VolumeName: "root",
 						Controller: "software",
-						PhysicalDisks: []interface{}{
+						PhysicalDisks: []any{
 							map[string]string{
 								"size": "> 100",
 							},
@@ -517,18 +542,18 @@ func TestToRAIDConfigMap(t *testing.T) {
 					},
 				},
 			},
-			expected: map[string]interface{}{
-				"logical_disks": []map[string]interface{}{
+			expected: map[string]any{
+				"logical_disks": []map[string]any{
 					{
 						"raid_level":  "0",
 						"size_gb":     "MAX",
 						"volume_name": "root",
 						"controller":  "software",
-						"physical_disks": []interface{}{
-							map[string]interface{}{
+						"physical_disks": []any{
+							map[string]any{
 								"size": "> 100",
 							},
-							map[string]interface{}{
+							map[string]any{
 								"size": "> 100",
 							},
 						},
@@ -552,7 +577,7 @@ func TestListBIOSSettings(t *testing.T) {
 	HandleListBIOSSettingsSuccessfully(t)
 
 	c := client.ServiceClient()
-	actual, err := nodes.ListBIOSSettings(c, "1234asdf", nil).Extract()
+	actual, err := nodes.ListBIOSSettings(context.TODO(), c, "1234asdf", nil).Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, NodeBIOSSettings, actual)
 }
@@ -567,7 +592,7 @@ func TestListDetailBIOSSettings(t *testing.T) {
 	}
 
 	c := client.ServiceClient()
-	actual, err := nodes.ListBIOSSettings(c, "1234asdf", opts).Extract()
+	actual, err := nodes.ListBIOSSettings(context.TODO(), c, "1234asdf", opts).Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, NodeDetailBIOSSettings, actual)
 }
@@ -578,7 +603,7 @@ func TestGetBIOSSetting(t *testing.T) {
 	HandleGetBIOSSettingSuccessfully(t)
 
 	c := client.ServiceClient()
-	actual, err := nodes.GetBIOSSetting(c, "1234asdf", "ProcVirtualization").Extract()
+	actual, err := nodes.GetBIOSSetting(context.TODO(), c, "1234asdf", "ProcVirtualization").Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, NodeSingleBIOSSetting, *actual)
 }
@@ -600,7 +625,7 @@ func TestGetVendorPassthruMethods(t *testing.T) {
 	HandleGetVendorPassthruMethodsSuccessfully(t)
 
 	c := client.ServiceClient()
-	actual, err := nodes.GetVendorPassthruMethods(c, "1234asdf").Extract()
+	actual, err := nodes.GetVendorPassthruMethods(context.TODO(), c, "1234asdf").Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, NodeVendorPassthruMethods, *actual)
 }
@@ -614,7 +639,7 @@ func TestGetAllSubscriptions(t *testing.T) {
 	method := nodes.CallVendorPassthruOpts{
 		Method: "get_all_subscriptions",
 	}
-	actual, err := nodes.GetAllSubscriptions(c, "1234asdf", method).Extract()
+	actual, err := nodes.GetAllSubscriptions(context.TODO(), c, "1234asdf", method).Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, NodeGetAllSubscriptions, *actual)
 }
@@ -631,7 +656,7 @@ func TestGetSubscription(t *testing.T) {
 	subscriptionOpt := nodes.GetSubscriptionOpts{
 		Id: "62dbd1b6-f637-11eb-b551-4cd98f20754c",
 	}
-	actual, err := nodes.GetSubscription(c, "1234asdf", method, subscriptionOpt).Extract()
+	actual, err := nodes.GetSubscription(context.TODO(), c, "1234asdf", method, subscriptionOpt).Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, NodeGetSubscription, *actual)
 }
@@ -652,7 +677,7 @@ func TestCreateSubscriptionAllParameters(t *testing.T) {
 		EventTypes:  []string{"Alert"},
 		HttpHeaders: []map[string]string{{"Content-Type": "application/json"}},
 	}
-	actual, err := nodes.CreateSubscription(c, "1234asdf", method, createOpt).Extract()
+	actual, err := nodes.CreateSubscription(context.TODO(), c, "1234asdf", method, createOpt).Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, NodeCreateSubscriptionAllParameters, *actual)
 }
@@ -669,7 +694,7 @@ func TestCreateSubscriptionWithRequiredParameters(t *testing.T) {
 	createOpt := nodes.CreateSubscriptionOpts{
 		Destination: "https://somedestinationurl",
 	}
-	actual, err := nodes.CreateSubscription(c, "1234asdf", method, createOpt).Extract()
+	actual, err := nodes.CreateSubscription(context.TODO(), c, "1234asdf", method, createOpt).Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, NodeCreateSubscriptionRequiredParameters, *actual)
 }
@@ -686,7 +711,7 @@ func TestDeleteSubscription(t *testing.T) {
 	deleteOpt := nodes.DeleteSubscriptionOpts{
 		Id: "344a3e2-978a-444e-990a-cbf47c62ef88",
 	}
-	err := nodes.DeleteSubscription(c, "1234asdf", method, deleteOpt).ExtractErr()
+	err := nodes.DeleteSubscription(context.TODO(), c, "1234asdf", method, deleteOpt).ExtractErr()
 	th.AssertNoErr(t, err)
 }
 
@@ -696,7 +721,7 @@ func TestSetMaintenance(t *testing.T) {
 	HandleSetNodeMaintenanceSuccessfully(t)
 
 	c := client.ServiceClient()
-	err := nodes.SetMaintenance(c, "1234asdf", nodes.MaintenanceOpts{
+	err := nodes.SetMaintenance(context.TODO(), c, "1234asdf", nodes.MaintenanceOpts{
 		Reason: "I'm tired",
 	}).ExtractErr()
 	th.AssertNoErr(t, err)
@@ -708,6 +733,99 @@ func TestUnsetMaintenance(t *testing.T) {
 	HandleUnsetNodeMaintenanceSuccessfully(t)
 
 	c := client.ServiceClient()
-	err := nodes.UnsetMaintenance(c, "1234asdf").ExtractErr()
+	err := nodes.UnsetMaintenance(context.TODO(), c, "1234asdf").ExtractErr()
+	th.AssertNoErr(t, err)
+}
+
+func TestGetInventory(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleGetInventorySuccessfully(t)
+
+	c := client.ServiceClient()
+	actual, err := nodes.GetInventory(context.TODO(), c, "1234asdf").Extract()
+	th.AssertNoErr(t, err)
+	th.CheckDeepEquals(t, NodeInventoryData.Inventory, actual.Inventory)
+
+	pluginData, err := actual.PluginData.AsMap()
+	th.AssertNoErr(t, err)
+	th.AssertEquals(t, "x86_64", pluginData["cpu_arch"].(string))
+
+	compatData, err := actual.PluginData.AsInspectorData()
+	th.AssertNoErr(t, err)
+	th.AssertEquals(t, "x86_64", compatData.CPUArch)
+}
+
+func TestListFirmware(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleListFirmwareSuccessfully(t)
+
+	c := client.ServiceClient()
+	actual, err := nodes.ListFirmware(context.TODO(), c, "1234asdf").Extract()
+	th.AssertNoErr(t, err)
+	th.CheckDeepEquals(t, NodeFirmwareList, actual)
+}
+
+func TestVirtualMediaOpts(t *testing.T) {
+	opts := nodes.DetachVirtualMediaOpts{
+		DeviceTypes: []nodes.VirtualMediaDeviceType{nodes.VirtualMediaCD, nodes.VirtualMediaDisk},
+	}
+
+	// Regular ListOpts can
+	query, err := opts.ToDetachVirtualMediaOptsQuery()
+	th.AssertEquals(t, "?device_types=cdrom%2Cdisk", query)
+	th.AssertNoErr(t, err)
+}
+
+func TestVirtualMediaAttach(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleAttachVirtualMediaSuccessfully(t, false)
+
+	c := client.ServiceClient()
+	opts := nodes.AttachVirtualMediaOpts{
+		ImageURL:   "https://example.com/image",
+		DeviceType: nodes.VirtualMediaCD,
+	}
+	err := nodes.AttachVirtualMedia(context.TODO(), c, "1234asdf", opts).ExtractErr()
+	th.AssertNoErr(t, err)
+}
+
+func TestVirtualMediaAttachWithSource(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleAttachVirtualMediaSuccessfully(t, true)
+
+	c := client.ServiceClient()
+	opts := nodes.AttachVirtualMediaOpts{
+		ImageURL:            "https://example.com/image",
+		DeviceType:          nodes.VirtualMediaCD,
+		ImageDownloadSource: nodes.ImageDownloadSourceHTTP,
+	}
+	err := nodes.AttachVirtualMedia(context.TODO(), c, "1234asdf", opts).ExtractErr()
+	th.AssertNoErr(t, err)
+}
+
+func TestVirtualMediaDetach(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleDetachVirtualMediaSuccessfully(t, false)
+
+	c := client.ServiceClient()
+	err := nodes.DetachVirtualMedia(context.TODO(), c, "1234asdf", nodes.DetachVirtualMediaOpts{}).ExtractErr()
+	th.AssertNoErr(t, err)
+}
+
+func TestVirtualMediaDetachWithTypes(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleDetachVirtualMediaSuccessfully(t, true)
+
+	c := client.ServiceClient()
+	opts := nodes.DetachVirtualMediaOpts{
+		DeviceTypes: []nodes.VirtualMediaDeviceType{nodes.VirtualMediaCD},
+	}
+	err := nodes.DetachVirtualMedia(context.TODO(), c, "1234asdf", opts).ExtractErr()
 	th.AssertNoErr(t, err)
 }

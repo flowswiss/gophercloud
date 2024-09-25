@@ -1,10 +1,11 @@
 package orders
 
 import (
+	"context"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // OrderType represents the valid types of orders.
@@ -52,8 +53,8 @@ func List(client *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pa
 }
 
 // Get retrieves details of a orders.
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(getURL(client, id), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -61,7 +62,7 @@ func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
 // CreateOptsBuilder allows extensions to add additional parameters to
 // the Create request.
 type CreateOptsBuilder interface {
-	ToOrderCreateMap() (map[string]interface{}, error)
+	ToOrderCreateMap() (map[string]any, error)
 }
 
 // MetaOpts represents options used for creating an order.
@@ -95,14 +96,14 @@ type CreateOpts struct {
 }
 
 // ToOrderCreateMap formats a CreateOpts into a create request.
-func (opts CreateOpts) ToOrderCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToOrderCreateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "")
 	if err != nil {
 		return nil, err
 	}
 
 	if opts.Meta.Expiration != nil {
-		meta := b["meta"].(map[string]interface{})
+		meta := b["meta"].(map[string]any)
 		meta["expiration"] = opts.Meta.Expiration.Format(gophercloud.RFC3339NoZ)
 		b["meta"] = meta
 	}
@@ -111,13 +112,13 @@ func (opts CreateOpts) ToOrderCreateMap() (map[string]interface{}, error) {
 }
 
 // Create creates a new orders.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToOrderCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -125,8 +126,8 @@ func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r Create
 }
 
 // Delete deletes a orders.
-func Delete(client *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, id), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

@@ -1,14 +1,15 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
-	fake "github.com/gophercloud/gophercloud/openstack/networking/v2/common"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/vpnaas/endpointgroups"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	fake "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/common"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/vpnaas/endpointgroups"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestCreate(t *testing.T) {
@@ -61,7 +62,7 @@ func TestCreate(t *testing.T) {
 			"10.3.0.0/24",
 		},
 	}
-	actual, err := endpointgroups.Create(fake.ServiceClient(), options).Extract()
+	actual, err := endpointgroups.Create(context.TODO(), fake.ServiceClient(), options).Extract()
 	th.AssertNoErr(t, err)
 	expected := endpointgroups.EndpointGroup{
 		Name:        "peers",
@@ -107,7 +108,7 @@ func TestGet(t *testing.T) {
         `)
 	})
 
-	actual, err := endpointgroups.Get(fake.ServiceClient(), "5c561d9d-eaea-45f6-ae3e-08d1a7080828").Extract()
+	actual, err := endpointgroups.Get(context.TODO(), fake.ServiceClient(), "5c561d9d-eaea-45f6-ae3e-08d1a7080828").Extract()
 	th.AssertNoErr(t, err)
 	expected := endpointgroups.EndpointGroup{
 		Name:        "peers",
@@ -156,7 +157,7 @@ func TestList(t *testing.T) {
 
 	count := 0
 
-	endpointgroups.List(fake.ServiceClient(), endpointgroups.ListOpts{}).EachPage(func(page pagination.Page) (bool, error) {
+	err := endpointgroups.List(fake.ServiceClient(), endpointgroups.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := endpointgroups.ExtractEndpointGroups(page)
 		if err != nil {
@@ -181,6 +182,7 @@ func TestList(t *testing.T) {
 
 		return true, nil
 	})
+	th.AssertNoErr(t, err)
 
 	if count != 1 {
 		t.Errorf("Expected 1 page, got %d", count)
@@ -197,7 +199,7 @@ func TestDelete(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	res := endpointgroups.Delete(fake.ServiceClient(), "5c561d9d-eaea-45f6-ae3e-08d1a7080828")
+	res := endpointgroups.Delete(context.TODO(), fake.ServiceClient(), "5c561d9d-eaea-45f6-ae3e-08d1a7080828")
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -247,7 +249,7 @@ func TestUpdate(t *testing.T) {
 		Description: &updatedDescription,
 	}
 
-	actual, err := endpointgroups.Update(fake.ServiceClient(), "5c561d9d-eaea-45f6-ae3e-08d1a7080828", options).Extract()
+	actual, err := endpointgroups.Update(context.TODO(), fake.ServiceClient(), "5c561d9d-eaea-45f6-ae3e-08d1a7080828", options).Extract()
 	th.AssertNoErr(t, err)
 	expected := endpointgroups.EndpointGroup{
 		Name:        "updatedname",

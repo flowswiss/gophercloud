@@ -1,12 +1,14 @@
 package endpoints
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type CreateOptsBuilder interface {
-	ToEndpointCreateMap() (map[string]interface{}, error)
+	ToEndpointCreateMap() (map[string]any, error)
 }
 
 // CreateOpts contains the subset of Endpoint attributes that should be used
@@ -31,18 +33,18 @@ type CreateOpts struct {
 }
 
 // ToEndpointCreateMap builds a request body from the Endpoint Create options.
-func (opts CreateOpts) ToEndpointCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToEndpointCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "endpoint")
 }
 
 // Create inserts a new Endpoint into the service catalog.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToEndpointCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(listURL(client), &b, &r.Body, nil)
+	resp, err := client.Post(ctx, listURL(client), &b, &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -90,7 +92,7 @@ func List(client *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pa
 
 // UpdateOptsBuilder allows extensions to add parameters to the Update request.
 type UpdateOptsBuilder interface {
-	ToEndpointUpdateMap() (map[string]interface{}, error)
+	ToEndpointUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts contains the subset of Endpoint attributes that should be used to
@@ -115,25 +117,25 @@ type UpdateOpts struct {
 }
 
 // ToEndpointUpdateMap builds an update request body from the Update options.
-func (opts UpdateOpts) ToEndpointUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToEndpointUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "endpoint")
 }
 
 // Update changes an existing endpoint with new data.
-func Update(client *gophercloud.ServiceClient, endpointID string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, endpointID string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToEndpointUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Patch(endpointURL(client, endpointID), &b, &r.Body, nil)
+	resp, err := client.Patch(ctx, endpointURL(client, endpointID), &b, &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Delete removes an endpoint from the service catalog.
-func Delete(client *gophercloud.ServiceClient, endpointID string) (r DeleteResult) {
-	resp, err := client.Delete(endpointURL(client, endpointID), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, endpointID string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, endpointURL(client, endpointID), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

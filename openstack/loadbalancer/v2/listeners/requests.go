@@ -1,10 +1,12 @@
 package listeners
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/l7policies"
-	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/l7policies"
+	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/pools"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Type Protocol represents a listener protocol.
@@ -18,7 +20,9 @@ const (
 	ProtocolHTTP  Protocol = "HTTP"
 	ProtocolHTTPS Protocol = "HTTPS"
 	// Protocol SCTP requires octavia microversion 2.23
-	ProtocolSCTP            Protocol = "SCTP"
+	ProtocolSCTP Protocol = "SCTP"
+	// Protocol Prometheus requires octavia microversion 2.25
+	ProtocolPrometheus      Protocol = "PROMETHEUS"
 	ProtocolTerminatedHTTPS Protocol = "TERMINATED_HTTPS"
 )
 
@@ -33,6 +37,15 @@ const (
 	TLSVersionTLSv1_3 TLSVersion = "TLSv1.3"
 )
 
+// ClientAuthentication represents the TLS client authentication mode.
+type ClientAuthentication string
+
+const (
+	ClientAuthenticationNone      ClientAuthentication = "NONE"
+	ClientAuthenticationOptional  ClientAuthentication = "OPTIONAL"
+	ClientAuthenticationMandatory ClientAuthentication = "MANDATORY"
+)
+
 // ListOptsBuilder allows extensions to add additional parameters to the
 // List request.
 type ListOptsBuilder interface {
@@ -45,23 +58,24 @@ type ListOptsBuilder interface {
 // sort by a particular listener attribute. SortDir sets the direction, and is
 // either `asc' or `desc'. Marker and Limit are used for pagination.
 type ListOpts struct {
-	ID                   string `q:"id"`
-	Name                 string `q:"name"`
-	AdminStateUp         *bool  `q:"admin_state_up"`
-	ProjectID            string `q:"project_id"`
-	LoadbalancerID       string `q:"loadbalancer_id"`
-	DefaultPoolID        string `q:"default_pool_id"`
-	Protocol             string `q:"protocol"`
-	ProtocolPort         int    `q:"protocol_port"`
-	ConnectionLimit      int    `q:"connection_limit"`
-	Limit                int    `q:"limit"`
-	Marker               string `q:"marker"`
-	SortKey              string `q:"sort_key"`
-	SortDir              string `q:"sort_dir"`
-	TimeoutClientData    *int   `q:"timeout_client_data"`
-	TimeoutMemberData    *int   `q:"timeout_member_data"`
-	TimeoutMemberConnect *int   `q:"timeout_member_connect"`
-	TimeoutTCPInspect    *int   `q:"timeout_tcp_inspect"`
+	ID                   string   `q:"id"`
+	Name                 string   `q:"name"`
+	AdminStateUp         *bool    `q:"admin_state_up"`
+	ProjectID            string   `q:"project_id"`
+	LoadbalancerID       string   `q:"loadbalancer_id"`
+	DefaultPoolID        string   `q:"default_pool_id"`
+	Protocol             string   `q:"protocol"`
+	ProtocolPort         int      `q:"protocol_port"`
+	ConnectionLimit      int      `q:"connection_limit"`
+	Limit                int      `q:"limit"`
+	Marker               string   `q:"marker"`
+	SortKey              string   `q:"sort_key"`
+	SortDir              string   `q:"sort_dir"`
+	TimeoutClientData    *int     `q:"timeout_client_data"`
+	TimeoutMemberData    *int     `q:"timeout_member_data"`
+	TimeoutMemberConnect *int     `q:"timeout_member_connect"`
+	TimeoutTCPInspect    *int     `q:"timeout_tcp_inspect"`
+	Tags                 []string `q:"tags"`
 }
 
 // ToListenerListQuery formats a ListOpts into a query string.
@@ -93,7 +107,7 @@ func List(c *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pager {
 // CreateOptsBuilder allows extensions to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToListenerCreateMap() (map[string]interface{}, error)
+	ToListenerCreateMap() (map[string]any, error)
 }
 
 // CreateOpts represents options for creating a listener.
@@ -165,6 +179,46 @@ type CreateOpts struct {
 	// A list of IPv4, IPv6 or mix of both CIDRs
 	AllowedCIDRs []string `json:"allowed_cidrs,omitempty"`
 
+	// A list of ALPN protocols. Available protocols: http/1.0, http/1.1,
+	// h2. Available from microversion 2.20.
+	ALPNProtocols []string `json:"alpn_protocols,omitempty"`
+
+	// The TLS client authentication mode. One of the options NONE,
+	// OPTIONAL or MANDATORY. Available from microversion 2.8.
+	ClientAuthentication ClientAuthentication `json:"client_authentication,omitempty"`
+
+	// The ref of the key manager service secret containing a PEM format
+	// client CA certificate bundle for TERMINATED_HTTPS listeners.
+	// Available from microversion 2.8.
+	ClientCATLSContainerRef string `json:"client_ca_tls_container_ref,omitempty"`
+
+	// The URI of the key manager service secret containing a PEM format CA
+	// revocation list file for TERMINATED_HTTPS listeners. Available from
+	// microversion 2.8.
+	ClientCRLContainerRef string `json:"client_crl_container_ref,omitempty"`
+
+	// Defines whether the includeSubDomains directive should be added to
+	// the Strict-Transport-Security HTTP response header. This requires
+	// setting the hsts_max_age option as well in order to become
+	// effective. Available from microversion 2.27.
+	HSTSIncludeSubdomains bool `json:"hsts_include_subdomains,omitempty"`
+
+	// The value of the max_age directive for the Strict-Transport-Security
+	// HTTP response header. Setting this enables HTTP Strict Transport
+	// Security (HSTS) for the TLS-terminated listener. Available from
+	// microversion 2.27.
+	HSTSMaxAge int `json:"hsts_max_age,omitempty"`
+
+	// Defines whether the preload directive should be added to the
+	// Strict-Transport-Security HTTP response header. This requires
+	// setting the hsts_max_age option as well in order to become
+	// effective. Available from microversion 2.27.
+	HSTSPreload bool `json:"hsts_preload,omitempty"`
+
+	// List of ciphers in OpenSSL format (colon-separated). Available from
+	// microversion 2.15.
+	TLSCiphers string `json:"tls_ciphers,omitempty"`
+
 	// A list of TLS protocol versions. Available from microversion 2.17
 	TLSVersions []TLSVersion `json:"tls_versions,omitempty"`
 
@@ -173,7 +227,7 @@ type CreateOpts struct {
 }
 
 // ToListenerCreateMap builds a request body from CreateOpts.
-func (opts CreateOpts) ToListenerCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToListenerCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "listener")
 }
 
@@ -184,20 +238,20 @@ func (opts CreateOpts) ToListenerCreateMap() (map[string]interface{}, error) {
 //
 // Users with an admin role can create Listeners on behalf of other projects by
 // specifying a ProjectID attribute different than their own.
-func Create(c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToListenerCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Post(rootURL(c), b, &r.Body, nil)
+	resp, err := c.Post(ctx, rootURL(c), b, &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Get retrieves a particular Listeners based on its unique ID.
-func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := c.Get(resourceURL(c, id), &r.Body, nil)
+func Get(ctx context.Context, c *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := c.Get(ctx, resourceURL(c, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -205,7 +259,7 @@ func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
 // UpdateOptsBuilder allows extensions to add additional parameters to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToListenerUpdateMap() (map[string]interface{}, error)
+	ToListenerUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts represents options for updating a Listener.
@@ -250,6 +304,46 @@ type UpdateOpts struct {
 	// A list of IPv4, IPv6 or mix of both CIDRs
 	AllowedCIDRs *[]string `json:"allowed_cidrs,omitempty"`
 
+	// A list of ALPN protocols. Available protocols: http/1.0, http/1.1,
+	// h2. Available from microversion 2.20.
+	ALPNProtocols *[]string `json:"alpn_protocols,omitempty"`
+
+	// The TLS client authentication mode. One of the options NONE,
+	// OPTIONAL or MANDATORY. Available from microversion 2.8.
+	ClientAuthentication *ClientAuthentication `json:"client_authentication,omitempty"`
+
+	// The ref of the key manager service secret containing a PEM format
+	// client CA certificate bundle for TERMINATED_HTTPS listeners.
+	// Available from microversion 2.8.
+	ClientCATLSContainerRef *string `json:"client_ca_tls_container_ref,omitempty"`
+
+	// The URI of the key manager service secret containing a PEM format CA
+	// revocation list file for TERMINATED_HTTPS listeners. Available from
+	// microversion 2.8.
+	ClientCRLContainerRef *string `json:"client_crl_container_ref,omitempty"`
+
+	// Defines whether the includeSubDomains directive should be added to
+	// the Strict-Transport-Security HTTP response header. This requires
+	// setting the hsts_max_age option as well in order to become
+	// effective. Available from microversion 2.27.
+	HSTSIncludeSubdomains *bool `json:"hsts_include_subdomains,omitempty"`
+
+	// The value of the max_age directive for the Strict-Transport-Security
+	// HTTP response header. Setting this enables HTTP Strict Transport
+	// Security (HSTS) for the TLS-terminated listener. Available from
+	// microversion 2.27.
+	HSTSMaxAge *int `json:"hsts_max_age,omitempty"`
+
+	// Defines whether the preload directive should be added to the
+	// Strict-Transport-Security HTTP response header. This requires
+	// setting the hsts_max_age option as well in order to become
+	// effective. Available from microversion 2.27.
+	HSTSPreload *bool `json:"hsts_preload,omitempty"`
+
+	// List of ciphers in OpenSSL format (colon-separated). Available from
+	// microversion 2.15.
+	TLSCiphers *string `json:"tls_ciphers,omitempty"`
+
 	// A list of TLS protocol versions. Available from microversion 2.17
 	TLSVersions *[]TLSVersion `json:"tls_versions,omitempty"`
 
@@ -258,14 +352,27 @@ type UpdateOpts struct {
 }
 
 // ToListenerUpdateMap builds a request body from UpdateOpts.
-func (opts UpdateOpts) ToListenerUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToListenerUpdateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "listener")
 	if err != nil {
 		return nil, err
 	}
 
-	if m := b["listener"].(map[string]interface{}); m["default_pool_id"] == "" {
+	m := b["listener"].(map[string]any)
+
+	// allow to unset default_pool_id on empty string
+	if m["default_pool_id"] == "" {
 		m["default_pool_id"] = nil
+	}
+
+	// allow to unset alpn_protocols on empty slice
+	if opts.ALPNProtocols != nil && len(*opts.ALPNProtocols) == 0 {
+		m["alpn_protocols"] = nil
+	}
+
+	// allow to unset tls_versions on empty slice
+	if opts.TLSVersions != nil && len(*opts.TLSVersions) == 0 {
+		m["tls_versions"] = nil
 	}
 
 	return b, nil
@@ -273,13 +380,13 @@ func (opts UpdateOpts) ToListenerUpdateMap() (map[string]interface{}, error) {
 
 // Update is an operation which modifies the attributes of the specified
 // Listener.
-func Update(c *gophercloud.ServiceClient, id string, opts UpdateOpts) (r UpdateResult) {
+func Update(ctx context.Context, c *gophercloud.ServiceClient, id string, opts UpdateOpts) (r UpdateResult) {
 	b, err := opts.ToListenerUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Put(resourceURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := c.Put(ctx, resourceURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200, 202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -287,15 +394,15 @@ func Update(c *gophercloud.ServiceClient, id string, opts UpdateOpts) (r UpdateR
 }
 
 // Delete will permanently delete a particular Listeners based on its unique ID.
-func Delete(c *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := c.Delete(resourceURL(c, id), nil)
+func Delete(ctx context.Context, c *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := c.Delete(ctx, resourceURL(c, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // GetStats will return the shows the current statistics of a particular Listeners.
-func GetStats(c *gophercloud.ServiceClient, id string) (r StatsResult) {
-	resp, err := c.Get(statisticsRootURL(c, id), &r.Body, nil)
+func GetStats(ctx context.Context, c *gophercloud.ServiceClient, id string) (r StatsResult) {
+	resp, err := c.Get(ctx, statisticsRootURL(c, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

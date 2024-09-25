@@ -1,12 +1,13 @@
 package testing
 
 import (
+	"context"
 	"testing"
 	"time"
 
-	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/availabilityzones"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/openstack/sharedfilesystems/v2/availabilityzones"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 // Verifies that availability zones can be listed correctly
@@ -16,7 +17,7 @@ func TestList(t *testing.T) {
 
 	MockListResponse(t)
 
-	allPages, err := availabilityzones.List(client.ServiceClient()).AllPages()
+	allPages, err := availabilityzones.List(client.ServiceClient()).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 	actual, err := availabilityzones.ExtractAvailabilityZones(allPages)
 	th.AssertNoErr(t, err)

@@ -2,35 +2,142 @@ package testing
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
-	accountTesting "github.com/gophercloud/gophercloud/openstack/objectstorage/v1/accounts/testing"
-	containerTesting "github.com/gophercloud/gophercloud/openstack/objectstorage/v1/containers/testing"
-	"github.com/gophercloud/gophercloud/openstack/objectstorage/v1/objects"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	fake "github.com/gophercloud/gophercloud/testhelper/client"
+	v1 "github.com/gophercloud/gophercloud/v2/openstack/objectstorage/v1"
+	accountTesting "github.com/gophercloud/gophercloud/v2/openstack/objectstorage/v1/accounts/testing"
+	containerTesting "github.com/gophercloud/gophercloud/v2/openstack/objectstorage/v1/containers/testing"
+	"github.com/gophercloud/gophercloud/v2/openstack/objectstorage/v1/objects"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	fake "github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
+
+func TestContainerNames(t *testing.T) {
+	for _, tc := range [...]struct {
+		name          string
+		containerName string
+		expectedError error
+	}{
+		{
+			"rejects_a_slash",
+			"one/two",
+			v1.ErrInvalidContainerName{},
+		},
+		{
+			"rejects_an_empty_string",
+			"",
+			v1.ErrEmptyContainerName{},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Run("list", func(t *testing.T) {
+				th.SetupHTTP()
+				defer th.TeardownHTTP()
+				HandleListObjectsInfoSuccessfully(t, WithPath("/"))
+
+				_, err := objects.List(fake.ServiceClient(), tc.containerName, nil).AllPages(context.TODO())
+				th.CheckErr(t, err, &tc.expectedError)
+			})
+			t.Run("download", func(t *testing.T) {
+				th.SetupHTTP()
+				defer th.TeardownHTTP()
+				HandleDownloadObjectSuccessfully(t, WithPath("/"))
+
+				_, err := objects.Download(context.TODO(), fake.ServiceClient(), tc.containerName, "testObject", nil).Extract()
+				th.CheckErr(t, err, &tc.expectedError)
+			})
+			t.Run("create", func(t *testing.T) {
+				th.SetupHTTP()
+				defer th.TeardownHTTP()
+				content := "Ceci n'est pas une pipe"
+				HandleCreateTextObjectSuccessfully(t, content, WithPath("/"))
+
+				res := objects.Create(context.TODO(), fake.ServiceClient(), tc.containerName, "testObject", &objects.CreateOpts{
+					ContentType: "text/plain",
+					Content:     strings.NewReader(content),
+				})
+				th.CheckErr(t, res.Err, &tc.expectedError)
+			})
+			t.Run("delete", func(t *testing.T) {
+				th.SetupHTTP()
+				defer th.TeardownHTTP()
+				HandleDeleteObjectSuccessfully(t, WithPath("/"))
+
+				res := objects.Delete(context.TODO(), fake.ServiceClient(), tc.containerName, "testObject", nil)
+				th.CheckErr(t, res.Err, &tc.expectedError)
+			})
+			t.Run("get", func(t *testing.T) {
+				th.SetupHTTP()
+				defer th.TeardownHTTP()
+				HandleGetObjectSuccessfully(t, WithPath("/"))
+
+				_, err := objects.Get(context.TODO(), fake.ServiceClient(), tc.containerName, "testObject", nil).ExtractMetadata()
+				th.CheckErr(t, err, &tc.expectedError)
+			})
+			t.Run("update", func(t *testing.T) {
+				th.SetupHTTP()
+				defer th.TeardownHTTP()
+				HandleUpdateObjectSuccessfully(t)
+
+				res := objects.Update(context.TODO(), fake.ServiceClient(), tc.containerName, "testObject", &objects.UpdateOpts{
+					Metadata: map[string]string{"Gophercloud-Test": "objects"},
+				})
+				th.CheckErr(t, res.Err, &tc.expectedError)
+			})
+			t.Run("createTempURL", func(t *testing.T) {
+				port := 33200
+				th.SetupHTTP()
+				th.SetupPersistentPortHTTP(t, port)
+				defer th.TeardownHTTP()
+
+				// Handle fetching of secret key inside of CreateTempURL
+				containerTesting.HandleGetContainerSuccessfully(t)
+				accountTesting.HandleGetAccountSuccessfully(t)
+				client := fake.ServiceClient()
+
+				// Append v1/ to client endpoint URL to be compliant with tempURL generator
+				client.Endpoint = client.Endpoint + "v1/"
+				_, err := objects.CreateTempURL(context.TODO(), client, tc.containerName, "testObject/testFile.txt", objects.CreateTempURLOpts{
+					Method:    http.MethodGet,
+					TTL:       60,
+					Timestamp: time.Date(2020, 07, 01, 01, 12, 00, 00, time.UTC),
+				})
+
+				th.CheckErr(t, err, &tc.expectedError)
+			})
+			t.Run("bulk-delete", func(t *testing.T) {
+				th.SetupHTTP()
+				defer th.TeardownHTTP()
+				HandleBulkDeleteSuccessfully(t)
+
+				res := objects.BulkDelete(context.TODO(), fake.ServiceClient(), tc.containerName, []string{"testObject"})
+				th.CheckErr(t, res.Err, &tc.expectedError)
+			})
+		})
+	}
+}
 
 func TestDownloadReader(t *testing.T) {
 	th.SetupHTTP()
 	defer th.TeardownHTTP()
 	HandleDownloadObjectSuccessfully(t)
 
-	response := objects.Download(fake.ServiceClient(), "testContainer", "testObject", nil)
+	response := objects.Download(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", nil)
 	defer response.Body.Close()
 
 	// Check reader
 	buf := bytes.NewBuffer(make([]byte, 0))
-	io.CopyN(buf, response.Body, 10)
-	th.CheckEquals(t, "Successful", string(buf.Bytes()))
+	_, err := io.CopyN(buf, response.Body, 10)
+	th.AssertNoErr(t, err)
+	th.CheckEquals(t, "Successful", buf.String())
 }
 
 func TestDownloadExtraction(t *testing.T) {
@@ -38,7 +145,7 @@ func TestDownloadExtraction(t *testing.T) {
 	defer th.TeardownHTTP()
 	HandleDownloadObjectSuccessfully(t)
 
-	response := objects.Download(fake.ServiceClient(), "testContainer", "testObject", nil)
+	response := objects.Download(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", nil)
 
 	// Check []byte extraction
 	bytes, err := response.ExtractContent()
@@ -65,17 +172,17 @@ func TestDownloadWithLastModified(t *testing.T) {
 	options1 := &objects.DownloadOpts{
 		IfUnmodifiedSince: time.Date(2009, time.November, 10, 22, 59, 59, 0, time.UTC),
 	}
-	response1 := objects.Download(fake.ServiceClient(), "testContainer", "testObject", options1)
+	response1 := objects.Download(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", options1)
 	_, err1 := response1.Extract()
 	th.AssertErr(t, err1)
 
 	options2 := &objects.DownloadOpts{
 		IfModifiedSince: time.Date(2009, time.November, 10, 23, 0, 1, 0, time.UTC),
 	}
-	response2 := objects.Download(fake.ServiceClient(), "testContainer", "testObject", options2)
+	response2 := objects.Download(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", options2)
 	content, err2 := response2.ExtractContent()
 	th.AssertNoErr(t, err2)
-	th.AssertEquals(t, len(content), 0)
+	th.AssertEquals(t, 0, len(content))
 }
 
 func TestListObjectInfo(t *testing.T) {
@@ -84,8 +191,8 @@ func TestListObjectInfo(t *testing.T) {
 	HandleListObjectsInfoSuccessfully(t)
 
 	count := 0
-	options := &objects.ListOpts{Full: true}
-	err := objects.List(fake.ServiceClient(), "testContainer", options).EachPage(func(page pagination.Page) (bool, error) {
+	options := &objects.ListOpts{}
+	err := objects.List(fake.ServiceClient(), "testContainer", options).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := objects.ExtractInfo(page)
 		th.AssertNoErr(t, err)
@@ -95,7 +202,7 @@ func TestListObjectInfo(t *testing.T) {
 		return true, nil
 	})
 	th.AssertNoErr(t, err)
-	th.CheckEquals(t, count, 1)
+	th.CheckEquals(t, 1, count)
 }
 
 func TestListObjectSubdir(t *testing.T) {
@@ -104,8 +211,8 @@ func TestListObjectSubdir(t *testing.T) {
 	HandleListSubdirSuccessfully(t)
 
 	count := 0
-	options := &objects.ListOpts{Full: true, Prefix: "", Delimiter: "/"}
-	err := objects.List(fake.ServiceClient(), "testContainer", options).EachPage(func(page pagination.Page) (bool, error) {
+	options := &objects.ListOpts{Prefix: "", Delimiter: "/"}
+	err := objects.List(fake.ServiceClient(), "testContainer", options).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := objects.ExtractInfo(page)
 		th.AssertNoErr(t, err)
@@ -115,18 +222,18 @@ func TestListObjectSubdir(t *testing.T) {
 		return true, nil
 	})
 	th.AssertNoErr(t, err)
-	th.CheckEquals(t, count, 1)
+	th.CheckEquals(t, 1, count)
 }
 
 func TestListObjectNames(t *testing.T) {
 	th.SetupHTTP()
 	defer th.TeardownHTTP()
-	HandleListObjectNamesSuccessfully(t)
+	HandleListObjectsInfoSuccessfully(t)
 
 	// Check without delimiter.
 	count := 0
-	options := &objects.ListOpts{Full: false}
-	err := objects.List(fake.ServiceClient(), "testContainer", options).EachPage(func(page pagination.Page) (bool, error) {
+	options := &objects.ListOpts{}
+	err := objects.List(fake.ServiceClient(), "testContainer", options).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := objects.ExtractNames(page)
 		if err != nil {
@@ -139,12 +246,12 @@ func TestListObjectNames(t *testing.T) {
 		return true, nil
 	})
 	th.AssertNoErr(t, err)
-	th.CheckEquals(t, count, 1)
+	th.CheckEquals(t, 1, count)
 
 	// Check with delimiter.
 	count = 0
-	options = &objects.ListOpts{Full: false, Delimiter: "/"}
-	err = objects.List(fake.ServiceClient(), "testContainer", options).EachPage(func(page pagination.Page) (bool, error) {
+	options = &objects.ListOpts{Delimiter: "/"}
+	err = objects.List(fake.ServiceClient(), "testContainer", options).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := objects.ExtractNames(page)
 		if err != nil {
@@ -157,7 +264,30 @@ func TestListObjectNames(t *testing.T) {
 		return true, nil
 	})
 	th.AssertNoErr(t, err)
-	th.CheckEquals(t, count, 1)
+	th.CheckEquals(t, 1, count)
+}
+
+func TestListZeroObjectNames204(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleListZeroObjectNames204(t)
+
+	count := 0
+	options := &objects.ListOpts{}
+	err := objects.List(fake.ServiceClient(), "testContainer", options).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
+		count++
+		actual, err := objects.ExtractNames(page)
+		if err != nil {
+			t.Errorf("Failed to extract container names: %v", err)
+			return false, err
+		}
+
+		th.CheckDeepEquals(t, []string{}, actual)
+
+		return true, nil
+	})
+	th.AssertNoErr(t, err)
+	th.CheckEquals(t, 0, count)
 }
 
 func TestCreateObject(t *testing.T) {
@@ -169,7 +299,7 @@ func TestCreateObject(t *testing.T) {
 	HandleCreateTextObjectSuccessfully(t, content)
 
 	options := &objects.CreateOpts{ContentType: "text/plain", Content: strings.NewReader(content)}
-	res := objects.Create(fake.ServiceClient(), "testContainer", "testObject", options)
+	res := objects.Create(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", options)
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -185,7 +315,7 @@ func TestCreateObjectWithCacheControl(t *testing.T) {
 		CacheControl: `max-age="3600", public`,
 		Content:      strings.NewReader(content),
 	}
-	res := objects.Create(fake.ServiceClient(), "testContainer", "testObject", options)
+	res := objects.Create(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", options)
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -197,36 +327,49 @@ func TestCreateObjectWithoutContentType(t *testing.T) {
 
 	HandleCreateTypelessObjectSuccessfully(t, content)
 
-	res := objects.Create(fake.ServiceClient(), "testContainer", "testObject", &objects.CreateOpts{Content: strings.NewReader(content)})
+	res := objects.Create(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", &objects.CreateOpts{Content: strings.NewReader(content)})
 	th.AssertNoErr(t, res.Err)
 }
-
-/*
-func TestErrorIsRaisedForChecksumMismatch(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
-
-	th.Mux.HandleFunc("/testContainer/testObject", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("ETag", "acbd18db4cc2f85cedef654fccc4a4d8")
-		w.WriteHeader(http.StatusCreated)
-	})
-
-	content := strings.NewReader("The sky was the color of television, tuned to a dead channel.")
-	res := Create(fake.ServiceClient(), "testContainer", "testObject", &CreateOpts{Content: content})
-
-	err := fmt.Errorf("Local checksum does not match API ETag header")
-	th.AssertDeepEquals(t, err, res.Err)
-}
-*/
 
 func TestCopyObject(t *testing.T) {
+	t.Run("simple", func(t *testing.T) {
+		th.SetupHTTP()
+		defer th.TeardownHTTP()
+		HandleCopyObjectSuccessfully(t, "/newTestContainer/newTestObject")
+
+		options := &objects.CopyOpts{Destination: "/newTestContainer/newTestObject"}
+		res := objects.Copy(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", options)
+		th.AssertNoErr(t, res.Err)
+	})
+	t.Run("slash", func(t *testing.T) {
+		th.SetupHTTP()
+		defer th.TeardownHTTP()
+		HandleCopyObjectSuccessfully(t, "/newTestContainer/path%2Fto%2FnewTestObject")
+
+		options := &objects.CopyOpts{Destination: "/newTestContainer/path/to/newTestObject"}
+		res := objects.Copy(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", options)
+		th.AssertNoErr(t, res.Err)
+	})
+	t.Run("emojis", func(t *testing.T) {
+		th.SetupHTTP()
+		defer th.TeardownHTTP()
+		HandleCopyObjectSuccessfully(t, "/newTestContainer/new%F0%9F%98%8ATest%2C%3B%22O%28bject%21_%E7%AF%84")
+
+		options := &objects.CopyOpts{Destination: "/newTestContainer/new😊Test,;\"O(bject!_範"}
+		res := objects.Copy(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", options)
+		th.AssertNoErr(t, res.Err)
+	})
+}
+
+func TestCopyObjectVersion(t *testing.T) {
 	th.SetupHTTP()
 	defer th.TeardownHTTP()
-	HandleCopyObjectSuccessfully(t)
+	HandleCopyObjectVersionSuccessfully(t)
 
-	options := &objects.CopyOpts{Destination: "/newTestContainer/newTestObject"}
-	res := objects.Copy(fake.ServiceClient(), "testContainer", "testObject", options)
-	th.AssertNoErr(t, res.Err)
+	options := &objects.CopyOpts{Destination: "/newTestContainer/newTestObject", ObjectVersionID: "123456788"}
+	res, err := objects.Copy(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", options).Extract()
+	th.AssertNoErr(t, err)
+	th.AssertEquals(t, "123456789", res.ObjectVersionID)
 }
 
 func TestDeleteObject(t *testing.T) {
@@ -234,7 +377,7 @@ func TestDeleteObject(t *testing.T) {
 	defer th.TeardownHTTP()
 	HandleDeleteObjectSuccessfully(t)
 
-	res := objects.Delete(fake.ServiceClient(), "testContainer", "testObject", nil)
+	res := objects.Delete(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", nil)
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -250,7 +393,7 @@ func TestBulkDelete(t *testing.T) {
 		Errors:         [][]string{},
 	}
 
-	resp, err := objects.BulkDelete(fake.ServiceClient(), "testContainer", []string{"testObject1", "testObject2"}).Extract()
+	resp, err := objects.BulkDelete(context.TODO(), fake.ServiceClient(), "testContainer", []string{"testObject1", "testObject2"}).Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, expected, *resp)
 }
@@ -271,7 +414,7 @@ func TestUpateObjectMetadata(t *testing.T) {
 		DeleteAt:           i,
 		DetectContentType:  new(bool),
 	}
-	res := objects.Update(fake.ServiceClient(), "testContainer", "testObject", options)
+	res := objects.Update(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", options)
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -281,16 +424,16 @@ func TestGetObject(t *testing.T) {
 	HandleGetObjectSuccessfully(t)
 
 	expected := map[string]string{"Gophercloud-Test": "objects"}
-	actual, err := objects.Get(fake.ServiceClient(), "testContainer", "testObject", nil).ExtractMetadata()
+	actual, err := objects.Get(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", nil).ExtractMetadata()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, expected, actual)
 
 	getOpts := objects.GetOpts{
 		Newest: true,
 	}
-	actualHeaders, err := objects.Get(fake.ServiceClient(), "testContainer", "testObject", getOpts).Extract()
+	actualHeaders, err := objects.Get(context.TODO(), fake.ServiceClient(), "testContainer", "testObject", getOpts).Extract()
 	th.AssertNoErr(t, err)
-	th.AssertEquals(t, actualHeaders.StaticLargeObject, true)
+	th.AssertEquals(t, true, actualHeaders.StaticLargeObject)
 }
 
 func TestETag(t *testing.T) {
@@ -303,10 +446,11 @@ func TestETag(t *testing.T) {
 	_, headers, _, err := createOpts.ToObjectCreateParams()
 	th.AssertNoErr(t, err)
 	_, ok := headers["ETag"]
-	th.AssertEquals(t, ok, false)
+	th.AssertEquals(t, false, ok)
 
 	hash := md5.New()
-	io.WriteString(hash, content)
+	_, err = io.WriteString(hash, content)
+	th.AssertNoErr(t, err)
 	localChecksum := fmt.Sprintf("%x", hash.Sum(nil))
 
 	createOpts = objects.CreateOpts{
@@ -316,12 +460,12 @@ func TestETag(t *testing.T) {
 
 	_, headers, _, err = createOpts.ToObjectCreateParams()
 	th.AssertNoErr(t, err)
-	th.AssertEquals(t, headers["ETag"], localChecksum)
+	th.AssertEquals(t, localChecksum, headers["ETag"])
 }
 
 func TestObjectCreateParamsWithoutSeek(t *testing.T) {
 	content := "I do not implement Seek()"
-	buf := bytes.NewBuffer([]byte(content))
+	buf := strings.NewReader(content)
 
 	createOpts := objects.CreateOpts{Content: buf}
 	reader, headers, _, err := createOpts.ToObjectCreateParams()
@@ -329,9 +473,9 @@ func TestObjectCreateParamsWithoutSeek(t *testing.T) {
 	th.AssertNoErr(t, err)
 
 	_, ok := reader.(io.ReadSeeker)
-	th.AssertEquals(t, ok, true)
+	th.AssertEquals(t, true, ok)
 
-	c, err := ioutil.ReadAll(reader)
+	c, err := io.ReadAll(reader)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, content, string(c))
@@ -350,7 +494,7 @@ func TestObjectCreateParamsWithSeek(t *testing.T) {
 	_, ok := reader.(io.ReadSeeker)
 	th.AssertEquals(t, ok, true)
 
-	c, err := ioutil.ReadAll(reader)
+	c, err := io.ReadAll(reader)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, content, string(c))
@@ -372,7 +516,7 @@ func TestCreateTempURL(t *testing.T) {
 
 	// Append v1/ to client endpoint URL to be compliant with tempURL generator
 	client.Endpoint = client.Endpoint + "v1/"
-	tempURL, err := objects.CreateTempURL(client, "testContainer", "testObject/testFile.txt", objects.CreateTempURLOpts{
+	tempURL, err := objects.CreateTempURL(context.TODO(), client, "testContainer", "testObject/testFile.txt", objects.CreateTempURLOpts{
 		Method:    http.MethodGet,
 		TTL:       60,
 		Timestamp: time.Date(2020, 07, 01, 01, 12, 00, 00, time.UTC),
@@ -380,8 +524,16 @@ func TestCreateTempURL(t *testing.T) {
 
 	sig := "89be454a9c7e2e9f3f50a8441815e0b5801cba5b"
 	expiry := "1593565980"
-	expectedURL := fmt.Sprintf("http://127.0.0.1:%v/v1/testContainer/testObject/testFile.txt?temp_url_sig=%v&temp_url_expires=%v", port, sig, expiry)
+	expectedURL := fmt.Sprintf("http://127.0.0.1:%v/v1/testContainer/testObject%%2FtestFile.txt?temp_url_sig=%v&temp_url_expires=%v", port, sig, expiry)
 
+	th.AssertNoErr(t, err)
+	th.AssertEquals(t, expectedURL, tempURL)
+
+	// Test TTL=0, but different timestamp
+	tempURL, err = objects.CreateTempURL(context.TODO(), client, "testContainer", "testObject/testFile.txt", objects.CreateTempURLOpts{
+		Method:    http.MethodGet,
+		Timestamp: time.Date(2020, 07, 01, 01, 13, 00, 00, time.UTC),
+	})
 	th.AssertNoErr(t, err)
 	th.AssertEquals(t, expectedURL, tempURL)
 }

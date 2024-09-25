@@ -1,10 +1,10 @@
 package listeners
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/l7policies"
-	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/l7policies"
+	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/pools"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type LoadBalancerID struct {
@@ -114,6 +114,24 @@ type Listener struct {
 	// New in version 2.8
 	ClientCRLContainerRef string `json:"client_crl_container_ref"`
 
+	// Defines whether the includeSubDomains directive should be added to
+	// the Strict-Transport-Security HTTP response header. This requires
+	// setting the hsts_max_age option as well in order to become
+	// effective. Available from microversion 2.27.
+	HSTSIncludeSubdomains bool `json:"hsts_include_subdomains"`
+
+	// The value of the max_age directive for the Strict-Transport-Security
+	// HTTP response header. Setting this enables HTTP Strict Transport
+	// Security (HSTS) for the TLS-terminated listener. Available from
+	// microversion 2.27.
+	HSTSMaxAge int `json:"hsts_max_age"`
+
+	// Defines whether the preload directive should be added to the
+	// Strict-Transport-Security HTTP response header. This requires
+	// setting the hsts_max_age option as well in order to become
+	// effective. Available from microversion 2.27.
+	HSTSPreload bool `json:"hsts_preload"`
+
 	// The operating status of the resource
 	OperatingStatus string `json:"operating_status"`
 }
@@ -157,6 +175,10 @@ func (r ListenerPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a ListenerPage struct is empty.
 func (r ListenerPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractListeners(r)
 	return len(is) == 0, err
 }

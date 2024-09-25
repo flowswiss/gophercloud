@@ -1,15 +1,16 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 	"time"
 
-	fake "github.com/gophercloud/gophercloud/openstack/networking/v2/common"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	fake "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/common"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/routers"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestList(t *testing.T) {
@@ -53,7 +54,8 @@ func TestList(t *testing.T) {
                 "external_fixed_ips": [
                     {"ip_address": "192.0.2.17", "subnet_id": "ab561bc4-1a8e-48f2-9fbd-376fcb1a1def"},
                     {"ip_address": "198.51.100.33", "subnet_id": "1d699529-bdfd-43f8-bcaa-bff00c547af2"}
-                ]
+                ],
+                "qos_policy_id": "6601bae5-f15a-4687-8be9-ddec9a2f8a8b"
             },
             "name": "gateway",
             "admin_state_up": true,
@@ -68,7 +70,7 @@ func TestList(t *testing.T) {
 
 	count := 0
 
-	routers.List(fake.ServiceClient(), routers.ListOpts{}).EachPage(func(page pagination.Page) (bool, error) {
+	err := routers.List(fake.ServiceClient(), routers.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := routers.ExtractRouters(page)
 		if err != nil {
@@ -103,6 +105,7 @@ func TestList(t *testing.T) {
 						{IPAddress: "192.0.2.17", SubnetID: "ab561bc4-1a8e-48f2-9fbd-376fcb1a1def"},
 						{IPAddress: "198.51.100.33", SubnetID: "1d699529-bdfd-43f8-bcaa-bff00c547af2"},
 					},
+					QoSPolicyID: "6601bae5-f15a-4687-8be9-ddec9a2f8a8b",
 				},
 				AdminStateUp: true,
 				Distributed:  false,
@@ -116,6 +119,7 @@ func TestList(t *testing.T) {
 
 		return true, nil
 	})
+	th.AssertNoErr(t, err)
 
 	if count != 1 {
 		t.Errorf("Expected 1 page, got %d", count)
@@ -141,7 +145,8 @@ func TestCreate(t *testing.T) {
          "network_id":"8ca37218-28ff-41cb-9b10-039601ea7e6b",
          "external_fixed_ips": [
              {"subnet_id": "ab561bc4-1a8e-48f2-9fbd-376fcb1a1def"}
-         ]
+         ],
+         "qos_policy_id": "6601bae5-f15a-4687-8be9-ddec9a2f8a8b"
 	  },
 	  "availability_zone_hints": ["zone1", "zone2"]
    }
@@ -160,7 +165,8 @@ func TestCreate(t *testing.T) {
             "enable_snat": false,
             "external_fixed_ips": [
                 {"ip_address": "192.0.2.17", "subnet_id": "ab561bc4-1a8e-48f2-9fbd-376fcb1a1def"}
-            ]
+            ],
+            "qos_policy_id": "6601bae5-f15a-4687-8be9-ddec9a2f8a8b"
         },
         "name": "foo_router",
         "admin_state_up": false,
@@ -175,6 +181,7 @@ func TestCreate(t *testing.T) {
 
 	asu := false
 	enableSNAT := false
+	qosID := "6601bae5-f15a-4687-8be9-ddec9a2f8a8b"
 	efi := []routers.ExternalFixedIP{
 		{
 			SubnetID: "ab561bc4-1a8e-48f2-9fbd-376fcb1a1def",
@@ -184,6 +191,7 @@ func TestCreate(t *testing.T) {
 		NetworkID:        "8ca37218-28ff-41cb-9b10-039601ea7e6b",
 		EnableSNAT:       &enableSNAT,
 		ExternalFixedIPs: efi,
+		QoSPolicyID:      qosID,
 	}
 	options := routers.CreateOpts{
 		Name:                  "foo_router",
@@ -191,7 +199,7 @@ func TestCreate(t *testing.T) {
 		GatewayInfo:           &gwi,
 		AvailabilityZoneHints: []string{"zone1", "zone2"},
 	}
-	r, err := routers.Create(fake.ServiceClient(), options).Extract()
+	r, err := routers.Create(context.TODO(), fake.ServiceClient(), options).Extract()
 	th.AssertNoErr(t, err)
 
 	gwi.ExternalFixedIPs = []routers.ExternalFixedIP{{
@@ -224,7 +232,8 @@ func TestGet(t *testing.T) {
             "network_id": "85d76829-6415-48ff-9c63-5c5ca8c61ac6",
             "external_fixed_ips": [
                 {"ip_address": "198.51.100.33", "subnet_id": "1d699529-bdfd-43f8-bcaa-bff00c547af2"}
-            ]
+            ],
+            "qos_policy_id": "6601bae5-f15a-4687-8be9-ddec9a2f8a8b"
         },
         "routes": [
             {
@@ -243,7 +252,7 @@ func TestGet(t *testing.T) {
 			`)
 	})
 
-	n, err := routers.Get(fake.ServiceClient(), "a07eea83-7710-4860-931b-5fe220fae533").Extract()
+	n, err := routers.Get(context.TODO(), fake.ServiceClient(), "a07eea83-7710-4860-931b-5fe220fae533").Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, n.Status, "ACTIVE")
@@ -252,6 +261,7 @@ func TestGet(t *testing.T) {
 		ExternalFixedIPs: []routers.ExternalFixedIP{
 			{IPAddress: "198.51.100.33", SubnetID: "1d699529-bdfd-43f8-bcaa-bff00c547af2"},
 		},
+		QoSPolicyID: "6601bae5-f15a-4687-8be9-ddec9a2f8a8b",
 	})
 	th.AssertEquals(t, n.Name, "router1")
 	th.AssertEquals(t, n.AdminStateUp, true)
@@ -275,7 +285,8 @@ func TestUpdate(t *testing.T) {
     "router": {
 			"name": "new_name",
         "external_gateway_info": {
-            "network_id": "8ca37218-28ff-41cb-9b10-039601ea7e6b"
+            "network_id": "8ca37218-28ff-41cb-9b10-039601ea7e6b",
+            "qos_policy_id": "01ba32e5-f15a-4687-8be9-ddec92a2f8a8"
 		},
         "routes": [
             {
@@ -298,7 +309,8 @@ func TestUpdate(t *testing.T) {
             "network_id": "8ca37218-28ff-41cb-9b10-039601ea7e6b",
             "external_fixed_ips": [
                 {"ip_address": "192.0.2.17", "subnet_id": "ab561bc4-1a8e-48f2-9fbd-376fcb1a1def"}
-            ]
+            ],
+            "qos_policy_id": "01ba32e5-f15a-4687-8be9-ddec92a2f8a8"
         },
         "name": "new_name",
         "admin_state_up": true,
@@ -316,11 +328,14 @@ func TestUpdate(t *testing.T) {
 		`)
 	})
 
-	gwi := routers.GatewayInfo{NetworkID: "8ca37218-28ff-41cb-9b10-039601ea7e6b"}
+	gwi := routers.GatewayInfo{
+		NetworkID:   "8ca37218-28ff-41cb-9b10-039601ea7e6b",
+		QoSPolicyID: "01ba32e5-f15a-4687-8be9-ddec92a2f8a8",
+	}
 	r := []routers.Route{{DestinationCIDR: "40.0.1.0/24", NextHop: "10.1.0.10"}}
 	options := routers.UpdateOpts{Name: "new_name", GatewayInfo: &gwi, Routes: &r}
 
-	n, err := routers.Update(fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", options).Extract()
+	n, err := routers.Update(context.TODO(), fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", options).Extract()
 	th.AssertNoErr(t, err)
 
 	gwi.ExternalFixedIPs = []routers.ExternalFixedIP{
@@ -380,7 +395,7 @@ func TestUpdateWithoutRoutes(t *testing.T) {
 
 	options := routers.UpdateOpts{Name: "new_name"}
 
-	n, err := routers.Update(fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", options).Extract()
+	n, err := routers.Update(context.TODO(), fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", options).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, n.Name, "new_name")
@@ -428,7 +443,7 @@ func TestAllRoutesRemoved(t *testing.T) {
 	r := []routers.Route{}
 	options := routers.UpdateOpts{Routes: &r}
 
-	n, err := routers.Update(fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", options).Extract()
+	n, err := routers.Update(context.TODO(), fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", options).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertDeepEquals(t, n.Routes, []routers.Route{})
@@ -444,7 +459,7 @@ func TestDelete(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	res := routers.Delete(fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c")
+	res := routers.Delete(context.TODO(), fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c")
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -477,7 +492,7 @@ func TestAddInterface(t *testing.T) {
 	})
 
 	opts := routers.AddInterfaceOpts{SubnetID: "a2f1f29d-571b-4533-907f-5803ab96ead1"}
-	res, err := routers.AddInterface(fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", opts).Extract()
+	res, err := routers.AddInterface(context.TODO(), fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, "0d32a837-8069-4ec3-84c4-3eef3e10b188", res.SubnetID)
@@ -487,11 +502,11 @@ func TestAddInterface(t *testing.T) {
 }
 
 func TestAddInterfaceRequiredOpts(t *testing.T) {
-	_, err := routers.AddInterface(fake.ServiceClient(), "foo", routers.AddInterfaceOpts{}).Extract()
+	_, err := routers.AddInterface(context.TODO(), fake.ServiceClient(), "foo", routers.AddInterfaceOpts{}).Extract()
 	if err == nil {
 		t.Fatalf("Expected error, got none")
 	}
-	_, err = routers.AddInterface(fake.ServiceClient(), "foo", routers.AddInterfaceOpts{SubnetID: "bar", PortID: "baz"}).Extract()
+	_, err = routers.AddInterface(context.TODO(), fake.ServiceClient(), "foo", routers.AddInterfaceOpts{SubnetID: "bar", PortID: "baz"}).Extract()
 	if err == nil {
 		t.Fatalf("Expected error, got none")
 	}
@@ -526,7 +541,7 @@ func TestRemoveInterface(t *testing.T) {
 	})
 
 	opts := routers.RemoveInterfaceOpts{SubnetID: "a2f1f29d-571b-4533-907f-5803ab96ead1"}
-	res, err := routers.RemoveInterface(fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", opts).Extract()
+	res, err := routers.RemoveInterface(context.TODO(), fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, "0d32a837-8069-4ec3-84c4-3eef3e10b188", res.SubnetID)
@@ -608,7 +623,7 @@ func TestListL3Agents(t *testing.T) {
 			`)
 	})
 
-	l3AgentsPages, err := routers.ListL3Agents(fake.ServiceClient(), "fa3a4aaa-c73f-48aa-a603-8c8bf642b7c0").AllPages()
+	l3AgentsPages, err := routers.ListL3Agents(fake.ServiceClient(), "fa3a4aaa-c73f-48aa-a603-8c8bf642b7c0").AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 	actual, err := routers.ExtractL3Agents(l3AgentsPages)
 	th.AssertNoErr(t, err)
@@ -623,7 +638,7 @@ func TestListL3Agents(t *testing.T) {
 			ResourcesSynced:  true,
 			Binary:           "neutron-l3-agent",
 			AvailabilityZone: "nova",
-			Configurations: map[string]interface{}{
+			Configurations: map[string]any{
 				"agent_mode":                   "legacy",
 				"ex_gw_ports":                  float64(2),
 				"floating_ips":                 float64(2),
@@ -639,7 +654,7 @@ func TestListL3Agents(t *testing.T) {
 			Host:               "os-ctrl-02",
 			Topic:              "l3_agent",
 			HAState:            "standby",
-			ResourceVersions:   map[string]interface{}{},
+			ResourceVersions:   map[string]any{},
 		},
 		{
 			ID:               "4541cc6c-87bc-4cee-bad2-36ca78836c91",
@@ -650,7 +665,7 @@ func TestListL3Agents(t *testing.T) {
 			ResourcesSynced:  true,
 			Binary:           "neutron-l3-agent",
 			AvailabilityZone: "nova",
-			Configurations: map[string]interface{}{
+			Configurations: map[string]any{
 				"agent_mode":                   "legacy",
 				"ex_gw_ports":                  float64(2),
 				"floating_ips":                 float64(2),
@@ -666,7 +681,7 @@ func TestListL3Agents(t *testing.T) {
 			Host:               "os-ctrl-03",
 			Topic:              "l3_agent",
 			HAState:            "active",
-			ResourceVersions:   map[string]interface{}{},
+			ResourceVersions:   map[string]any{},
 		},
 	}
 	th.CheckDeepEquals(t, expected, actual)

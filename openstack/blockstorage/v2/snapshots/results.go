@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Snapshot contains all the information associated with a Cinder Snapshot.
@@ -79,6 +79,10 @@ func (r *Snapshot) UnmarshalJSON(b []byte) error {
 
 // IsEmpty returns true if a SnapshotPage contains no Snapshots.
 func (r SnapshotPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	volumes, err := ExtractSnapshots(r)
 	return len(volumes) == 0, err
 }
@@ -98,12 +102,12 @@ type UpdateMetadataResult struct {
 }
 
 // ExtractMetadata returns the metadata from a response from snapshots.UpdateMetadata.
-func (r UpdateMetadataResult) ExtractMetadata() (map[string]interface{}, error) {
+func (r UpdateMetadataResult) ExtractMetadata() (map[string]any, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
-	m := r.Body.(map[string]interface{})["metadata"]
-	return m.(map[string]interface{}), nil
+	m := r.Body.(map[string]any)["metadata"]
+	return m.(map[string]any), nil
 }
 
 type commonResult struct {

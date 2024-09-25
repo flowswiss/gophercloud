@@ -1,15 +1,16 @@
 package testing
 
 import (
+	"context"
 	"testing"
 	"time"
 
-	fake "github.com/gophercloud/gophercloud/openstack/networking/v2/common"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/dns"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	fake "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/common"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/dns"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/floatingips"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/ports"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 type PortDNS struct {
@@ -57,6 +58,8 @@ func TestPortList(t *testing.T) {
 				ID:             "d80b1a3b-4fc1-49f3-952e-1e2ab7081d8b",
 				SecurityGroups: []string{},
 				DeviceID:       "9ae135f4-b6e0-4dad-9e91-3c223e385824",
+				CreatedAt:      time.Date(2019, time.June, 30, 4, 15, 37, 0, time.UTC),
+				UpdatedAt:      time.Date(2019, time.June, 30, 5, 18, 49, 0, time.UTC),
 			},
 			PortDNSExt: dns.PortDNSExt{
 				DNSName: "test-port",
@@ -71,13 +74,12 @@ func TestPortList(t *testing.T) {
 		},
 	}
 
-	var listOptsBuilder ports.ListOptsBuilder
-	listOptsBuilder = dns.PortListOptsExt{
+	listOptsBuilder := dns.PortListOptsExt{
 		ListOptsBuilder: ports.ListOpts{},
 		DNSName:         "test-port",
 	}
 
-	allPages, err := ports.List(fake.ServiceClient(), listOptsBuilder).AllPages()
+	allPages, err := ports.List(fake.ServiceClient(), listOptsBuilder).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 
 	err = ports.ExtractPortsInto(allPages, &actual)
@@ -94,7 +96,7 @@ func TestPortGet(t *testing.T) {
 
 	var s PortDNS
 
-	err := ports.Get(fake.ServiceClient(), "46d4bfb9-b26e-41f3-bd2e-e6dcc1ccedb2").ExtractInto(&s)
+	err := ports.Get(context.TODO(), fake.ServiceClient(), "46d4bfb9-b26e-41f3-bd2e-e6dcc1ccedb2").ExtractInto(&s)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Status, "ACTIVE")
@@ -145,7 +147,7 @@ func TestPortCreate(t *testing.T) {
 		DNSName:           "test-port",
 	}
 
-	err := ports.Create(fake.ServiceClient(), createOpts).ExtractInto(&s)
+	err := ports.Create(context.TODO(), fake.ServiceClient(), createOpts).ExtractInto(&s)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Status, "DOWN")
@@ -172,7 +174,7 @@ func TestPortCreate(t *testing.T) {
 }
 
 func TestPortRequiredCreateOpts(t *testing.T) {
-	res := ports.Create(fake.ServiceClient(), dns.PortCreateOptsExt{CreateOptsBuilder: ports.CreateOpts{}})
+	res := ports.Create(context.TODO(), fake.ServiceClient(), dns.PortCreateOptsExt{CreateOptsBuilder: ports.CreateOpts{}})
 	if res.Err == nil {
 		t.Fatalf("Expected error, got none")
 	}
@@ -201,7 +203,7 @@ func TestPortUpdate(t *testing.T) {
 		DNSName:           &dnsName,
 	}
 
-	err := ports.Update(fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d", updateOpts).ExtractInto(&s)
+	err := ports.Update(context.TODO(), fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d", updateOpts).ExtractInto(&s)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "new_port_name")
@@ -226,7 +228,7 @@ func TestFloatingIPGet(t *testing.T) {
 	FloatingIPHandleGet(t)
 
 	var actual FloatingIPDNS
-	err := floatingips.Get(fake.ServiceClient(), "2f95fd2b-9f6a-4e8e-9e9a-2cbe286cbf9e").ExtractInto(&actual)
+	err := floatingips.Get(context.TODO(), fake.ServiceClient(), "2f95fd2b-9f6a-4e8e-9e9a-2cbe286cbf9e").ExtractInto(&actual)
 	th.AssertNoErr(t, err)
 
 	expected := FloatingIPDNS{
@@ -269,7 +271,7 @@ func TestFloatingIPCreate(t *testing.T) {
 		DNSDomain:         "local.",
 	}
 
-	err := floatingips.Create(fake.ServiceClient(), options).ExtractInto(&actual)
+	err := floatingips.Create(context.TODO(), fake.ServiceClient(), options).ExtractInto(&actual)
 	th.AssertNoErr(t, err)
 
 	expected := FloatingIPDNS{
@@ -302,7 +304,7 @@ func TestNetworkGet(t *testing.T) {
 
 	var actual NetworkDNS
 
-	err := networks.Get(fake.ServiceClient(), "d32019d3-bc6e-4319-9c1d-6722fc136a22").ExtractInto(&actual)
+	err := networks.Get(context.TODO(), fake.ServiceClient(), "d32019d3-bc6e-4319-9c1d-6722fc136a22").ExtractInto(&actual)
 	th.AssertNoErr(t, err)
 
 	expected := NetworkDNS{
@@ -340,7 +342,7 @@ func TestNetworkCreate(t *testing.T) {
 		DNSDomain:         "local.",
 	}
 
-	err := networks.Create(fake.ServiceClient(), createOpts).ExtractInto(&actual)
+	err := networks.Create(context.TODO(), fake.ServiceClient(), createOpts).ExtractInto(&actual)
 	th.AssertNoErr(t, err)
 
 	expected := NetworkDNS{
@@ -378,7 +380,7 @@ func TestNetworkUpdate(t *testing.T) {
 		DNSDomain:         new(string),
 	}
 
-	err := networks.Update(fake.ServiceClient(), "db193ab3-96e3-4cb3-8fc5-05f4296d0324", updateOpts).ExtractInto(&actual)
+	err := networks.Update(context.TODO(), fake.ServiceClient(), "db193ab3-96e3-4cb3-8fc5-05f4296d0324", updateOpts).ExtractInto(&actual)
 	th.AssertNoErr(t, err)
 
 	expected := NetworkDNS{

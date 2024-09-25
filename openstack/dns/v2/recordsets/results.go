@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -51,6 +51,10 @@ type DeleteResult struct {
 
 // IsEmpty returns true if the page contains no results.
 func (r RecordSetPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	s, err := ExtractRecordSets(r)
 	return len(s) == 0, err
 }
@@ -125,7 +129,7 @@ func (r *RecordSet) UnmarshalJSON(b []byte) error {
 		tmp
 		CreatedAt gophercloud.JSONRFC3339MilliNoZ `json:"created_at"`
 		UpdatedAt gophercloud.JSONRFC3339MilliNoZ `json:"updated_at"`
-		Links     map[string]interface{}          `json:"links"`
+		Links     map[string]any                  `json:"links"`
 	}
 	err := json.Unmarshal(b, &s)
 	if err != nil {

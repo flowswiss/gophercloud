@@ -1,6 +1,6 @@
 package projects
 
-import "github.com/gophercloud/gophercloud"
+import "github.com/gophercloud/gophercloud/v2"
 
 func listAvailableURL(client *gophercloud.ServiceClient) string {
 	return client.ServiceURL("auth", "projects")
@@ -24,4 +24,16 @@ func deleteURL(client *gophercloud.ServiceClient, projectID string) string {
 
 func updateURL(client *gophercloud.ServiceClient, projectID string) string {
 	return client.ServiceURL("projects", projectID)
+}
+
+func listTagsURL(client *gophercloud.ServiceClient, projectID string) string {
+	return client.ServiceURL("projects", projectID, "tags")
+}
+
+func modifyTagsURL(client *gophercloud.ServiceClient, projectID string) string {
+	return client.ServiceURL("projects", projectID, "tags")
+}
+
+func deleteTagsURL(client *gophercloud.ServiceClient, projectID string) string {
+	return client.ServiceURL("projects", projectID, "tags")
 }

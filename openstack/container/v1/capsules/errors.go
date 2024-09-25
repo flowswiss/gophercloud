@@ -1,9 +1,7 @@
 package capsules
 
 import (
-	"fmt"
-
-	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/v2"
 )
 
 type ErrInvalidDataFormat struct {
@@ -11,5 +9,5 @@ type ErrInvalidDataFormat struct {
 }
 
 func (e ErrInvalidDataFormat) Error() string {
-	return fmt.Sprintf("Data in neither json nor yaml format.")
+	return "Data in neither json nor yaml format."
 }

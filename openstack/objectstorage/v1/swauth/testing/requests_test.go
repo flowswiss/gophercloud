@@ -1,11 +1,12 @@
 package testing
 
 import (
+	"context"
 	"testing"
 
-	"github.com/gophercloud/gophercloud/openstack"
-	"github.com/gophercloud/gophercloud/openstack/objectstorage/v1/swauth"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	"github.com/gophercloud/gophercloud/v2/openstack"
+	"github.com/gophercloud/gophercloud/v2/openstack/objectstorage/v1/swauth"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestAuth(t *testing.T) {
@@ -21,9 +22,9 @@ func TestAuth(t *testing.T) {
 	providerClient, err := openstack.NewClient(th.Endpoint())
 	th.AssertNoErr(t, err)
 
-	swiftClient, err := swauth.NewObjectStorageV1(providerClient, authOpts)
+	swiftClient, err := swauth.NewObjectStorageV1(context.TODO(), providerClient, authOpts)
 	th.AssertNoErr(t, err)
-	th.AssertEquals(t, swiftClient.TokenID, AuthResult.Token)
+	th.AssertEquals(t, AuthResult.Token, swiftClient.TokenID)
 }
 
 func TestBadAuth(t *testing.T) {

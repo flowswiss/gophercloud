@@ -1,8 +1,8 @@
 package catalog
 
 import (
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/tokens"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ServiceCatalogPage is a single page of Service results.
@@ -12,6 +12,10 @@ type ServiceCatalogPage struct {
 
 // IsEmpty returns true if the ServiceCatalogPage contains no results.
 func (r ServiceCatalogPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	services, err := ExtractServiceCatalog(r)
 	return len(services) == 0, err
 }

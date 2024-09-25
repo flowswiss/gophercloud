@@ -1,10 +1,11 @@
 package request
 
 import (
+	"context"
 	"net/http"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOptsBuilder allows extensions to add parameters to the List request.
@@ -42,8 +43,8 @@ func List(client *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pa
 }
 
 // Get returns information about a transfer request, given its ID.
-func Get(client *gophercloud.ServiceClient, transferRequestID string) (r GetResult) {
-	resp, err := client.Get(resourceURL(client, transferRequestID), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, transferRequestID string) (r GetResult) {
+	resp, err := client.Get(ctx, resourceURL(client, transferRequestID), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -51,7 +52,7 @@ func Get(client *gophercloud.ServiceClient, transferRequestID string) (r GetResu
 // CreateOptsBuilder allows extensions to add additional attributes to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToTransferRequestCreateMap() (map[string]interface{}, error)
+	ToTransferRequestCreateMap() (map[string]any, error)
 }
 
 // CreateOpts specifies the attributes used to create a transfer request.
@@ -65,7 +66,7 @@ type CreateOpts struct {
 }
 
 // ToTransferRequestCreateMap formats an CreateOpts structure into a request body.
-func (opts CreateOpts) ToTransferRequestCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToTransferRequestCreateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "")
 	if err != nil {
 		return nil, err
@@ -74,13 +75,13 @@ func (opts CreateOpts) ToTransferRequestCreateMap() (map[string]interface{}, err
 }
 
 // Create implements a transfer request create request.
-func Create(client *gophercloud.ServiceClient, zoneID string, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, zoneID string, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToTransferRequestCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client, zoneID), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client, zoneID), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{http.StatusCreated, http.StatusAccepted},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -90,7 +91,7 @@ func Create(client *gophercloud.ServiceClient, zoneID string, opts CreateOptsBui
 // UpdateOptsBuilder allows extensions to add additional attributes to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToTransferRequestUpdateMap() (map[string]interface{}, error)
+	ToTransferRequestUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts specifies the attributes to update a transfer request.
@@ -104,7 +105,7 @@ type UpdateOpts struct {
 }
 
 // ToTransferRequestUpdateMap formats an UpdateOpts structure into a request body.
-func (opts UpdateOpts) ToTransferRequestUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToTransferRequestUpdateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "")
 	if err != nil {
 		return nil, err
@@ -113,13 +114,13 @@ func (opts UpdateOpts) ToTransferRequestUpdateMap() (map[string]interface{}, err
 }
 
 // Update implements a transfer request update request.
-func Update(client *gophercloud.ServiceClient, transferID string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, transferID string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToTransferRequestUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Patch(resourceURL(client, transferID), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Patch(ctx, resourceURL(client, transferID), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{http.StatusOK, http.StatusAccepted},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -127,8 +128,8 @@ func Update(client *gophercloud.ServiceClient, transferID string, opts UpdateOpt
 }
 
 // Delete implements a transfer request delete request.
-func Delete(client *gophercloud.ServiceClient, transferID string) (r DeleteResult) {
-	resp, err := client.Delete(resourceURL(client, transferID), &gophercloud.RequestOpts{
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, transferID string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, resourceURL(client, transferID), &gophercloud.RequestOpts{
 		OkCodes: []int{http.StatusNoContent},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

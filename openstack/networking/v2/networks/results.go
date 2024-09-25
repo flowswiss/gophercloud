@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -19,7 +19,7 @@ func (r commonResult) Extract() (*Network, error) {
 	return &s, err
 }
 
-func (r commonResult) ExtractInto(v interface{}) error {
+func (r commonResult) ExtractInto(v any) error {
 	return r.Result.ExtractIntoStructPtr(v, "network")
 }
 
@@ -90,6 +90,9 @@ type Network struct {
 
 	// Tags optionally set via extensions/attributestags
 	Tags []string `json:"tags"`
+
+	// RevisionNumber optionally set via extensions/standard-attr-revisions
+	RevisionNumber int `json:"revision_number"`
 }
 
 func (r *Network) UnmarshalJSON(b []byte) error {
@@ -152,6 +155,10 @@ func (r NetworkPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a NetworkPage struct is empty.
 func (r NetworkPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractNetworks(r)
 	return len(is) == 0, err
 }
@@ -165,6 +172,6 @@ func ExtractNetworks(r pagination.Page) ([]Network, error) {
 	return s, err
 }
 
-func ExtractNetworksInto(r pagination.Page, v interface{}) error {
+func ExtractNetworksInto(r pagination.Page, v any) error {
 	return r.(NetworkPage).Result.ExtractIntoSlicePtr(v, "networks")
 }

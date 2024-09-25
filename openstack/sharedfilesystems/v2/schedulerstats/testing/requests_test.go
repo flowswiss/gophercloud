@@ -1,12 +1,13 @@
 package testing
 
 import (
+	"context"
 	"testing"
 
-	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/schedulerstats"
-	"github.com/gophercloud/gophercloud/pagination"
-	"github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/openstack/sharedfilesystems/v2/schedulerstats"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	"github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 func TestListPoolsDetail(t *testing.T) {
@@ -15,7 +16,7 @@ func TestListPoolsDetail(t *testing.T) {
 	HandlePoolsListSuccessfully(t)
 
 	pages := 0
-	err := schedulerstats.List(client.ServiceClient(), schedulerstats.ListOpts{}).EachPage(func(page pagination.Page) (bool, error) {
+	err := schedulerstats.List(client.ServiceClient(), schedulerstats.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		pages++
 
 		actual, err := schedulerstats.ExtractPools(page)
@@ -39,7 +40,7 @@ func TestListPoolsDetail(t *testing.T) {
 	}
 
 	pages = 0
-	err = schedulerstats.ListDetail(client.ServiceClient(), schedulerstats.ListDetailOpts{}).EachPage(func(page pagination.Page) (bool, error) {
+	err = schedulerstats.ListDetail(client.ServiceClient(), schedulerstats.ListDetailOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		pages++
 
 		actual, err := schedulerstats.ExtractPools(page)

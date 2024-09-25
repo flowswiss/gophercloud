@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // SecGroup represents a container for security group rules.
@@ -24,6 +24,9 @@ type SecGroup struct {
 	// A slice of security group rules that dictate the permitted behaviour for
 	// traffic entering and leaving the group.
 	Rules []rules.SecGroupRule `json:"security_group_rules"`
+
+	// Indicates if the security group is stateful or stateless.
+	Stateful bool `json:"stateful"`
 
 	// TenantID is the project owner of the security group.
 	TenantID string `json:"tenant_id"`
@@ -101,6 +104,10 @@ func (r SecGroupPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a SecGroupPage struct is empty.
 func (r SecGroupPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractGroups(r)
 	return len(is) == 0, err
 }

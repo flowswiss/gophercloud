@@ -3,8 +3,8 @@ package allocations
 import (
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type Allocation struct {
@@ -42,7 +42,7 @@ type Allocation struct {
 	UpdatedAt time.Time `json:"updated_at"`
 
 	// A list of relative links. Includes the self and bookmark links.
-	Links []interface{} `json:"links"`
+	Links []any `json:"links"`
 }
 
 type allocationResult struct {
@@ -55,11 +55,11 @@ func (r allocationResult) Extract() (*Allocation, error) {
 	return &s, err
 }
 
-func (r allocationResult) ExtractInto(v interface{}) error {
+func (r allocationResult) ExtractInto(v any) error {
 	return r.Result.ExtractIntoStructPtr(v, "")
 }
 
-func ExtractAllocationsInto(r pagination.Page, v interface{}) error {
+func ExtractAllocationsInto(r pagination.Page, v any) error {
 	return r.(AllocationPage).Result.ExtractIntoSlicePtr(v, "allocations")
 }
 
@@ -71,6 +71,10 @@ type AllocationPage struct {
 
 // IsEmpty returns true if a page contains no Allocation results.
 func (r AllocationPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	s, err := ExtractAllocations(r)
 	return len(s) == 0, err
 }

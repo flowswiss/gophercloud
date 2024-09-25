@@ -1,8 +1,8 @@
 package ruletypes
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -37,9 +37,9 @@ type Driver struct {
 
 // SupportedParameter represents a single set of supported parameters for a some QoS driver's .
 type SupportedParameter struct {
-	ParameterName   string      `json:"parameter_name"`
-	ParameterType   string      `json:"parameter_type"`
-	ParameterValues interface{} `json:"parameter_values"`
+	ParameterName   string `json:"parameter_name"`
+	ParameterType   string `json:"parameter_type"`
+	ParameterValues any    `json:"parameter_values"`
 }
 
 type ListRuleTypesPage struct {
@@ -47,6 +47,10 @@ type ListRuleTypesPage struct {
 }
 
 func (r ListRuleTypesPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	v, err := ExtractRuleTypes(r)
 	return len(v) == 0, err
 }

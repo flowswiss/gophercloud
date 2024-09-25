@@ -1,8 +1,11 @@
 package networks
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+	"fmt"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOptsBuilder allows extensions to add additional parameters to the
@@ -59,8 +62,8 @@ func List(c *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pager {
 }
 
 // Get retrieves a specific network based on its unique ID.
-func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := c.Get(getURL(c, id), &r.Body, nil)
+func Get(ctx context.Context, c *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := c.Get(ctx, getURL(c, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -68,7 +71,7 @@ func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
 // CreateOptsBuilder allows extensions to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToNetworkCreateMap() (map[string]interface{}, error)
+	ToNetworkCreateMap() (map[string]any, error)
 }
 
 // CreateOpts represents options used to create a network.
@@ -83,7 +86,7 @@ type CreateOpts struct {
 }
 
 // ToNetworkCreateMap builds a request body from CreateOpts.
-func (opts CreateOpts) ToNetworkCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToNetworkCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "network")
 }
 
@@ -94,13 +97,13 @@ func (opts CreateOpts) ToNetworkCreateMap() (map[string]interface{}, error) {
 // The tenant ID that is contained in the URI is the tenant that creates the
 // network. An admin user, however, has the option of specifying another tenant
 // ID in the CreateOpts struct.
-func Create(c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToNetworkCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Post(createURL(c), b, &r.Body, nil)
+	resp, err := c.Post(ctx, createURL(c), b, &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -108,7 +111,7 @@ func Create(c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResul
 // UpdateOptsBuilder allows extensions to add additional parameters to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToNetworkUpdateMap() (map[string]interface{}, error)
+	ToNetworkUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts represents options used to update a network.
@@ -117,31 +120,47 @@ type UpdateOpts struct {
 	Name         *string `json:"name,omitempty"`
 	Description  *string `json:"description,omitempty"`
 	Shared       *bool   `json:"shared,omitempty"`
+
+	// RevisionNumber implements extension:standard-attr-revisions. If != "" it
+	// will set revision_number=%s. If the revision number does not match, the
+	// update will fail.
+	RevisionNumber *int `json:"-" h:"If-Match"`
 }
 
 // ToNetworkUpdateMap builds a request body from UpdateOpts.
-func (opts UpdateOpts) ToNetworkUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToNetworkUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "network")
 }
 
 // Update accepts a UpdateOpts struct and updates an existing network using the
 // values provided. For more information, see the Create function.
-func Update(c *gophercloud.ServiceClient, networkID string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, c *gophercloud.ServiceClient, networkID string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToNetworkUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Put(updateURL(c, networkID), b, &r.Body, &gophercloud.RequestOpts{
-		OkCodes: []int{200, 201},
+	h, err := gophercloud.BuildHeaders(opts)
+	if err != nil {
+		r.Err = err
+		return
+	}
+	for k := range h {
+		if k == "If-Match" {
+			h[k] = fmt.Sprintf("revision_number=%s", h[k])
+		}
+	}
+	resp, err := c.Put(ctx, updateURL(c, networkID), b, &r.Body, &gophercloud.RequestOpts{
+		MoreHeaders: h,
+		OkCodes:     []int{200, 201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Delete accepts a unique ID and deletes the network associated with it.
-func Delete(c *gophercloud.ServiceClient, networkID string) (r DeleteResult) {
-	resp, err := c.Delete(deleteURL(c, networkID), nil)
+func Delete(ctx context.Context, c *gophercloud.ServiceClient, networkID string) (r DeleteResult) {
+	resp, err := c.Delete(ctx, deleteURL(c, networkID), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

@@ -1,8 +1,8 @@
 package l7policies
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // L7Policy is a collection of L7 rules associated with a Listener, and which
@@ -58,6 +58,10 @@ type L7Policy struct {
 
 	// Rules are List of associated L7 rule IDs.
 	Rules []Rule `json:"rules"`
+
+	// Tags is a list of resource tags. Tags are arbitrarily defined strings
+	// attached to the resource.
+	Tags []string `json:"tags"`
 }
 
 // Rule represents layer 7 load balancing rule.
@@ -94,6 +98,10 @@ type Rule struct {
 
 	// The operating status of the L7 policy.
 	OperatingStatus string `json:"operating_status"`
+
+	// Tags is a list of resource tags. Tags are arbitrarily defined strings
+	// attached to the resource.
+	Tags []string `json:"tags"`
 }
 
 type commonResult struct {
@@ -137,6 +145,10 @@ func (r L7PolicyPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a L7PolicyPage struct is empty.
 func (r L7PolicyPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractL7Policies(r)
 	return len(is) == 0, err
 }
@@ -211,6 +223,10 @@ func (r RulePage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a RulePage struct is empty.
 func (r RulePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractRules(r)
 	return len(is) == 0, err
 }

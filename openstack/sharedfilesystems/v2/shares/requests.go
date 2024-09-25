@@ -1,14 +1,16 @@
 package shares
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // CreateOptsBuilder allows extensions to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToShareCreateMap() (map[string]interface{}, error)
+	ToShareCreateMap() (map[string]any, error)
 }
 
 // CreateOpts contains the options for create a Share. This object is
@@ -50,20 +52,20 @@ type CreateOpts struct {
 
 // ToShareCreateMap assembles a request body based on the contents of a
 // CreateOpts.
-func (opts CreateOpts) ToShareCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToShareCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "share")
 }
 
 // Create will create a new Share based on the values in CreateOpts. To extract
 // the Share object from the response, call the Extract method on the
 // CreateResult.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToShareCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200, 201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -164,31 +166,31 @@ func ListDetail(client *gophercloud.ServiceClient, opts ListOptsBuilder) paginat
 }
 
 // Delete will delete an existing Share with the given UUID.
-func Delete(client *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, id), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Get will get a single share with given UUID
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(getURL(client, id), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // ListExportLocations will list shareID's export locations.
 // Client must have Microversion set; minimum supported microversion for ListExportLocations is 2.9.
-func ListExportLocations(client *gophercloud.ServiceClient, id string) (r ListExportLocationsResult) {
-	resp, err := client.Get(listExportLocationsURL(client, id), &r.Body, nil)
+func ListExportLocations(ctx context.Context, client *gophercloud.ServiceClient, id string) (r ListExportLocationsResult) {
+	resp, err := client.Get(ctx, listExportLocationsURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // GetExportLocation will get shareID's export location by an ID.
 // Client must have Microversion set; minimum supported microversion for GetExportLocation is 2.9.
-func GetExportLocation(client *gophercloud.ServiceClient, shareID string, id string) (r GetExportLocationResult) {
-	resp, err := client.Get(getExportLocationURL(client, shareID, id), &r.Body, nil)
+func GetExportLocation(ctx context.Context, client *gophercloud.ServiceClient, shareID string, id string) (r GetExportLocationResult) {
+	resp, err := client.Get(ctx, getExportLocationURL(client, shareID, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -196,7 +198,7 @@ func GetExportLocation(client *gophercloud.ServiceClient, shareID string, id str
 // GrantAccessOptsBuilder allows extensions to add additional parameters to the
 // GrantAccess request.
 type GrantAccessOptsBuilder interface {
-	ToGrantAccessMap() (map[string]interface{}, error)
+	ToGrantAccessMap() (map[string]any, error)
 }
 
 // GrantAccessOpts contains the options for creation of an GrantAccess request.
@@ -213,20 +215,20 @@ type GrantAccessOpts struct {
 
 // ToGrantAccessMap assembles a request body based on the contents of a
 // GrantAccessOpts.
-func (opts GrantAccessOpts) ToGrantAccessMap() (map[string]interface{}, error) {
+func (opts GrantAccessOpts) ToGrantAccessMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "allow_access")
 }
 
 // GrantAccess will grant access to a Share based on the values in GrantAccessOpts. To extract
 // the GrantAccess object from the response, call the Extract method on the GrantAccessResult.
 // Client must have Microversion set; minimum supported microversion for GrantAccess is 2.7.
-func GrantAccess(client *gophercloud.ServiceClient, id string, opts GrantAccessOptsBuilder) (r GrantAccessResult) {
+func GrantAccess(ctx context.Context, client *gophercloud.ServiceClient, id string, opts GrantAccessOptsBuilder) (r GrantAccessResult) {
 	b, err := opts.ToGrantAccessMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(grantAccessURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, grantAccessURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -236,7 +238,7 @@ func GrantAccess(client *gophercloud.ServiceClient, id string, opts GrantAccessO
 // RevokeAccessOptsBuilder allows extensions to add additional parameters to the
 // RevokeAccess request.
 type RevokeAccessOptsBuilder interface {
-	ToRevokeAccessMap() (map[string]interface{}, error)
+	ToRevokeAccessMap() (map[string]any, error)
 }
 
 // RevokeAccessOpts contains the options for creation of a RevokeAccess request.
@@ -248,7 +250,7 @@ type RevokeAccessOpts struct {
 
 // ToRevokeAccessMap assembles a request body based on the contents of a
 // RevokeAccessOpts.
-func (opts RevokeAccessOpts) ToRevokeAccessMap() (map[string]interface{}, error) {
+func (opts RevokeAccessOpts) ToRevokeAccessMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "deny_access")
 }
 
@@ -256,14 +258,14 @@ func (opts RevokeAccessOpts) ToRevokeAccessMap() (map[string]interface{}, error)
 // RevokeAccessResult contains only the error. To extract it, call the ExtractErr method on
 // the RevokeAccessResult. Client must have Microversion set; minimum supported microversion
 // for RevokeAccess is 2.7.
-func RevokeAccess(client *gophercloud.ServiceClient, id string, opts RevokeAccessOptsBuilder) (r RevokeAccessResult) {
+func RevokeAccess(ctx context.Context, client *gophercloud.ServiceClient, id string, opts RevokeAccessOptsBuilder) (r RevokeAccessResult) {
 	b, err := opts.ToRevokeAccessMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 
-	resp, err := client.Post(revokeAccessURL(client, id), b, nil, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, revokeAccessURL(client, id), b, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{200, 202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -273,9 +275,9 @@ func RevokeAccess(client *gophercloud.ServiceClient, id string, opts RevokeAcces
 // ListAccessRights lists all access rules assigned to a Share based on its id. To extract
 // the AccessRight slice from the response, call the Extract method on the ListAccessRightsResult.
 // Client must have Microversion set; minimum supported microversion for ListAccessRights is 2.7.
-func ListAccessRights(client *gophercloud.ServiceClient, id string) (r ListAccessRightsResult) {
-	requestBody := map[string]interface{}{"access_list": nil}
-	resp, err := client.Post(listAccessRightsURL(client, id), requestBody, &r.Body, &gophercloud.RequestOpts{
+func ListAccessRights(ctx context.Context, client *gophercloud.ServiceClient, id string) (r ListAccessRightsResult) {
+	requestBody := map[string]any{"access_list": nil}
+	resp, err := client.Post(ctx, listAccessRightsURL(client, id), requestBody, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -285,7 +287,7 @@ func ListAccessRights(client *gophercloud.ServiceClient, id string) (r ListAcces
 // ExtendOptsBuilder allows extensions to add additional parameters to the
 // Extend request.
 type ExtendOptsBuilder interface {
-	ToShareExtendMap() (map[string]interface{}, error)
+	ToShareExtendMap() (map[string]any, error)
 }
 
 // ExtendOpts contains options for extending a Share.
@@ -298,21 +300,21 @@ type ExtendOpts struct {
 
 // ToShareExtendMap assembles a request body based on the contents of a
 // ExtendOpts.
-func (opts ExtendOpts) ToShareExtendMap() (map[string]interface{}, error) {
+func (opts ExtendOpts) ToShareExtendMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "extend")
 }
 
 // Extend will extend the capacity of an existing share. ExtendResult contains only the error.
 // To extract it, call the ExtractErr method on the ExtendResult.
 // Client must have Microversion set; minimum supported microversion for Extend is 2.7.
-func Extend(client *gophercloud.ServiceClient, id string, opts ExtendOptsBuilder) (r ExtendResult) {
+func Extend(ctx context.Context, client *gophercloud.ServiceClient, id string, opts ExtendOptsBuilder) (r ExtendResult) {
 	b, err := opts.ToShareExtendMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 
-	resp, err := client.Post(extendURL(client, id), b, nil, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, extendURL(client, id), b, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -322,7 +324,7 @@ func Extend(client *gophercloud.ServiceClient, id string, opts ExtendOptsBuilder
 // ShrinkOptsBuilder allows extensions to add additional parameters to the
 // Shrink request.
 type ShrinkOptsBuilder interface {
-	ToShareShrinkMap() (map[string]interface{}, error)
+	ToShareShrinkMap() (map[string]any, error)
 }
 
 // ShrinkOpts contains options for shrinking a Share.
@@ -335,21 +337,21 @@ type ShrinkOpts struct {
 
 // ToShareShrinkMap assembles a request body based on the contents of a
 // ShrinkOpts.
-func (opts ShrinkOpts) ToShareShrinkMap() (map[string]interface{}, error) {
+func (opts ShrinkOpts) ToShareShrinkMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "shrink")
 }
 
 // Shrink will shrink the capacity of an existing share. ShrinkResult contains only the error.
 // To extract it, call the ExtractErr method on the ShrinkResult.
 // Client must have Microversion set; minimum supported microversion for Shrink is 2.7.
-func Shrink(client *gophercloud.ServiceClient, id string, opts ShrinkOptsBuilder) (r ShrinkResult) {
+func Shrink(ctx context.Context, client *gophercloud.ServiceClient, id string, opts ShrinkOptsBuilder) (r ShrinkResult) {
 	b, err := opts.ToShareShrinkMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 
-	resp, err := client.Post(shrinkURL(client, id), b, nil, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, shrinkURL(client, id), b, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -359,7 +361,7 @@ func Shrink(client *gophercloud.ServiceClient, id string, opts ShrinkOptsBuilder
 // UpdateOptsBuilder allows extensions to add additional parameters to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToShareUpdateMap() (map[string]interface{}, error)
+	ToShareUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts contain options for updating an existing Share. This object is passed
@@ -376,19 +378,19 @@ type UpdateOpts struct {
 
 // ToShareUpdateMap assembles a request body based on the contents of an
 // UpdateOpts.
-func (opts UpdateOpts) ToShareUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToShareUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "share")
 }
 
 // Update will update the Share with provided information. To extract the updated
 // Share from the response, call the Extract method on the UpdateResult.
-func Update(client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToShareUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Put(updateURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Put(ctx, updateURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -397,16 +399,16 @@ func Update(client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder
 
 // GetMetadata retrieves metadata of the specified share. To extract the retrieved
 // metadata from the response, call the Extract method on the MetadataResult.
-func GetMetadata(client *gophercloud.ServiceClient, id string) (r MetadataResult) {
-	resp, err := client.Get(getMetadataURL(client, id), &r.Body, nil)
+func GetMetadata(ctx context.Context, client *gophercloud.ServiceClient, id string) (r MetadataResult) {
+	resp, err := client.Get(ctx, getMetadataURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // GetMetadatum retrieves a single metadata item of the specified share. To extract the retrieved
 // metadata from the response, call the Extract method on the GetMetadatumResult.
-func GetMetadatum(client *gophercloud.ServiceClient, id, key string) (r GetMetadatumResult) {
-	resp, err := client.Get(getMetadatumURL(client, id, key), &r.Body, nil)
+func GetMetadatum(ctx context.Context, client *gophercloud.ServiceClient, id, key string) (r GetMetadatumResult) {
+	resp, err := client.Get(ctx, getMetadatumURL(client, id, key), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -420,28 +422,28 @@ type SetMetadataOpts struct {
 
 // ToSetMetadataMap assembles a request body based on the contents of an
 // SetMetadataOpts.
-func (opts SetMetadataOpts) ToSetMetadataMap() (map[string]interface{}, error) {
+func (opts SetMetadataOpts) ToSetMetadataMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "")
 }
 
 // SetMetadataOptsBuilder allows extensions to add additional parameters to the
 // SetMetadata request.
 type SetMetadataOptsBuilder interface {
-	ToSetMetadataMap() (map[string]interface{}, error)
+	ToSetMetadataMap() (map[string]any, error)
 }
 
 // SetMetadata sets metadata of the specified share.
 // Existing metadata items are either kept or overwritten by the metadata from the request.
 // To extract the updated metadata from the response, call the Extract
 // method on the MetadataResult.
-func SetMetadata(client *gophercloud.ServiceClient, id string, opts SetMetadataOptsBuilder) (r MetadataResult) {
+func SetMetadata(ctx context.Context, client *gophercloud.ServiceClient, id string, opts SetMetadataOptsBuilder) (r MetadataResult) {
 	b, err := opts.ToSetMetadataMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 
-	resp, err := client.Post(setMetadataURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, setMetadataURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -457,28 +459,28 @@ type UpdateMetadataOpts struct {
 
 // ToUpdateMetadataMap assembles a request body based on the contents of an
 // UpdateMetadataOpts.
-func (opts UpdateMetadataOpts) ToUpdateMetadataMap() (map[string]interface{}, error) {
+func (opts UpdateMetadataOpts) ToUpdateMetadataMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "")
 }
 
 // UpdateMetadataOptsBuilder allows extensions to add additional parameters to the
 // UpdateMetadata request.
 type UpdateMetadataOptsBuilder interface {
-	ToUpdateMetadataMap() (map[string]interface{}, error)
+	ToUpdateMetadataMap() (map[string]any, error)
 }
 
 // UpdateMetadata updates metadata of the specified share.
 // All existing metadata items are discarded and replaced by the metadata from the request.
 // To extract the updated metadata from the response, call the Extract
 // method on the MetadataResult.
-func UpdateMetadata(client *gophercloud.ServiceClient, id string, opts UpdateMetadataOptsBuilder) (r MetadataResult) {
+func UpdateMetadata(ctx context.Context, client *gophercloud.ServiceClient, id string, opts UpdateMetadataOptsBuilder) (r MetadataResult) {
 	b, err := opts.ToUpdateMetadataMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 
-	resp, err := client.Post(updateMetadataURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, updateMetadataURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -486,8 +488,8 @@ func UpdateMetadata(client *gophercloud.ServiceClient, id string, opts UpdateMet
 }
 
 // DeleteMetadatum deletes a single key-value pair from the metadata of the specified share.
-func DeleteMetadatum(client *gophercloud.ServiceClient, id, key string) (r DeleteMetadatumResult) {
-	resp, err := client.Delete(deleteMetadatumURL(client, id, key), &gophercloud.RequestOpts{
+func DeleteMetadatum(ctx context.Context, client *gophercloud.ServiceClient, id, key string) (r DeleteMetadatumResult) {
+	resp, err := client.Delete(ctx, deleteMetadatumURL(client, id, key), &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -497,7 +499,7 @@ func DeleteMetadatum(client *gophercloud.ServiceClient, id, key string) (r Delet
 // RevertOptsBuilder allows extensions to add additional parameters to the
 // Revert request.
 type RevertOptsBuilder interface {
-	ToShareRevertMap() (map[string]interface{}, error)
+	ToShareRevertMap() (map[string]any, error)
 }
 
 // RevertOpts contains options for reverting a Share to a snapshot.
@@ -511,21 +513,21 @@ type RevertOpts struct {
 
 // ToShareRevertMap assembles a request body based on the contents of a
 // RevertOpts.
-func (opts RevertOpts) ToShareRevertMap() (map[string]interface{}, error) {
+func (opts RevertOpts) ToShareRevertMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "revert")
 }
 
 // Revert will revert the existing share to a Snapshot. RevertResult contains only the error.
 // To extract it, call the ExtractErr method on the RevertResult.
 // Client must have Microversion set; minimum supported microversion for Revert is 2.27.
-func Revert(client *gophercloud.ServiceClient, id string, opts RevertOptsBuilder) (r RevertResult) {
+func Revert(ctx context.Context, client *gophercloud.ServiceClient, id string, opts RevertOptsBuilder) (r RevertResult) {
 	b, err := opts.ToShareRevertMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 
-	resp, err := client.Post(revertURL(client, id), b, nil, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, revertURL(client, id), b, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -535,7 +537,7 @@ func Revert(client *gophercloud.ServiceClient, id string, opts RevertOptsBuilder
 // ResetStatusOptsBuilder allows extensions to add additional parameters to the
 // ResetStatus request.
 type ResetStatusOptsBuilder interface {
-	ToShareResetStatusMap() (map[string]interface{}, error)
+	ToShareResetStatusMap() (map[string]any, error)
 }
 
 // ResetStatusOpts contains options for resetting a Share status.
@@ -548,21 +550,21 @@ type ResetStatusOpts struct {
 
 // ToShareResetStatusMap assembles a request body based on the contents of a
 // ResetStatusOpts.
-func (opts ResetStatusOpts) ToShareResetStatusMap() (map[string]interface{}, error) {
+func (opts ResetStatusOpts) ToShareResetStatusMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "reset_status")
 }
 
 // ResetStatus will reset the existing share status. ResetStatusResult contains only the error.
 // To extract it, call the ExtractErr method on the ResetStatusResult.
 // Client must have Microversion set; minimum supported microversion for ResetStatus is 2.7.
-func ResetStatus(client *gophercloud.ServiceClient, id string, opts ResetStatusOptsBuilder) (r ResetStatusResult) {
+func ResetStatus(ctx context.Context, client *gophercloud.ServiceClient, id string, opts ResetStatusOptsBuilder) (r ResetStatusResult) {
 	b, err := opts.ToShareResetStatusMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 
-	resp, err := client.Post(resetStatusURL(client, id), b, nil, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, resetStatusURL(client, id), b, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -572,11 +574,11 @@ func ResetStatus(client *gophercloud.ServiceClient, id string, opts ResetStatusO
 // ForceDelete will delete the existing share in any state. ForceDeleteResult contains only the error.
 // To extract it, call the ExtractErr method on the ForceDeleteResult.
 // Client must have Microversion set; minimum supported microversion for ForceDelete is 2.7.
-func ForceDelete(client *gophercloud.ServiceClient, id string) (r ForceDeleteResult) {
-	b := map[string]interface{}{
+func ForceDelete(ctx context.Context, client *gophercloud.ServiceClient, id string) (r ForceDeleteResult) {
+	b := map[string]any{
 		"force_delete": nil,
 	}
-	resp, err := client.Post(forceDeleteURL(client, id), b, nil, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, forceDeleteURL(client, id), b, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -587,11 +589,11 @@ func ForceDelete(client *gophercloud.ServiceClient, id string) (r ForceDeleteRes
 // service without deleting the share. UnmanageResult contains only the error.
 // To extract it, call the ExtractErr method on the UnmanageResult.
 // Client must have Microversion set; minimum supported microversion for Unmanage is 2.7.
-func Unmanage(client *gophercloud.ServiceClient, id string) (r UnmanageResult) {
-	b := map[string]interface{}{
+func Unmanage(ctx context.Context, client *gophercloud.ServiceClient, id string) (r UnmanageResult) {
+	b := map[string]any{
 		"unmanage": nil,
 	}
-	resp, err := client.Post(unmanageURL(client, id), b, nil, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, unmanageURL(client, id), b, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

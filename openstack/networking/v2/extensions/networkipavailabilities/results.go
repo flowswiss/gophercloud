@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -121,6 +121,10 @@ type NetworkIPAvailabilityPage struct {
 
 // IsEmpty determines whether or not a NetworkIPAvailability is empty.
 func (r NetworkIPAvailabilityPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	networkipavailabilities, err := ExtractNetworkIPAvailabilities(r)
 	return len(networkipavailabilities) == 0, err
 }

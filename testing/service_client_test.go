@@ -1,12 +1,13 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/gophercloud/gophercloud"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	"github.com/gophercloud/gophercloud/v2"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestServiceURL(t *testing.T) {
@@ -28,7 +29,7 @@ func TestMoreHeaders(t *testing.T) {
 		"custom": "header",
 	}
 	c.ProviderClient = new(gophercloud.ProviderClient)
-	resp, err := c.Get(fmt.Sprintf("%s/route", th.Endpoint()), nil, nil)
+	resp, err := c.Get(context.TODO(), fmt.Sprintf("%s/route", th.Endpoint()), nil, nil)
 	th.AssertNoErr(t, err)
 	th.AssertEquals(t, resp.Request.Header.Get("custom"), "header")
 }

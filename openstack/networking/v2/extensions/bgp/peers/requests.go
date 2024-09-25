@@ -1,8 +1,10 @@
 package peers
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // List the bgp peers
@@ -14,8 +16,8 @@ func List(c *gophercloud.ServiceClient) pagination.Pager {
 }
 
 // Get retrieve the specific bgp peer by its uuid
-func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := c.Get(getURL(c, id), &r.Body, nil)
+func Get(ctx context.Context, c *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := c.Get(ctx, getURL(c, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -23,7 +25,7 @@ func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
 // CreateOptsBuilder allows extensions to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToPeerCreateMap() (map[string]interface{}, error)
+	ToPeerCreateMap() (map[string]any, error)
 }
 
 // CreateOpts represents options used to create a BGP Peer.
@@ -36,25 +38,25 @@ type CreateOpts struct {
 }
 
 // ToPeerCreateMap builds a request body from CreateOpts.
-func (opts CreateOpts) ToPeerCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToPeerCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, jroot)
 }
 
 // Create a BGP Peer
-func Create(c *gophercloud.ServiceClient, opts CreateOpts) (r CreateResult) {
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOpts) (r CreateResult) {
 	b, err := opts.ToPeerCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Post(createURL(c), b, &r.Body, nil)
+	resp, err := c.Post(ctx, createURL(c), b, &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Delete accepts a unique ID and deletes the bgp Peer associated with it.
-func Delete(c *gophercloud.ServiceClient, bgpPeerID string) (r DeleteResult) {
-	resp, err := c.Delete(deleteURL(c, bgpPeerID), nil)
+func Delete(ctx context.Context, c *gophercloud.ServiceClient, bgpPeerID string) (r DeleteResult) {
+	resp, err := c.Delete(ctx, deleteURL(c, bgpPeerID), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -62,7 +64,7 @@ func Delete(c *gophercloud.ServiceClient, bgpPeerID string) (r DeleteResult) {
 // UpdateOptsBuilder allows extensions to add additional parameters to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToPeerUpdateMap() (map[string]interface{}, error)
+	ToPeerUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts represents options used to update a BGP Peer.
@@ -72,18 +74,18 @@ type UpdateOpts struct {
 }
 
 // ToPeerUpdateMap builds a request body from UpdateOpts.
-func (opts UpdateOpts) ToPeerUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToPeerUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, jroot)
 }
 
 // Update accept a BGP Peer ID and an UpdateOpts and update the BGP Peer
-func Update(c *gophercloud.ServiceClient, bgpPeerID string, opts UpdateOpts) (r UpdateResult) {
+func Update(ctx context.Context, c *gophercloud.ServiceClient, bgpPeerID string, opts UpdateOpts) (r UpdateResult) {
 	b, err := opts.ToPeerUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Put(updateURL(c, bgpPeerID), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := c.Put(ctx, updateURL(c, bgpPeerID), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

@@ -3,11 +3,10 @@ package secrets
 import (
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Secret represents a secret stored in the key manager service.
@@ -93,14 +92,14 @@ type CreateResult struct {
 	commonResult
 }
 
-// UpdateResult is the response from an Update operation. Call its ExtractErr to
-// determine if the request succeeded or failed.
+// UpdateResult is the response from an Update operation. Call its ExtractErr
+// method to determine if the request succeeded or failed.
 type UpdateResult struct {
 	gophercloud.ErrResult
 }
 
-// DeleteResult is the response from a Delete operation. Call its ExtractErr to
-// determine if the request succeeded or failed.
+// DeleteResult is the response from a Delete operation. Call its ExtractErr
+// method to determine if the request succeeded or failed.
 type DeleteResult struct {
 	gophercloud.ErrResult
 }
@@ -112,17 +111,17 @@ type PayloadResult struct {
 	Body io.ReadCloser
 }
 
-// Extract is a function that takes a PayloadResult's io.Reader body
-// and reads all available data into a slice of bytes. Please be aware that due
-// to the nature of io.Reader is forward-only - meaning that it can only be read
-// once and not rewound. You can recreate a reader from the output of this
-// function by using bytes.NewReader(downloadBytes)
+// Extract is a method that takes a PayloadResult's io.Reader body and reads
+// all available data into a slice of bytes. Please be aware that its io.Reader
+// is forward-only - meaning that it can only be read once and not rewound. You
+// can recreate a reader from the output of this function by using
+// bytes.NewReader(downloadBytes)
 func (r PayloadResult) Extract() ([]byte, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -136,6 +135,10 @@ type SecretPage struct {
 
 // IsEmpty determines whether or not a page of secrets contains any results.
 func (r SecretPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	secrets, err := ExtractSecrets(r)
 	return len(secrets) == 0, err
 }
@@ -211,7 +214,7 @@ func (r MetadatumResult) Extract() (*Metadatum, error) {
 }
 
 // MetadatumCreateResult is the response from a metadata Create operation. Call
-// it's ExtractErr to determine if the request succeeded or failed.
+// its ExtractErr method to determine if the request succeeded or failed.
 //
 // NOTE: This could be a MetadatumResponse but, at the time of testing, it looks
 // like Barbican was returning errneous JSON in the response.
@@ -220,7 +223,7 @@ type MetadatumCreateResult struct {
 }
 
 // MetadatumDeleteResult is the response from a metadatum Delete operation. Call
-// its ExtractErr to determine if the request succeeded or failed.
+// its ExtractErr method to determine if the request succeeded or failed.
 type MetadatumDeleteResult struct {
 	gophercloud.ErrResult
 }

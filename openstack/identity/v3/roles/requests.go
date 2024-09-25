@@ -1,11 +1,12 @@
 package roles
 
 import (
+	"context"
 	"net/url"
 	"strings"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOptsBuilder allows extensions to add additional parameters to
@@ -65,8 +66,8 @@ func List(client *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pa
 }
 
 // Get retrieves details on a single role, by ID.
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(getURL(client, id), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -74,7 +75,7 @@ func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
 // CreateOptsBuilder allows extensions to add additional parameters to
 // the Create request.
 type CreateOptsBuilder interface {
-	ToRoleCreateMap() (map[string]interface{}, error)
+	ToRoleCreateMap() (map[string]any, error)
 }
 
 // CreateOpts provides options used to create a role.
@@ -86,18 +87,18 @@ type CreateOpts struct {
 	DomainID string `json:"domain_id,omitempty"`
 
 	// Extra is free-form extra key/value pairs to describe the role.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 }
 
 // ToRoleCreateMap formats a CreateOpts into a create request.
-func (opts CreateOpts) ToRoleCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToRoleCreateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "role")
 	if err != nil {
 		return nil, err
 	}
 
 	if opts.Extra != nil {
-		if v, ok := b["role"].(map[string]interface{}); ok {
+		if v, ok := b["role"].(map[string]any); ok {
 			for key, value := range opts.Extra {
 				v[key] = value
 			}
@@ -108,13 +109,13 @@ func (opts CreateOpts) ToRoleCreateMap() (map[string]interface{}, error) {
 }
 
 // Create creates a new Role.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToRoleCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -124,7 +125,7 @@ func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r Create
 // UpdateOptsBuilder allows extensions to add additional parameters to
 // the Update request.
 type UpdateOptsBuilder interface {
-	ToRoleUpdateMap() (map[string]interface{}, error)
+	ToRoleUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts provides options for updating a role.
@@ -133,18 +134,18 @@ type UpdateOpts struct {
 	Name string `json:"name,omitempty"`
 
 	// Extra is free-form extra key/value pairs to describe the role.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 }
 
 // ToRoleUpdateMap formats a UpdateOpts into an update request.
-func (opts UpdateOpts) ToRoleUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToRoleUpdateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "role")
 	if err != nil {
 		return nil, err
 	}
 
 	if opts.Extra != nil {
-		if v, ok := b["role"].(map[string]interface{}); ok {
+		if v, ok := b["role"].(map[string]any); ok {
 			for key, value := range opts.Extra {
 				v[key] = value
 			}
@@ -155,13 +156,13 @@ func (opts UpdateOpts) ToRoleUpdateMap() (map[string]interface{}, error) {
 }
 
 // Update updates an existing Role.
-func Update(client *gophercloud.ServiceClient, roleID string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, roleID string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToRoleUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Patch(updateURL(client, roleID), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Patch(ctx, updateURL(client, roleID), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -169,8 +170,8 @@ func Update(client *gophercloud.ServiceClient, roleID string, opts UpdateOptsBui
 }
 
 // Delete deletes a role.
-func Delete(client *gophercloud.ServiceClient, roleID string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, roleID), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, roleID string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, roleID), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -332,7 +333,7 @@ func ListAssignmentsOnResource(client *gophercloud.ServiceClient, opts ListAssig
 
 // Assign is the operation responsible for assigning a role
 // to a user/group on a project/domain.
-func Assign(client *gophercloud.ServiceClient, roleID string, opts AssignOpts) (r AssignmentResult) {
+func Assign(ctx context.Context, client *gophercloud.ServiceClient, roleID string, opts AssignOpts) (r AssignmentResult) {
 	// Check xor conditions
 	_, err := gophercloud.BuildRequestBody(opts, "")
 	if err != nil {
@@ -361,7 +362,7 @@ func Assign(client *gophercloud.ServiceClient, roleID string, opts AssignOpts) (
 		actorType = "groups"
 	}
 
-	resp, err := client.Put(assignURL(client, targetType, targetID, actorType, actorID, roleID), nil, nil, &gophercloud.RequestOpts{
+	resp, err := client.Put(ctx, assignURL(client, targetType, targetID, actorType, actorID, roleID), nil, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{204},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -370,7 +371,7 @@ func Assign(client *gophercloud.ServiceClient, roleID string, opts AssignOpts) (
 
 // Unassign is the operation responsible for unassigning a role
 // from a user/group on a project/domain.
-func Unassign(client *gophercloud.ServiceClient, roleID string, opts UnassignOpts) (r UnassignmentResult) {
+func Unassign(ctx context.Context, client *gophercloud.ServiceClient, roleID string, opts UnassignOpts) (r UnassignmentResult) {
 	// Check xor conditions
 	_, err := gophercloud.BuildRequestBody(opts, "")
 	if err != nil {
@@ -399,8 +400,40 @@ func Unassign(client *gophercloud.ServiceClient, roleID string, opts UnassignOpt
 		actorType = "groups"
 	}
 
-	resp, err := client.Delete(assignURL(client, targetType, targetID, actorType, actorID, roleID), &gophercloud.RequestOpts{
+	resp, err := client.Delete(ctx, assignURL(client, targetType, targetID, actorType, actorID, roleID), &gophercloud.RequestOpts{
 		OkCodes: []int{204},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+func CreateRoleInferenceRule(ctx context.Context, client *gophercloud.ServiceClient, priorRoleID, impliedRoleID string) (r CreateImpliedRoleResult) {
+	resp, err := client.Put(ctx, createRoleInferenceRuleURL(client, priorRoleID, impliedRoleID), nil, &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{201},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+func GetRoleInferenceRule(ctx context.Context, client *gophercloud.ServiceClient, priorRoleID, impliedRoleID string) (r CreateImpliedRoleResult) {
+	resp, err := client.Get(ctx, getRoleInferenceRuleURL(client, priorRoleID, impliedRoleID), &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{200},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+func DeleteRoleInferenceRule(ctx context.Context, client *gophercloud.ServiceClient, priorRoleID, impliedRoleID string) (r DeleteImpliedRoleResult) {
+	resp, err := client.Delete(ctx, deleteRoleInferenceRuleURL(client, priorRoleID, impliedRoleID), &gophercloud.RequestOpts{
+		OkCodes: []int{204},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+func ListRoleInferenceRules(ctx context.Context, client *gophercloud.ServiceClient) (r ListImpliedRolesResult) {
+	resp, err := client.Get(ctx, listRoleInferenceRulesURL(client), &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return

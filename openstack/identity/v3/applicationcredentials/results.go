@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type Role struct {
@@ -56,7 +56,7 @@ type ApplicationCredential struct {
 	// A list of access rules objects.
 	AccessRules []AccessRule `json:"access_rules,omitempty"`
 	// Links contains referencing links to the application credential.
-	Links map[string]interface{} `json:"links"`
+	Links map[string]any `json:"links"`
 }
 
 func (r *ApplicationCredential) UnmarshalJSON(b []byte) error {
@@ -105,6 +105,10 @@ type ApplicationCredentialPage struct {
 
 // IsEmpty determines whether or not a an ApplicationCredentialPage contains any results.
 func (r ApplicationCredentialPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	applicationCredentials, err := ExtractApplicationCredentials(r)
 	return len(applicationCredentials) == 0, err
 }
@@ -155,6 +159,10 @@ type AccessRulePage struct {
 
 // IsEmpty determines whether or not a an AccessRulePage contains any results.
 func (r AccessRulePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	accessRules, err := ExtractAccessRules(r)
 	return len(accessRules) == 0, err
 }

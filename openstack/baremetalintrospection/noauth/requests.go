@@ -3,7 +3,7 @@ package noauth
 import (
 	"fmt"
 
-	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/v2"
 )
 
 // EndpointOpts specifies a "noauth" Ironic Inspector Endpoint.
@@ -33,7 +33,7 @@ func NewBareMetalIntrospectionNoAuth(eo EndpointOpts) (*gophercloud.ServiceClien
 		return nil, err
 	}
 
-	sc.Type = "baremetal-inspector"
+	sc.Type = "baremetal-introspection"
 
 	return sc, nil
 }

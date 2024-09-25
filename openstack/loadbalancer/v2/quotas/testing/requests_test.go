@@ -1,14 +1,15 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/quotas"
-	fake "github.com/gophercloud/gophercloud/openstack/networking/v2/common"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/quotas"
+	fake "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/common"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestGet_1(t *testing.T) {
@@ -25,7 +26,7 @@ func TestGet_1(t *testing.T) {
 		fmt.Fprintf(w, GetResponseRaw_1)
 	})
 
-	q, err := quotas.Get(fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76").Extract()
+	q, err := quotas.Get(context.TODO(), fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76").Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, q, &GetResponse)
 }
@@ -44,7 +45,7 @@ func TestGet_2(t *testing.T) {
 		fmt.Fprintf(w, GetResponseRaw_2)
 	})
 
-	q, err := quotas.Get(fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76").Extract()
+	q, err := quotas.Get(context.TODO(), fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76").Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, q, &GetResponse)
 }
@@ -63,7 +64,7 @@ func TestUpdate_1(t *testing.T) {
 		fmt.Fprintf(w, UpdateRequestResponseRaw_1)
 	})
 
-	q, err := quotas.Update(fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76", quotas.UpdateOpts{
+	q, err := quotas.Update(context.TODO(), fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76", quotas.UpdateOpts{
 		Loadbalancer:  gophercloud.IntToPointer(20),
 		Listener:      gophercloud.IntToPointer(40),
 		Member:        gophercloud.IntToPointer(200),
@@ -91,7 +92,7 @@ func TestUpdate_2(t *testing.T) {
 		fmt.Fprintf(w, UpdateRequestResponseRaw_2)
 	})
 
-	q, err := quotas.Update(fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76", quotas.UpdateOpts{
+	q, err := quotas.Update(context.TODO(), fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76", quotas.UpdateOpts{
 		Loadbalancer:  gophercloud.IntToPointer(20),
 		Listener:      gophercloud.IntToPointer(40),
 		Member:        gophercloud.IntToPointer(200),

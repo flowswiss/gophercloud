@@ -1,8 +1,8 @@
 package rules
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -70,6 +70,10 @@ type BandwidthLimitRulePage struct {
 
 // IsEmpty checks whether a BandwidthLimitRulePage is empty.
 func (r BandwidthLimitRulePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractBandwidthLimitRules(r)
 	return len(is) == 0, err
 }
@@ -83,7 +87,7 @@ func ExtractBandwidthLimitRules(r pagination.Page) ([]BandwidthLimitRule, error)
 }
 
 // ExtractBandwidthLimitRulesInto extracts the elements into a slice of RBAC Policy structs.
-func ExtractBandwidthLimitRulesInto(r pagination.Page, v interface{}) error {
+func ExtractBandwidthLimitRulesInto(r pagination.Page, v any) error {
 	return r.(BandwidthLimitRulePage).Result.ExtractIntoSlicePtr(v, "bandwidth_limit_rules")
 }
 
@@ -142,6 +146,10 @@ type DSCPMarkingRulePage struct {
 
 // IsEmpty checks whether a DSCPMarkingRulePage is empty.
 func (r DSCPMarkingRulePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractDSCPMarkingRules(r)
 	return len(is) == 0, err
 }
@@ -155,7 +163,7 @@ func ExtractDSCPMarkingRules(r pagination.Page) ([]DSCPMarkingRule, error) {
 }
 
 // ExtractDSCPMarkingRulesInto extracts the elements into a slice of RBAC Policy structs.
-func ExtractDSCPMarkingRulesInto(r pagination.Page, v interface{}) error {
+func ExtractDSCPMarkingRulesInto(r pagination.Page, v any) error {
 	return r.(DSCPMarkingRulePage).Result.ExtractIntoSlicePtr(v, "dscp_marking_rules")
 }
 
@@ -217,6 +225,10 @@ type MinimumBandwidthRulePage struct {
 
 // IsEmpty checks whether a MinimumBandwidthRulePage is empty.
 func (r MinimumBandwidthRulePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractMinimumBandwidthRules(r)
 	return len(is) == 0, err
 }
@@ -230,6 +242,6 @@ func ExtractMinimumBandwidthRules(r pagination.Page) ([]MinimumBandwidthRule, er
 }
 
 // ExtractMinimumBandwidthRulesInto extracts the elements into a slice of RBAC Policy structs.
-func ExtractMinimumBandwidthRulesInto(r pagination.Page, v interface{}) error {
+func ExtractMinimumBandwidthRulesInto(r pagination.Page, v any) error {
 	return r.(MinimumBandwidthRulePage).Result.ExtractIntoSlicePtr(v, "minimum_bandwidth_rules")
 }

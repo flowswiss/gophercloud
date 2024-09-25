@@ -1,18 +1,83 @@
 package testing
 
 import (
+	"context"
 	"testing"
 	"time"
 
-	"github.com/gophercloud/gophercloud/openstack/objectstorage/v1/containers"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	fake "github.com/gophercloud/gophercloud/testhelper/client"
+	v1 "github.com/gophercloud/gophercloud/v2/openstack/objectstorage/v1"
+	"github.com/gophercloud/gophercloud/v2/openstack/objectstorage/v1/containers"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	fake "github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
-var (
-	metadata = map[string]string{"gophercloud-test": "containers"}
-)
+func TestContainerNames(t *testing.T) {
+	for _, tc := range [...]struct {
+		name          string
+		containerName string
+		expectedError error
+	}{
+		{
+			"rejects_a_slash",
+			"one/two",
+			v1.ErrInvalidContainerName{},
+		},
+		{
+			"rejects_an_empty_string",
+			"",
+			v1.ErrEmptyContainerName{},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Run("create", func(t *testing.T) {
+				th.SetupHTTP()
+				defer th.TeardownHTTP()
+				HandleCreateContainerSuccessfully(t)
+
+				_, err := containers.Create(context.TODO(), fake.ServiceClient(), tc.containerName, nil).Extract()
+				th.CheckErr(t, err, &tc.expectedError)
+			})
+			t.Run("delete", func(t *testing.T) {
+				th.SetupHTTP()
+				defer th.TeardownHTTP()
+				HandleDeleteContainerSuccessfully(t, WithPath("/"))
+
+				res := containers.Delete(context.TODO(), fake.ServiceClient(), tc.containerName)
+				th.CheckErr(t, res.Err, &tc.expectedError)
+			})
+			t.Run("update", func(t *testing.T) {
+				th.SetupHTTP()
+				defer th.TeardownHTTP()
+				HandleUpdateContainerSuccessfully(t, WithPath("/"))
+
+				contentType := "text/plain"
+				options := &containers.UpdateOpts{
+					Metadata:         map[string]string{"foo": "bar"},
+					ContainerWrite:   new(string),
+					ContainerRead:    new(string),
+					ContainerSyncTo:  new(string),
+					ContainerSyncKey: new(string),
+					ContentType:      &contentType,
+				}
+				res := containers.Update(context.TODO(), fake.ServiceClient(), tc.containerName, options)
+				th.CheckErr(t, res.Err, &tc.expectedError)
+			})
+			t.Run("get", func(t *testing.T) {
+				th.SetupHTTP()
+				defer th.TeardownHTTP()
+				HandleGetContainerSuccessfully(t, WithPath("/"))
+
+				res := containers.Get(context.TODO(), fake.ServiceClient(), tc.containerName, nil)
+				_, err := res.ExtractMetadata()
+				th.CheckErr(t, err, &tc.expectedError)
+
+				_, err = res.Extract()
+				th.CheckErr(t, err, &tc.expectedError)
+			})
+		})
+	}
+}
 
 func TestListContainerInfo(t *testing.T) {
 	th.SetupHTTP()
@@ -20,7 +85,7 @@ func TestListContainerInfo(t *testing.T) {
 	HandleListContainerInfoSuccessfully(t)
 
 	count := 0
-	err := containers.List(fake.ServiceClient(), &containers.ListOpts{Full: true}).EachPage(func(page pagination.Page) (bool, error) {
+	err := containers.List(fake.ServiceClient(), &containers.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := containers.ExtractInfo(page)
 		th.AssertNoErr(t, err)
@@ -30,7 +95,7 @@ func TestListContainerInfo(t *testing.T) {
 		return true, nil
 	})
 	th.AssertNoErr(t, err)
-	th.CheckEquals(t, count, 1)
+	th.CheckEquals(t, 1, count)
 }
 
 func TestListAllContainerInfo(t *testing.T) {
@@ -38,7 +103,7 @@ func TestListAllContainerInfo(t *testing.T) {
 	defer th.TeardownHTTP()
 	HandleListContainerInfoSuccessfully(t)
 
-	allPages, err := containers.List(fake.ServiceClient(), &containers.ListOpts{Full: true}).AllPages()
+	allPages, err := containers.List(fake.ServiceClient(), &containers.ListOpts{}).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 	actual, err := containers.ExtractInfo(allPages)
 	th.AssertNoErr(t, err)
@@ -48,10 +113,10 @@ func TestListAllContainerInfo(t *testing.T) {
 func TestListContainerNames(t *testing.T) {
 	th.SetupHTTP()
 	defer th.TeardownHTTP()
-	HandleListContainerNamesSuccessfully(t)
+	HandleListContainerInfoSuccessfully(t)
 
 	count := 0
-	err := containers.List(fake.ServiceClient(), &containers.ListOpts{Full: false}).EachPage(func(page pagination.Page) (bool, error) {
+	err := containers.List(fake.ServiceClient(), &containers.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := containers.ExtractNames(page)
 		if err != nil {
@@ -64,19 +129,31 @@ func TestListContainerNames(t *testing.T) {
 		return true, nil
 	})
 	th.AssertNoErr(t, err)
-	th.CheckEquals(t, count, 1)
+	th.CheckEquals(t, 1, count)
 }
 
 func TestListAllContainerNames(t *testing.T) {
 	th.SetupHTTP()
 	defer th.TeardownHTTP()
-	HandleListContainerNamesSuccessfully(t)
+	HandleListContainerInfoSuccessfully(t)
 
-	allPages, err := containers.List(fake.ServiceClient(), &containers.ListOpts{Full: false}).AllPages()
+	allPages, err := containers.List(fake.ServiceClient(), &containers.ListOpts{}).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 	actual, err := containers.ExtractNames(allPages)
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, ExpectedListNames, actual)
+}
+
+func TestListZeroContainerNames(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleListZeroContainerNames204(t)
+
+	allPages, err := containers.List(fake.ServiceClient(), &containers.ListOpts{}).AllPages(context.TODO())
+	th.AssertNoErr(t, err)
+	actual, err := containers.ExtractNames(allPages)
+	th.AssertNoErr(t, err)
+	th.CheckDeepEquals(t, []string{}, actual)
 }
 
 func TestCreateContainer(t *testing.T) {
@@ -85,7 +162,7 @@ func TestCreateContainer(t *testing.T) {
 	HandleCreateContainerSuccessfully(t)
 
 	options := containers.CreateOpts{ContentType: "application/json", Metadata: map[string]string{"foo": "bar"}}
-	res := containers.Create(fake.ServiceClient(), "testContainer", options)
+	res := containers.Create(context.TODO(), fake.ServiceClient(), "testContainer", options)
 	th.CheckEquals(t, "bar", res.Header["X-Container-Meta-Foo"][0])
 
 	expected := &containers.CreateHeader{
@@ -104,7 +181,7 @@ func TestDeleteContainer(t *testing.T) {
 	defer th.TeardownHTTP()
 	HandleDeleteContainerSuccessfully(t)
 
-	res := containers.Delete(fake.ServiceClient(), "testContainer")
+	res := containers.Delete(context.TODO(), fake.ServiceClient(), "testContainer")
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -120,7 +197,7 @@ func TestBulkDelete(t *testing.T) {
 		Errors:         [][]string{},
 	}
 
-	resp, err := containers.BulkDelete(fake.ServiceClient(), []string{"testContainer1", "testContainer2"}).Extract()
+	resp, err := containers.BulkDelete(context.TODO(), fake.ServiceClient(), []string{"testContainer1", "testContainer2"}).Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, expected, *resp)
 }
@@ -139,7 +216,7 @@ func TestUpdateContainer(t *testing.T) {
 		ContainerSyncKey: new(string),
 		ContentType:      &contentType,
 	}
-	res := containers.Update(fake.ServiceClient(), "testContainer", options)
+	res := containers.Update(context.TODO(), fake.ServiceClient(), "testContainer", options)
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -151,23 +228,63 @@ func TestGetContainer(t *testing.T) {
 	getOpts := containers.GetOpts{
 		Newest: true,
 	}
-	res := containers.Get(fake.ServiceClient(), "testContainer", getOpts)
+	res := containers.Get(context.TODO(), fake.ServiceClient(), "testContainer", getOpts)
 	_, err := res.ExtractMetadata()
 	th.AssertNoErr(t, err)
 
 	expected := &containers.GetHeader{
-		AcceptRanges:  "bytes",
-		BytesUsed:     100,
-		ContentType:   "application/json; charset=utf-8",
-		Date:          time.Date(2016, time.August, 17, 19, 25, 43, 0, time.UTC),
-		ObjectCount:   4,
-		Read:          []string{"test"},
-		TransID:       "tx554ed59667a64c61866f1-0057b4ba37",
-		Write:         []string{"test2", "user4"},
-		StoragePolicy: "test_policy",
-		Timestamp:     1471298837.95721,
+		AcceptRanges:    "bytes",
+		BytesUsed:       100,
+		ContentType:     "application/json; charset=utf-8",
+		Date:            time.Date(2016, time.August, 17, 19, 25, 43, 0, time.UTC),
+		ObjectCount:     4,
+		Read:            []string{"test"},
+		TransID:         "tx554ed59667a64c61866f1-0057b4ba37",
+		Write:           []string{"test2", "user4"},
+		StoragePolicy:   "test_policy",
+		Timestamp:       1471298837.95721,
+		VersionsEnabled: true,
 	}
 	actual, err := res.Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, expected, actual)
+}
+
+func TestUpdateContainerVersioningOff(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleUpdateContainerVersioningOff(t)
+
+	contentType := "text/plain"
+	options := &containers.UpdateOpts{
+		Metadata:         map[string]string{"foo": "bar"},
+		ContainerWrite:   new(string),
+		ContainerRead:    new(string),
+		ContainerSyncTo:  new(string),
+		ContainerSyncKey: new(string),
+		ContentType:      &contentType,
+		VersionsEnabled:  new(bool),
+	}
+	_, err := containers.Update(context.TODO(), fake.ServiceClient(), "testVersioning", options).Extract()
+	th.AssertNoErr(t, err)
+}
+
+func TestUpdateContainerVersioningOn(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleUpdateContainerVersioningOn(t)
+
+	iTrue := true
+	contentType := "text/plain"
+	options := &containers.UpdateOpts{
+		Metadata:         map[string]string{"foo": "bar"},
+		ContainerWrite:   new(string),
+		ContainerRead:    new(string),
+		ContainerSyncTo:  new(string),
+		ContainerSyncKey: new(string),
+		ContentType:      &contentType,
+		VersionsEnabled:  &iTrue,
+	}
+	_, err := containers.Update(context.TODO(), fake.ServiceClient(), "testVersioning", options).Extract()
+	th.AssertNoErr(t, err)
 }

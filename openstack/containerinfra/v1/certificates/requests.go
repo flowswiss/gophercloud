@@ -1,13 +1,15 @@
 package certificates
 
 import (
-	"github.com/gophercloud/gophercloud"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
 )
 
 // CreateOptsBuilder allows extensions to add additional parameters
 // to the Create request.
 type CreateOptsBuilder interface {
-	ToCertificateCreateMap() (map[string]interface{}, error)
+	ToCertificateCreateMap() (map[string]any, error)
 }
 
 // CreateOpts represents options used to create a certificate.
@@ -18,14 +20,14 @@ type CreateOpts struct {
 }
 
 // ToCertificateCreateMap constructs a request body from CreateOpts.
-func (opts CreateOpts) ToCertificateCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToCertificateCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "")
 }
 
 // Get makes a request against the API to get details for a certificate.
-func Get(client *gophercloud.ServiceClient, clusterID string) (r GetResult) {
+func Get(ctx context.Context, client *gophercloud.ServiceClient, clusterID string) (r GetResult) {
 	url := getURL(client, clusterID)
-	resp, err := client.Get(url, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Get(ctx, url, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -33,13 +35,13 @@ func Get(client *gophercloud.ServiceClient, clusterID string) (r GetResult) {
 }
 
 // Create requests the creation of a new certificate.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToCertificateCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -47,8 +49,8 @@ func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r Create
 }
 
 // Update will rotate the CA certificate for a cluster
-func Update(client *gophercloud.ServiceClient, clusterID string) (r UpdateResult) {
-	resp, err := client.Patch(updateURL(client, clusterID), nil, &r.Body, &gophercloud.RequestOpts{
+func Update(ctx context.Context, client *gophercloud.ServiceClient, clusterID string) (r UpdateResult) {
+	resp, err := client.Patch(ctx, updateURL(client, clusterID), nil, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

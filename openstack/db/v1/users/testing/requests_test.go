@@ -1,13 +1,14 @@
 package testing
 
 import (
+	"context"
 	"testing"
 
-	db "github.com/gophercloud/gophercloud/openstack/db/v1/databases"
-	"github.com/gophercloud/gophercloud/openstack/db/v1/users"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	fake "github.com/gophercloud/gophercloud/testhelper/client"
+	db "github.com/gophercloud/gophercloud/v2/openstack/db/v1/databases"
+	"github.com/gophercloud/gophercloud/v2/openstack/db/v1/users"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	fake "github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 func TestCreate(t *testing.T) {
@@ -33,7 +34,7 @@ func TestCreate(t *testing.T) {
 		},
 	}
 
-	res := users.Create(fake.ServiceClient(), instanceID, opts)
+	res := users.Create(context.TODO(), fake.ServiceClient(), instanceID, opts)
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -59,7 +60,7 @@ func TestUserList(t *testing.T) {
 	}
 
 	pages := 0
-	err := users.List(fake.ServiceClient(), instanceID).EachPage(func(page pagination.Page) (bool, error) {
+	err := users.List(fake.ServiceClient(), instanceID).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		pages++
 
 		actual, err := users.ExtractUsers(page)
@@ -80,6 +81,6 @@ func TestDelete(t *testing.T) {
 	defer th.TeardownHTTP()
 	HandleDelete(t)
 
-	res := users.Delete(fake.ServiceClient(), instanceID, "{userName}")
+	res := users.Delete(context.TODO(), fake.ServiceClient(), instanceID, "{userName}")
 	th.AssertNoErr(t, res.Err)
 }

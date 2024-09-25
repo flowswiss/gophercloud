@@ -1,14 +1,9 @@
 package messages
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
-
-// commonResult is the response of a base result.
-type commonResult struct {
-	gophercloud.Result
-}
 
 // CreateResult is the response of a Create operations.
 type CreateResult struct {
@@ -43,22 +38,22 @@ type GetResult struct {
 
 // Message represents a message on a queue.
 type Message struct {
-	Body     map[string]interface{} `json:"body"`
-	Age      int                    `json:"age"`
-	Href     string                 `json:"href"`
-	ID       string                 `json:"id"`
-	TTL      int                    `json:"ttl"`
-	Checksum string                 `json:"checksum"`
+	Body     map[string]any `json:"body"`
+	Age      int            `json:"age"`
+	Href     string         `json:"href"`
+	ID       string         `json:"id"`
+	TTL      int            `json:"ttl"`
+	Checksum string         `json:"checksum"`
 }
 
 // PopMessage represents a message returned from PopMessages.
 type PopMessage struct {
-	Body       map[string]interface{} `json:"body"`
-	Age        int                    `json:"age"`
-	ID         string                 `json:"id"`
-	TTL        int                    `json:"ttl"`
-	ClaimCount int                    `json:"claim_count"`
-	ClaimID    string                 `json:"claim_id"`
+	Body       map[string]any `json:"body"`
+	Age        int            `json:"age"`
+	ID         string         `json:"id"`
+	TTL        int            `json:"ttl"`
+	ClaimCount int            `json:"claim_count"`
+	ClaimID    string         `json:"claim_id"`
 }
 
 // ResourceList represents the result of creating a message.
@@ -109,6 +104,10 @@ func ExtractMessages(r pagination.Page) ([]Message, error) {
 
 // IsEmpty determines if a MessagePage contains any results.
 func (r MessagePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	s, err := ExtractMessages(r)
 	return len(s) == 0, err
 }

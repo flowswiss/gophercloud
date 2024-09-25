@@ -3,8 +3,8 @@ package queues
 import (
 	"encoding/json"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // commonResult is the response of a base result.
@@ -79,7 +79,7 @@ type QueueDetails struct {
 	DefaultMessageTTL int `json:"_default_message_ttl"`
 
 	// Extra is a collection of miscellaneous key/values.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 
 	// The max number the message can be claimed from the queue.
 	MaxClaimCount int `json:"_max_claim_count"`
@@ -150,6 +150,10 @@ func ExtractQueues(r pagination.Page) ([]Queue, error) {
 
 // IsEmpty determines if a QueuesPage contains any results.
 func (r QueuePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	s, err := ExtractQueues(r)
 	return len(s) == 0, err
 }
@@ -188,7 +192,7 @@ func (r *QueueDetails) UnmarshalJSON(b []byte) error {
 	type tmp QueueDetails
 	var s struct {
 		tmp
-		Extra map[string]interface{} `json:"extra"`
+		Extra map[string]any `json:"extra"`
 	}
 	err := json.Unmarshal(b, &s)
 	if err != nil {
@@ -201,12 +205,12 @@ func (r *QueueDetails) UnmarshalJSON(b []byte) error {
 	if s.Extra != nil {
 		r.Extra = s.Extra
 	} else {
-		var result interface{}
+		var result any
 		err := json.Unmarshal(b, &result)
 		if err != nil {
 			return err
 		}
-		if resultMap, ok := result.(map[string]interface{}); ok {
+		if resultMap, ok := result.(map[string]any); ok {
 			r.Extra = gophercloud.RemainingKeys(QueueDetails{}, resultMap)
 		}
 	}

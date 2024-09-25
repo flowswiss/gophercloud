@@ -1,14 +1,15 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
-	fake "github.com/gophercloud/gophercloud/openstack/networking/v2/common"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/bgp/peers"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	fake "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/common"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/bgp/peers"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestList(t *testing.T) {
@@ -26,8 +27,9 @@ func TestList(t *testing.T) {
 		})
 	count := 0
 
-	peers.List(fake.ServiceClient()).EachPage(
-		func(page pagination.Page) (bool, error) {
+	err := peers.List(fake.ServiceClient()).EachPage(
+		context.TODO(),
+		func(_ context.Context, page pagination.Page) (bool, error) {
 			count++
 			actual, err := peers.ExtractBGPPeers(page)
 
@@ -39,6 +41,7 @@ func TestList(t *testing.T) {
 			th.CheckDeepEquals(t, expected, actual)
 			return true, nil
 		})
+	th.AssertNoErr(t, err)
 }
 
 func TestGet(t *testing.T) {
@@ -54,7 +57,7 @@ func TestGet(t *testing.T) {
 		fmt.Fprintf(w, GetBGPPeerResult)
 	})
 
-	s, err := peers.Get(fake.ServiceClient(), bgpPeerID).Extract()
+	s, err := peers.Get(context.TODO(), fake.ServiceClient(), bgpPeerID).Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, *s, BGPPeer1)
 }
@@ -81,7 +84,7 @@ func TestCreate(t *testing.T) {
 	opts.Name = "gophercloud-testing-bgp-peer"
 	opts.PeerIP = "192.168.0.1"
 
-	r, err := peers.Create(fake.ServiceClient(), opts).Extract()
+	r, err := peers.Create(context.TODO(), fake.ServiceClient(), opts).Extract()
 	th.AssertNoErr(t, err)
 	th.AssertEquals(t, r.AuthType, opts.AuthType)
 	th.AssertEquals(t, r.RemoteAS, opts.RemoteAS)
@@ -102,7 +105,7 @@ func TestDelete(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := peers.Delete(fake.ServiceClient(), bgpPeerID).ExtractErr()
+	err := peers.Delete(context.TODO(), fake.ServiceClient(), bgpPeerID).ExtractErr()
 	th.AssertNoErr(t, err)
 }
 
@@ -128,7 +131,7 @@ func TestUpdate(t *testing.T) {
 	opts.Name = "test-rename-bgp-peer"
 	opts.Password = "superStrong"
 
-	r, err := peers.Update(fake.ServiceClient(), bgpPeerID, opts).Extract()
+	r, err := peers.Update(context.TODO(), fake.ServiceClient(), bgpPeerID, opts).Extract()
 	th.AssertNoErr(t, err)
 	th.AssertEquals(t, r.Name, opts.Name)
 }

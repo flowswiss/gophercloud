@@ -5,10 +5,22 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gophercloud/gophercloud/openstack/objectstorage/v1/containers"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	fake "github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/openstack/objectstorage/v1/containers"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	fake "github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
+
+type handlerOptions struct {
+	path string
+}
+
+type option func(*handlerOptions)
+
+func WithPath(s string) option {
+	return func(h *handlerOptions) {
+		h.path = s
+	}
+}
 
 // ExpectedListInfo is the result expected from a call to `List` when full
 // info is requested.
@@ -38,7 +50,9 @@ func HandleListContainerInfoSuccessfully(t *testing.T) {
 		th.TestHeader(t, r, "Accept", "application/json")
 
 		w.Header().Set("Content-Type", "application/json")
-		r.ParseForm()
+		if err := r.ParseForm(); err != nil {
+			t.Errorf("Failed to parse request form %v", err)
+		}
 		marker := r.Form.Get("marker")
 		switch marker {
 		case "":
@@ -70,27 +84,16 @@ func HandleListContainerInfoSuccessfully(t *testing.T) {
 	})
 }
 
-// HandleListContainerNamesSuccessfully creates an HTTP handler at `/` on the test handler mux that
-// responds with a `ListNames` response when only container names are requested.
-func HandleListContainerNamesSuccessfully(t *testing.T) {
+// HandleListZeroContainerNames204 creates an HTTP handler at `/` on the test handler mux that
+// responds with "204 No Content" when container names are requested. This happens on some, but not all,
+// objectstorage instances. This case is peculiar in that the server sends no `content-type` header.
+func HandleListZeroContainerNames204(t *testing.T) {
 	th.Mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
-		th.TestHeader(t, r, "Accept", "text/plain")
+		th.TestHeader(t, r, "Accept", "application/json")
 
-		w.Header().Set("Content-Type", "text/plain")
-		r.ParseForm()
-		marker := r.Form.Get("marker")
-		switch marker {
-		case "":
-			fmt.Fprintf(w, "janeausten\nmarktwain\n")
-		case "janeausten":
-			fmt.Fprintf(w, "marktwain\n")
-		case "marktwain":
-			fmt.Fprintf(w, ``)
-		default:
-			t.Fatalf("Unexpected marker: [%s]", marker)
-		}
+		w.WriteHeader(http.StatusNoContent)
 	})
 }
 
@@ -114,8 +117,15 @@ func HandleCreateContainerSuccessfully(t *testing.T) {
 
 // HandleDeleteContainerSuccessfully creates an HTTP handler at `/testContainer` on the test handler mux that
 // responds with a `Delete` response.
-func HandleDeleteContainerSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/testContainer", func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteContainerSuccessfully(t *testing.T, options ...option) {
+	ho := handlerOptions{
+		path: "/testContainer",
+	}
+	for _, apply := range options {
+		apply(&ho)
+	}
+
+	th.Mux.HandleFunc(ho.path, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
@@ -154,8 +164,15 @@ func HandleBulkDeleteSuccessfully(t *testing.T) {
 
 // HandleUpdateContainerSuccessfully creates an HTTP handler at `/testContainer` on the test handler mux that
 // responds with a `Update` response.
-func HandleUpdateContainerSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/testContainer", func(w http.ResponseWriter, r *http.Request) {
+func HandleUpdateContainerSuccessfully(t *testing.T, options ...option) {
+	ho := handlerOptions{
+		path: "/testContainer",
+	}
+	for _, apply := range options {
+		apply(&ho)
+	}
+
+	th.Mux.HandleFunc(ho.path, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
@@ -168,10 +185,65 @@ func HandleUpdateContainerSuccessfully(t *testing.T) {
 	})
 }
 
+// HandleUpdateContainerVersioningOn creates an HTTP handler at `/testVersioning` on the test handler mux that
+// responds with a `Update` response.
+func HandleUpdateContainerVersioningOn(t *testing.T, options ...option) {
+	ho := handlerOptions{
+		path: "/testVersioning",
+	}
+	for _, apply := range options {
+		apply(&ho)
+	}
+
+	th.Mux.HandleFunc(ho.path, func(w http.ResponseWriter, r *http.Request) {
+		th.TestMethod(t, r, "POST")
+		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		th.TestHeader(t, r, "Accept", "application/json")
+		th.TestHeader(t, r, "X-Container-Write", "")
+		th.TestHeader(t, r, "X-Container-Read", "")
+		th.TestHeader(t, r, "X-Container-Sync-To", "")
+		th.TestHeader(t, r, "X-Container-Sync-Key", "")
+		th.TestHeader(t, r, "Content-Type", "text/plain")
+		th.TestHeader(t, r, "X-Versions-Enabled", "true")
+		w.WriteHeader(http.StatusNoContent)
+	})
+}
+
+// HandleUpdateContainerVersioningOff creates an HTTP handler at `/testVersioning` on the test handler mux that
+// responds with a `Update` response.
+func HandleUpdateContainerVersioningOff(t *testing.T, options ...option) {
+	ho := handlerOptions{
+		path: "/testVersioning",
+	}
+	for _, apply := range options {
+		apply(&ho)
+	}
+
+	th.Mux.HandleFunc(ho.path, func(w http.ResponseWriter, r *http.Request) {
+		th.TestMethod(t, r, "POST")
+		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		th.TestHeader(t, r, "Accept", "application/json")
+		th.TestHeader(t, r, "X-Container-Write", "")
+		th.TestHeader(t, r, "X-Container-Read", "")
+		th.TestHeader(t, r, "X-Container-Sync-To", "")
+		th.TestHeader(t, r, "X-Container-Sync-Key", "")
+		th.TestHeader(t, r, "Content-Type", "text/plain")
+		th.TestHeader(t, r, "X-Versions-Enabled", "false")
+		w.WriteHeader(http.StatusNoContent)
+	})
+}
+
 // HandleGetContainerSuccessfully creates an HTTP handler at `/testContainer` on the test handler mux that
 // responds with a `Get` response.
-func HandleGetContainerSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/testContainer", func(w http.ResponseWriter, r *http.Request) {
+func HandleGetContainerSuccessfully(t *testing.T, options ...option) {
+	ho := handlerOptions{
+		path: "/testContainer",
+	}
+	for _, apply := range options {
+		apply(&ho)
+	}
+
+	th.Mux.HandleFunc(ho.path, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "HEAD")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
@@ -185,6 +257,7 @@ func HandleGetContainerSuccessfully(t *testing.T) {
 		w.Header().Set("X-Timestamp", "1471298837.95721")
 		w.Header().Set("X-Trans-Id", "tx554ed59667a64c61866f1-0057b4ba37")
 		w.Header().Set("X-Storage-Policy", "test_policy")
+		w.Header().Set("X-Versions-Enabled", "True")
 		w.WriteHeader(http.StatusNoContent)
 	})
 }

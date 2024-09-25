@@ -1,13 +1,14 @@
 package users
 
 import (
+	"context"
 	"net/url"
 	"strings"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/groups"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/groups"
+	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/projects"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Option is a specific option defined at the API to enable features
@@ -93,8 +94,8 @@ func List(client *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pa
 }
 
 // Get retrieves details on a single user, by ID.
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(getURL(client, id), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -102,7 +103,7 @@ func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
 // CreateOptsBuilder allows extensions to add additional parameters to
 // the Create request.
 type CreateOptsBuilder interface {
-	ToUserCreateMap() (map[string]interface{}, error)
+	ToUserCreateMap() (map[string]any, error)
 }
 
 // CreateOpts provides options used to create a user.
@@ -123,24 +124,24 @@ type CreateOpts struct {
 	Enabled *bool `json:"enabled,omitempty"`
 
 	// Extra is free-form extra key/value pairs to describe the user.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 
 	// Options are defined options in the API to enable certain features.
-	Options map[Option]interface{} `json:"options,omitempty"`
+	Options map[Option]any `json:"options,omitempty"`
 
 	// Password is the password of the new user.
 	Password string `json:"password,omitempty"`
 }
 
 // ToUserCreateMap formats a CreateOpts into a create request.
-func (opts CreateOpts) ToUserCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToUserCreateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "user")
 	if err != nil {
 		return nil, err
 	}
 
 	if opts.Extra != nil {
-		if v, ok := b["user"].(map[string]interface{}); ok {
+		if v, ok := b["user"].(map[string]any); ok {
 			for key, value := range opts.Extra {
 				v[key] = value
 			}
@@ -151,13 +152,13 @@ func (opts CreateOpts) ToUserCreateMap() (map[string]interface{}, error) {
 }
 
 // Create creates a new User.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToUserCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -167,7 +168,7 @@ func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r Create
 // UpdateOptsBuilder allows extensions to add additional parameters to
 // the Update request.
 type UpdateOptsBuilder interface {
-	ToUserUpdateMap() (map[string]interface{}, error)
+	ToUserUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts provides options for updating a user account.
@@ -188,24 +189,24 @@ type UpdateOpts struct {
 	Enabled *bool `json:"enabled,omitempty"`
 
 	// Extra is free-form extra key/value pairs to describe the user.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 
 	// Options are defined options in the API to enable certain features.
-	Options map[Option]interface{} `json:"options,omitempty"`
+	Options map[Option]any `json:"options,omitempty"`
 
 	// Password is the password of the new user.
 	Password string `json:"password,omitempty"`
 }
 
 // ToUserUpdateMap formats a UpdateOpts into an update request.
-func (opts UpdateOpts) ToUserUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToUserUpdateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "user")
 	if err != nil {
 		return nil, err
 	}
 
 	if opts.Extra != nil {
-		if v, ok := b["user"].(map[string]interface{}); ok {
+		if v, ok := b["user"].(map[string]any); ok {
 			for key, value := range opts.Extra {
 				v[key] = value
 			}
@@ -216,13 +217,13 @@ func (opts UpdateOpts) ToUserUpdateMap() (map[string]interface{}, error) {
 }
 
 // Update updates an existing User.
-func Update(client *gophercloud.ServiceClient, userID string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, userID string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToUserUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Patch(updateURL(client, userID), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Patch(ctx, updateURL(client, userID), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -232,7 +233,7 @@ func Update(client *gophercloud.ServiceClient, userID string, opts UpdateOptsBui
 // ChangePasswordOptsBuilder allows extensions to add additional parameters to
 // the ChangePassword request.
 type ChangePasswordOptsBuilder interface {
-	ToUserChangePasswordMap() (map[string]interface{}, error)
+	ToUserChangePasswordMap() (map[string]any, error)
 }
 
 // ChangePasswordOpts provides options for changing password for a user.
@@ -245,7 +246,7 @@ type ChangePasswordOpts struct {
 }
 
 // ToUserChangePasswordMap formats a ChangePasswordOpts into a ChangePassword request.
-func (opts ChangePasswordOpts) ToUserChangePasswordMap() (map[string]interface{}, error) {
+func (opts ChangePasswordOpts) ToUserChangePasswordMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "user")
 	if err != nil {
 		return nil, err
@@ -255,14 +256,14 @@ func (opts ChangePasswordOpts) ToUserChangePasswordMap() (map[string]interface{}
 }
 
 // ChangePassword changes password for a user.
-func ChangePassword(client *gophercloud.ServiceClient, userID string, opts ChangePasswordOptsBuilder) (r ChangePasswordResult) {
+func ChangePassword(ctx context.Context, client *gophercloud.ServiceClient, userID string, opts ChangePasswordOptsBuilder) (r ChangePasswordResult) {
 	b, err := opts.ToUserChangePasswordMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 
-	resp, err := client.Post(changePasswordURL(client, userID), &b, nil, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, changePasswordURL(client, userID), &b, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{204},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -270,8 +271,8 @@ func ChangePassword(client *gophercloud.ServiceClient, userID string, opts Chang
 }
 
 // Delete deletes a user.
-func Delete(client *gophercloud.ServiceClient, userID string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, userID), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, userID string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, userID), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -285,9 +286,9 @@ func ListGroups(client *gophercloud.ServiceClient, userID string) pagination.Pag
 }
 
 // AddToGroup adds a user to a group.
-func AddToGroup(client *gophercloud.ServiceClient, groupID, userID string) (r AddToGroupResult) {
+func AddToGroup(ctx context.Context, client *gophercloud.ServiceClient, groupID, userID string) (r AddToGroupResult) {
 	url := addToGroupURL(client, groupID, userID)
-	resp, err := client.Put(url, nil, nil, &gophercloud.RequestOpts{
+	resp, err := client.Put(ctx, url, nil, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{204},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -295,9 +296,9 @@ func AddToGroup(client *gophercloud.ServiceClient, groupID, userID string) (r Ad
 }
 
 // IsMemberOfGroup checks whether a user belongs to a group.
-func IsMemberOfGroup(client *gophercloud.ServiceClient, groupID, userID string) (r IsMemberOfGroupResult) {
+func IsMemberOfGroup(ctx context.Context, client *gophercloud.ServiceClient, groupID, userID string) (r IsMemberOfGroupResult) {
 	url := isMemberOfGroupURL(client, groupID, userID)
-	resp, err := client.Head(url, &gophercloud.RequestOpts{
+	resp, err := client.Head(ctx, url, &gophercloud.RequestOpts{
 		OkCodes: []int{204, 404},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -310,9 +311,9 @@ func IsMemberOfGroup(client *gophercloud.ServiceClient, groupID, userID string) 
 }
 
 // RemoveFromGroup removes a user from a group.
-func RemoveFromGroup(client *gophercloud.ServiceClient, groupID, userID string) (r RemoveFromGroupResult) {
+func RemoveFromGroup(ctx context.Context, client *gophercloud.ServiceClient, groupID, userID string) (r RemoveFromGroupResult) {
 	url := removeFromGroupURL(client, groupID, userID)
-	resp, err := client.Delete(url, &gophercloud.RequestOpts{
+	resp, err := client.Delete(ctx, url, &gophercloud.RequestOpts{
 		OkCodes: []int{204},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

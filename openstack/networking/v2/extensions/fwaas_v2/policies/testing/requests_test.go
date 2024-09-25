@@ -1,15 +1,16 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/gophercloud/gophercloud"
-	fake "github.com/gophercloud/gophercloud/openstack/networking/v2/common"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/fwaas_v2/policies"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	"github.com/gophercloud/gophercloud/v2"
+	fake "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/common"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/fwaas_v2/policies"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestList(t *testing.T) {
@@ -33,6 +34,7 @@ func TestList(t *testing.T) {
                 "c9e77ca0-1bc8-497d-904d-948107873dc6"
             ],
             "tenant_id": "9145d91459d248b1b02fdaca97c6a75d",
+			"project_id": "9145d91459d248b1b02fdaca97c6a75d",
             "audited": true,
 			"shared": false,
             "id": "f2b08c1e-aa81-4668-8ae1-1401bcb0576c",
@@ -44,6 +46,7 @@ func TestList(t *testing.T) {
                 "03d2a6ad-633f-431a-8463-4370d06a22c8"
             ],
             "tenant_id": "9145d91459d248b1b02fdaca97c6a75d",
+			"project_id": "9145d91459d248b1b02fdaca97c6a75d",
             "audited": false,
 			"shared": true,
             "id": "c854fab5-bdaf-4a86-9359-78de93e5df01",
@@ -56,7 +59,7 @@ func TestList(t *testing.T) {
 
 	count := 0
 
-	policies.List(fake.ServiceClient(), policies.ListOpts{}).EachPage(func(page pagination.Page) (bool, error) {
+	err := policies.List(fake.ServiceClient(), policies.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := policies.ExtractPolicies(page)
 		if err != nil {
@@ -72,6 +75,7 @@ func TestList(t *testing.T) {
 					"c9e77ca0-1bc8-497d-904d-948107873dc6",
 				},
 				TenantID:    "9145d91459d248b1b02fdaca97c6a75d",
+				ProjectID:   "9145d91459d248b1b02fdaca97c6a75d",
 				Audited:     true,
 				Shared:      false,
 				ID:          "f2b08c1e-aa81-4668-8ae1-1401bcb0576c",
@@ -83,6 +87,7 @@ func TestList(t *testing.T) {
 					"03d2a6ad-633f-431a-8463-4370d06a22c8",
 				},
 				TenantID:    "9145d91459d248b1b02fdaca97c6a75d",
+				ProjectID:   "9145d91459d248b1b02fdaca97c6a75d",
 				Audited:     false,
 				Shared:      true,
 				ID:          "c854fab5-bdaf-4a86-9359-78de93e5df01",
@@ -94,6 +99,7 @@ func TestList(t *testing.T) {
 
 		return true, nil
 	})
+	th.AssertNoErr(t, err)
 
 	if count != 1 {
 		t.Errorf("Expected 1 page, got %d", count)
@@ -119,6 +125,7 @@ func TestCreate(t *testing.T) {
         ],
         "description": "Firewall policy",
 		"tenant_id": "9145d91459d248b1b02fdaca97c6a75d",
+		"project_id": "9145d91459d248b1b02fdaca97c6a75d",
 		"audited": true,
 		"shared": false
     }
@@ -137,6 +144,7 @@ func TestCreate(t *testing.T) {
             "11a58c87-76be-ae7c-a74e-b77fffb88a32"
         ],
         "tenant_id": "9145d91459d248b1b02fdaca97c6a75d",
+		"project_id": "9145d91459d248b1b02fdaca97c6a75d",
         "audited": false,
         "id": "f2b08c1e-aa81-4668-8ae1-1401bcb0576c",
         "description": "Firewall policy"
@@ -147,6 +155,7 @@ func TestCreate(t *testing.T) {
 
 	options := policies.CreateOpts{
 		TenantID:    "9145d91459d248b1b02fdaca97c6a75d",
+		ProjectID:   "9145d91459d248b1b02fdaca97c6a75d",
 		Name:        "policy",
 		Description: "Firewall policy",
 		Shared:      gophercloud.Disabled,
@@ -157,7 +166,7 @@ func TestCreate(t *testing.T) {
 		},
 	}
 
-	_, err := policies.Create(fake.ServiceClient(), options).Extract()
+	_, err := policies.Create(context.TODO(), fake.ServiceClient(), options).Extract()
 	th.AssertNoErr(t, err)
 }
 
@@ -202,7 +211,7 @@ func TestInsertRule(t *testing.T) {
 		InsertBefore: "3062ed90-1fb0-4c25-af3d-318dff2143ae",
 	}
 
-	policy, err := policies.InsertRule(fake.ServiceClient(), "e3c78ab6-e827-4297-8d68-739063865a8b", options).Extract()
+	policy, err := policies.InsertRule(context.TODO(), fake.ServiceClient(), "e3c78ab6-e827-4297-8d68-739063865a8b", options).Extract()
 	th.AssertNoErr(t, err)
 	th.AssertEquals(t, "TESTACC-2LnMayeG", policy.Name)
 	th.AssertEquals(t, 2, len(policy.Rules))
@@ -211,7 +220,7 @@ func TestInsertRule(t *testing.T) {
 	th.AssertEquals(t, "e3c78ab6-e827-4297-8d68-739063865a8b", policy.ID)
 	th.AssertEquals(t, "TESTACC-DESC-8P12aLfW", policy.Description)
 	th.AssertEquals(t, "9f98fc0e5f944cd1b51798b668dc8778", policy.TenantID)
-
+	th.AssertEquals(t, "9f98fc0e5f944cd1b51798b668dc8778", policy.ProjectID)
 }
 
 func TestInsertRuleWithInvalidParameters(t *testing.T) {
@@ -225,7 +234,7 @@ func TestInsertRuleWithInvalidParameters(t *testing.T) {
 		InsertAfter:  "2",
 	}
 
-	_, err := policies.InsertRule(fake.ServiceClient(), "0", options).Extract()
+	_, err := policies.InsertRule(context.TODO(), fake.ServiceClient(), "0", options).Extract()
 
 	// expect to fail with an gophercloud error
 	th.AssertErr(t, err)
@@ -253,6 +262,7 @@ func TestGet(t *testing.T) {
             "03d2a6ad-633f-431a-8463-4370d06a22c8"
         ],
         "tenant_id": "9145d91459d248b1b02fdaca97c6a75d",
+		"project_id": "9145d91459d248b1b02fdaca97c6a75d",
         "audited": false,
         "id": "f2b08c1e-aa81-4668-8ae1-1401bcb0576c",
         "description": "Firewall policy web"
@@ -261,7 +271,7 @@ func TestGet(t *testing.T) {
         `)
 	})
 
-	policy, err := policies.Get(fake.ServiceClient(), "f2b08c1e-aa81-4668-8ae1-1401bcb0576c").Extract()
+	policy, err := policies.Get(context.TODO(), fake.ServiceClient(), "f2b08c1e-aa81-4668-8ae1-1401bcb0576c").Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, "www", policy.Name)
@@ -272,6 +282,7 @@ func TestGet(t *testing.T) {
 	th.AssertEquals(t, "c9e77ca0-1bc8-497d-904d-948107873dc6", policy.Rules[1])
 	th.AssertEquals(t, "03d2a6ad-633f-431a-8463-4370d06a22c8", policy.Rules[2])
 	th.AssertEquals(t, "9145d91459d248b1b02fdaca97c6a75d", policy.TenantID)
+	th.AssertEquals(t, "9145d91459d248b1b02fdaca97c6a75d", policy.ProjectID)
 }
 
 func TestUpdate(t *testing.T) {
@@ -309,6 +320,7 @@ func TestUpdate(t *testing.T) {
             "03d2a6ad-633f-431a-8463-4370d06a22c8"
         ],
         "tenant_id": "9145d91459d248b1b02fdaca97c6a75d",
+        "project_id": "9145d91459d248b1b02fdaca97c6a75d",
         "audited": false,
         "id": "f2b08c1e-aa81-4668-8ae1-1401bcb0576c",
         "description": "Firewall policy"
@@ -329,7 +341,7 @@ func TestUpdate(t *testing.T) {
 		},
 	}
 
-	_, err := policies.Update(fake.ServiceClient(), "f2b08c1e-aa81-4668-8ae1-1401bcb0576c", options).Extract()
+	_, err := policies.Update(context.TODO(), fake.ServiceClient(), "f2b08c1e-aa81-4668-8ae1-1401bcb0576c", options).Extract()
 	th.AssertNoErr(t, err)
 }
 
@@ -343,7 +355,7 @@ func TestDelete(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	res := policies.Delete(fake.ServiceClient(), "4ec89077-d057-4a2b-911f-60a3b47ee304")
+	res := policies.Delete(context.TODO(), fake.ServiceClient(), "4ec89077-d057-4a2b-911f-60a3b47ee304")
 	th.AssertNoErr(t, res.Err)
 }
 
@@ -381,7 +393,7 @@ func TestRemoveRule(t *testing.T) {
     `)
 	})
 
-	policy, err := policies.RemoveRule(fake.ServiceClient(), "9fed8075-06ee-463f-83a6-d4118791b02f", "9fed8075-06ee-463f-83a6-d4118791b02f").Extract()
+	policy, err := policies.RemoveRule(context.TODO(), fake.ServiceClient(), "9fed8075-06ee-463f-83a6-d4118791b02f", "9fed8075-06ee-463f-83a6-d4118791b02f").Extract()
 	th.AssertNoErr(t, err)
 	th.AssertEquals(t, "9fed8075-06ee-463f-83a6-d4118791b02f", policy.ID)
 

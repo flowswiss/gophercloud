@@ -1,10 +1,11 @@
 package ports
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOptsBuilder allows extensions to add additional parameters to the
@@ -32,7 +33,7 @@ type ListOpts struct {
 	Address string `q:"address"`
 
 	// One or more fields to be returned in the response.
-	Fields []string `q:"fields"`
+	Fields []string `q:"fields" format:"comma-separated"`
 
 	// Requests a page size of items.
 	Limit int `q:"limit"`
@@ -98,8 +99,8 @@ func ListDetail(client *gophercloud.ServiceClient, opts ListOptsBuilder) paginat
 }
 
 // Get - requests the details off a port, by ID.
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(getURL(client, id), &r.Body, &gophercloud.RequestOpts{
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, id), &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -109,7 +110,7 @@ func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
 // CreateOptsBuilder allows extensions to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToPortCreateMap() (map[string]interface{}, error)
+	ToPortCreateMap() (map[string]any, error)
 }
 
 // CreateOpts specifies port creation parameters.
@@ -129,7 +130,7 @@ type CreateOpts struct {
 	// field) and port_id (identifier of the physical port on the switch to which
 	// node’s port is connected to) fields. switch_info is an optional string
 	// field to be used to store any vendor-specific information.
-	LocalLinkConnection map[string]interface{} `json:"local_link_connection,omitempty"`
+	LocalLinkConnection map[string]any `json:"local_link_connection,omitempty"`
 
 	// Indicates whether PXE is enabled or disabled on the Port.
 	PXEEnabled *bool `json:"pxe_enabled,omitempty"`
@@ -138,14 +139,14 @@ type CreateOpts struct {
 	PhysicalNetwork string `json:"physical_network,omitempty"`
 
 	// A set of one or more arbitrary metadata key and value pairs.
-	Extra map[string]interface{} `json:"extra,omitempty"`
+	Extra map[string]any `json:"extra,omitempty"`
 
 	// Indicates whether the Port is a Smart NIC port.
 	IsSmartNIC *bool `json:"is_smartnic,omitempty"`
 }
 
 // ToPortCreateMap assembles a request body based on the contents of a CreateOpts.
-func (opts CreateOpts) ToPortCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToPortCreateMap() (map[string]any, error) {
 	body, err := gophercloud.BuildRequestBody(opts, "")
 	if err != nil {
 		return nil, err
@@ -155,21 +156,21 @@ func (opts CreateOpts) ToPortCreateMap() (map[string]interface{}, error) {
 }
 
 // Create - requests the creation of a port
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	reqBody, err := opts.ToPortCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 
-	resp, err := client.Post(createURL(client), reqBody, &r.Body, nil)
+	resp, err := client.Post(ctx, createURL(client), reqBody, &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // TODO Update
 type Patch interface {
-	ToPortUpdateMap() map[string]interface{}
+	ToPortUpdateMap() map[string]any
 }
 
 // UpdateOpts is a slice of Patches used to update a port
@@ -184,13 +185,13 @@ const (
 )
 
 type UpdateOperation struct {
-	Op    UpdateOp    `json:"op" required:"true"`
-	Path  string      `json:"path" required:"true"`
-	Value interface{} `json:"value,omitempty"`
+	Op    UpdateOp `json:"op" required:"true"`
+	Path  string   `json:"path" required:"true"`
+	Value any      `json:"value,omitempty"`
 }
 
-func (opts UpdateOperation) ToPortUpdateMap() map[string]interface{} {
-	return map[string]interface{}{
+func (opts UpdateOperation) ToPortUpdateMap() map[string]any {
+	return map[string]any{
 		"op":    opts.Op,
 		"path":  opts.Path,
 		"value": opts.Value,
@@ -198,13 +199,13 @@ func (opts UpdateOperation) ToPortUpdateMap() map[string]interface{} {
 }
 
 // Update - requests the update of a port
-func Update(client *gophercloud.ServiceClient, id string, opts UpdateOpts) (r UpdateResult) {
-	body := make([]map[string]interface{}, len(opts))
+func Update(ctx context.Context, client *gophercloud.ServiceClient, id string, opts UpdateOpts) (r UpdateResult) {
+	body := make([]map[string]any, len(opts))
 	for i, patch := range opts {
 		body[i] = patch.ToPortUpdateMap()
 	}
 
-	resp, err := client.Patch(updateURL(client, id), body, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Patch(ctx, updateURL(client, id), body, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -212,8 +213,8 @@ func Update(client *gophercloud.ServiceClient, id string, opts UpdateOpts) (r Up
 }
 
 // Delete - requests the deletion of a port
-func Delete(client *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, id), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

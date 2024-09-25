@@ -5,7 +5,7 @@ An execution is a one-shot execution of a specific workflow. Each execution cont
 
 An execution represents also the execution of a cron trigger. Each run of a cron trigger will generate an execution.
 
-List executions
+# List executions
 
 To filter executions from a list request, you can use advanced filters with special FilterType to check for equality, non equality, values greater or lower, etc.
 Default Filter checks equality, but you can override it with provided filter type.
@@ -22,7 +22,7 @@ Default Filter checks equality, but you can override it with provided filter typ
 		},
 	}
 
-	allPages, err := executions.List(mistralClient, listOpts).AllPages()
+	allPages, err := executions.List(mistralClient, listOpts).AllPages(context.TODO())
 	if err != nil {
 		panic(err)
 	}
@@ -40,20 +40,20 @@ Create an execution
 
 	createOpts := &executions.CreateOpts{
 		WorkflowID:  "6656c143-a009-4bcb-9814-cc100a20bbfa",
-		Input: map[string]interface{}{
+		Input: map[string]any{
 			"msg": "Hello",
 		},
 		Description: "this is a description",
 	}
 
-	execution, err := executions.Create(mistralClient, createOpts).Extract()
+	execution, err := executions.Create(context.TODO(), mistralClient, createOpts).Extract()
 	if err != nil {
 		panic(err)
 	}
 
 Get an execution
 
-	execution, err := executions.Get(mistralClient, "50bb59f1-eb77-4017-a77f-6d575b002667").Extract()
+	execution, err := executions.Get(context.TODO(), mistralClient, "50bb59f1-eb77-4017-a77f-6d575b002667").Extract()
 	if err != nil {
 		panic(err)
 	}
@@ -61,10 +61,9 @@ Get an execution
 
 Delete an execution
 
-	res := executions.Delete(mistralClient, "50bb59f1-eb77-4017-a77f-6d575b002667")
+	res := executions.Delete(context.TODO(), mistralClient, "50bb59f1-eb77-4017-a77f-6d575b002667")
 	if res.Err != nil {
 		panic(res.Err)
 	}
-
 */
 package executions

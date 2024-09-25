@@ -1,6 +1,6 @@
 package roles
 
-import "github.com/gophercloud/gophercloud"
+import "github.com/gophercloud/gophercloud/v2"
 
 const (
 	rolePath = "roles"
@@ -36,4 +36,20 @@ func listAssignmentsOnResourceURL(client *gophercloud.ServiceClient, targetType,
 
 func assignURL(client *gophercloud.ServiceClient, targetType, targetID, actorType, actorID, roleID string) string {
 	return client.ServiceURL(targetType, targetID, actorType, actorID, rolePath, roleID)
+}
+
+func createRoleInferenceRuleURL(client *gophercloud.ServiceClient, priorRoleID, impliedRoleID string) string {
+	return client.ServiceURL(rolePath, priorRoleID, "implies", impliedRoleID)
+}
+
+func getRoleInferenceRuleURL(client *gophercloud.ServiceClient, priorRoleID, impliedRoleID string) string {
+	return client.ServiceURL(rolePath, priorRoleID, "implies", impliedRoleID)
+}
+
+func listRoleInferenceRulesURL(client *gophercloud.ServiceClient) string {
+	return client.ServiceURL("role_inferences")
+}
+
+func deleteRoleInferenceRuleURL(client *gophercloud.ServiceClient, priorRoleID, impliedRoleID string) string {
+	return client.ServiceURL(rolePath, priorRoleID, "implies", impliedRoleID)
 }

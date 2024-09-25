@@ -4,13 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Object is a structure that holds information related to a storage object.
@@ -32,6 +31,13 @@ type Object struct {
 
 	// Subdir denotes if the result contains a subdir.
 	Subdir string `json:"subdir"`
+
+	// IsLatest indicates whether the object version is the latest one.
+	IsLatest bool `json:"is_latest"`
+
+	// VersionID contains a version ID of the object, when container
+	// versioning is enabled.
+	VersionID string `json:"version_id"`
 }
 
 func (r *Object) UnmarshalJSON(b []byte) error {
@@ -70,6 +76,10 @@ type ObjectPage struct {
 
 // IsEmpty returns true if a ListResult contains no object names.
 func (r ObjectPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	names, err := ExtractNames(r)
 	return len(names) == 0, err
 }
@@ -142,6 +152,7 @@ type DownloadHeader struct {
 	ObjectManifest     string    `json:"X-Object-Manifest"`
 	StaticLargeObject  bool      `json:"-"`
 	TransID            string    `json:"X-Trans-Id"`
+	ObjectVersionID    string    `json:"X-Object-Version-Id"`
 }
 
 func (r *DownloadHeader) UnmarshalJSON(b []byte) error {
@@ -151,7 +162,7 @@ func (r *DownloadHeader) UnmarshalJSON(b []byte) error {
 		Date              gophercloud.JSONRFC1123 `json:"Date"`
 		DeleteAt          gophercloud.JSONUnix    `json:"X-Delete-At"`
 		LastModified      gophercloud.JSONRFC1123 `json:"Last-Modified"`
-		StaticLargeObject interface{}             `json:"X-Static-Large-Object"`
+		StaticLargeObject any                     `json:"X-Static-Large-Object"`
 	}
 	err := json.Unmarshal(b, &s)
 	if err != nil {
@@ -200,7 +211,7 @@ func (r *DownloadResult) ExtractContent() ([]byte, error) {
 		return nil, r.Err
 	}
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -220,6 +231,7 @@ type GetHeader struct {
 	ObjectManifest     string    `json:"X-Object-Manifest"`
 	StaticLargeObject  bool      `json:"-"`
 	TransID            string    `json:"X-Trans-Id"`
+	ObjectVersionID    string    `json:"X-Object-Version-Id"`
 }
 
 func (r *GetHeader) UnmarshalJSON(b []byte) error {
@@ -229,7 +241,7 @@ func (r *GetHeader) UnmarshalJSON(b []byte) error {
 		Date              gophercloud.JSONRFC1123 `json:"Date"`
 		DeleteAt          gophercloud.JSONUnix    `json:"X-Delete-At"`
 		LastModified      gophercloud.JSONRFC1123 `json:"Last-Modified"`
-		StaticLargeObject interface{}             `json:"X-Static-Large-Object"`
+		StaticLargeObject any                     `json:"X-Static-Large-Object"`
 	}
 	err := json.Unmarshal(b, &s)
 	if err != nil {
@@ -286,12 +298,13 @@ func (r GetResult) ExtractMetadata() (map[string]string, error) {
 // CreateHeader represents the headers returned in the response from a
 // Create request.
 type CreateHeader struct {
-	ContentLength int64     `json:"Content-Length,string"`
-	ContentType   string    `json:"Content-Type"`
-	Date          time.Time `json:"-"`
-	ETag          string    `json:"Etag"`
-	LastModified  time.Time `json:"-"`
-	TransID       string    `json:"X-Trans-Id"`
+	ContentLength   int64     `json:"Content-Length,string"`
+	ContentType     string    `json:"Content-Type"`
+	Date            time.Time `json:"-"`
+	ETag            string    `json:"Etag"`
+	LastModified    time.Time `json:"-"`
+	TransID         string    `json:"X-Trans-Id"`
+	ObjectVersionID string    `json:"X-Object-Version-Id"`
 }
 
 func (r *CreateHeader) UnmarshalJSON(b []byte) error {
@@ -316,15 +329,11 @@ func (r *CreateHeader) UnmarshalJSON(b []byte) error {
 
 // CreateResult represents the result of a create operation.
 type CreateResult struct {
-	checksum string
 	gophercloud.HeaderResult
 }
 
 // Extract will return a struct of headers returned from a call to Create.
 func (r CreateResult) Extract() (*CreateHeader, error) {
-	//if r.Header.Get("ETag") != fmt.Sprintf("%x", localChecksum) {
-	//	return nil, ErrWrongChecksum{}
-	//}
 	var s CreateHeader
 	err := r.ExtractInto(&s)
 	return &s, err
@@ -333,10 +342,11 @@ func (r CreateResult) Extract() (*CreateHeader, error) {
 // UpdateHeader represents the headers returned in the response from a
 // Update request.
 type UpdateHeader struct {
-	ContentLength int64     `json:"Content-Length,string"`
-	ContentType   string    `json:"Content-Type"`
-	Date          time.Time `json:"-"`
-	TransID       string    `json:"X-Trans-Id"`
+	ContentLength   int64     `json:"Content-Length,string"`
+	ContentType     string    `json:"Content-Type"`
+	Date            time.Time `json:"-"`
+	TransID         string    `json:"X-Trans-Id"`
+	ObjectVersionID string    `json:"X-Object-Version-Id"`
 }
 
 func (r *UpdateHeader) UnmarshalJSON(b []byte) error {
@@ -372,10 +382,12 @@ func (r UpdateResult) Extract() (*UpdateHeader, error) {
 // DeleteHeader represents the headers returned in the response from a
 // Delete request.
 type DeleteHeader struct {
-	ContentLength int64     `json:"Content-Length,string"`
-	ContentType   string    `json:"Content-Type"`
-	Date          time.Time `json:"-"`
-	TransID       string    `json:"X-Trans-Id"`
+	ContentLength          int64     `json:"Content-Length,string"`
+	ContentType            string    `json:"Content-Type"`
+	Date                   time.Time `json:"-"`
+	TransID                string    `json:"X-Trans-Id"`
+	ObjectVersionID        string    `json:"X-Object-Version-Id"`
+	ObjectCurrentVersionID string    `json:"X-Object-Current-Version-Id"`
 }
 
 func (r *DeleteHeader) UnmarshalJSON(b []byte) error {
@@ -419,6 +431,7 @@ type CopyHeader struct {
 	ETag                   string    `json:"Etag"`
 	LastModified           time.Time `json:"-"`
 	TransID                string    `json:"X-Trans-Id"`
+	ObjectVersionID        string    `json:"X-Object-Version-Id"`
 }
 
 func (r *CopyHeader) UnmarshalJSON(b []byte) error {

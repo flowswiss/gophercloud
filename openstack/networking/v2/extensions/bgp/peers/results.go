@@ -1,8 +1,8 @@
 package peers
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 const jroot = "bgp_peer"
@@ -18,7 +18,7 @@ func (r commonResult) Extract() (*BGPPeer, error) {
 	return &s, err
 }
 
-func (r commonResult) ExtractInto(v interface{}) error {
+func (r commonResult) ExtractInto(v any) error {
 	return r.Result.ExtractIntoStructPtr(v, jroot)
 }
 
@@ -54,6 +54,10 @@ type BGPPeerPage struct {
 
 // IsEmpty checks whether a BGPPage struct is empty.
 func (r BGPPeerPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractBGPPeers(r)
 	return len(is) == 0, err
 }
@@ -67,7 +71,7 @@ func ExtractBGPPeers(r pagination.Page) ([]BGPPeer, error) {
 	return s, err
 }
 
-func ExtractBGPPeersInto(r pagination.Page, v interface{}) error {
+func ExtractBGPPeersInto(r pagination.Page, v any) error {
 	return r.(BGPPeerPage).Result.ExtractIntoSlicePtr(v, "bgp_peers")
 }
 

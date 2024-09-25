@@ -1,8 +1,10 @@
 package rules
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOpts allows the filtering and sorting of paginated collections through
@@ -60,6 +62,7 @@ const (
 	ProtocolGRE       RuleProtocol  = "gre"
 	ProtocolICMP      RuleProtocol  = "icmp"
 	ProtocolIGMP      RuleProtocol  = "igmp"
+	ProtocolIPIP      RuleProtocol  = "ipip"
 	ProtocolIPv6Encap RuleProtocol  = "ipv6-encap"
 	ProtocolIPv6Frag  RuleProtocol  = "ipv6-frag"
 	ProtocolIPv6ICMP  RuleProtocol  = "ipv6-icmp"
@@ -74,13 +77,13 @@ const (
 	ProtocolUDP       RuleProtocol  = "udp"
 	ProtocolUDPLite   RuleProtocol  = "udplite"
 	ProtocolVRRP      RuleProtocol  = "vrrp"
-	ProtocolAny       RuleProtocol  = "any"
+	ProtocolAny       RuleProtocol  = ""
 )
 
 // CreateOptsBuilder allows extensions to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToSecGroupRuleCreateMap() (map[string]interface{}, error)
+	ToSecGroupRuleCreateMap() (map[string]any, error)
 }
 
 // CreateOpts contains all the values needed to create a new security group
@@ -130,34 +133,34 @@ type CreateOpts struct {
 }
 
 // ToSecGroupRuleCreateMap builds a request body from CreateOpts.
-func (opts CreateOpts) ToSecGroupRuleCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToSecGroupRuleCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "security_group_rule")
 }
 
 // Create is an operation which adds a new security group rule and associates it
 // with an existing security group (whose ID is specified in CreateOpts).
-func Create(c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToSecGroupRuleCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Post(rootURL(c), b, &r.Body, nil)
+	resp, err := c.Post(ctx, rootURL(c), b, &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Get retrieves a particular security group rule based on its unique ID.
-func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := c.Get(resourceURL(c, id), &r.Body, nil)
+func Get(ctx context.Context, c *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := c.Get(ctx, resourceURL(c, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Delete will permanently delete a particular security group rule based on its
 // unique ID.
-func Delete(c *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := c.Delete(resourceURL(c, id), nil)
+func Delete(ctx context.Context, c *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := c.Delete(ctx, resourceURL(c, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

@@ -1,14 +1,16 @@
 package sharenetworks
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // CreateOptsBuilder allows extensions to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToShareNetworkCreateMap() (map[string]interface{}, error)
+	ToShareNetworkCreateMap() (map[string]any, error)
 }
 
 // CreateOpts contains options for creating a ShareNetwork. This object is
@@ -29,20 +31,20 @@ type CreateOpts struct {
 
 // ToShareNetworkCreateMap assembles a request body based on the contents of a
 // CreateOpts.
-func (opts CreateOpts) ToShareNetworkCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToShareNetworkCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "share_network")
 }
 
 // Create will create a new ShareNetwork based on the values in CreateOpts. To
 // extract the ShareNetwork object from the response, call the Extract method
 // on the CreateResult.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToShareNetworkCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200, 202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -50,8 +52,8 @@ func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r Create
 }
 
 // Delete will delete the existing ShareNetwork with the provided ID.
-func Delete(client *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, id), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -121,8 +123,8 @@ func ListDetail(client *gophercloud.ServiceClient, opts ListOptsBuilder) paginat
 
 // Get retrieves the ShareNetwork with the provided ID. To extract the ShareNetwork
 // object from the response, call the Extract method on the GetResult.
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(getURL(client, id), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -130,7 +132,7 @@ func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
 // UpdateOptsBuilder allows extensions to add additional parameters to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToShareNetworkUpdateMap() (map[string]interface{}, error)
+	ToShareNetworkUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts contain options for updating an existing ShareNetwork. This object is passed
@@ -151,19 +153,19 @@ type UpdateOpts struct {
 
 // ToShareNetworkUpdateMap assembles a request body based on the contents of an
 // UpdateOpts.
-func (opts UpdateOpts) ToShareNetworkUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToShareNetworkUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "share_network")
 }
 
 // Update will update the ShareNetwork with provided information. To extract the updated
 // ShareNetwork from the response, call the Extract method on the UpdateResult.
-func Update(client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToShareNetworkUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Put(updateURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Put(ctx, updateURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -173,7 +175,7 @@ func Update(client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder
 // AddSecurityServiceOptsBuilder allows extensions to add additional parameters to the
 // AddSecurityService request.
 type AddSecurityServiceOptsBuilder interface {
-	ToShareNetworkAddSecurityServiceMap() (map[string]interface{}, error)
+	ToShareNetworkAddSecurityServiceMap() (map[string]any, error)
 }
 
 // AddSecurityServiceOpts contain options for adding a security service to an
@@ -185,19 +187,19 @@ type AddSecurityServiceOpts struct {
 
 // ToShareNetworkAddSecurityServiceMap assembles a request body based on the contents of an
 // AddSecurityServiceOpts.
-func (opts AddSecurityServiceOpts) ToShareNetworkAddSecurityServiceMap() (map[string]interface{}, error) {
+func (opts AddSecurityServiceOpts) ToShareNetworkAddSecurityServiceMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "add_security_service")
 }
 
 // AddSecurityService will add the security service to a ShareNetwork. To extract the updated
 // ShareNetwork from the response, call the Extract method on the UpdateResult.
-func AddSecurityService(client *gophercloud.ServiceClient, id string, opts AddSecurityServiceOptsBuilder) (r UpdateResult) {
+func AddSecurityService(ctx context.Context, client *gophercloud.ServiceClient, id string, opts AddSecurityServiceOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToShareNetworkAddSecurityServiceMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(addSecurityServiceURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, addSecurityServiceURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -207,7 +209,7 @@ func AddSecurityService(client *gophercloud.ServiceClient, id string, opts AddSe
 // RemoveSecurityServiceOptsBuilder allows extensions to add additional parameters to the
 // RemoveSecurityService request.
 type RemoveSecurityServiceOptsBuilder interface {
-	ToShareNetworkRemoveSecurityServiceMap() (map[string]interface{}, error)
+	ToShareNetworkRemoveSecurityServiceMap() (map[string]any, error)
 }
 
 // RemoveSecurityServiceOpts contain options for removing a security service from an
@@ -219,19 +221,19 @@ type RemoveSecurityServiceOpts struct {
 
 // ToShareNetworkRemoveSecurityServiceMap assembles a request body based on the contents of an
 // RemoveSecurityServiceOpts.
-func (opts RemoveSecurityServiceOpts) ToShareNetworkRemoveSecurityServiceMap() (map[string]interface{}, error) {
+func (opts RemoveSecurityServiceOpts) ToShareNetworkRemoveSecurityServiceMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "remove_security_service")
 }
 
 // RemoveSecurityService will remove the security service from a ShareNetwork. To extract the updated
 // ShareNetwork from the response, call the Extract method on the UpdateResult.
-func RemoveSecurityService(client *gophercloud.ServiceClient, id string, opts RemoveSecurityServiceOptsBuilder) (r UpdateResult) {
+func RemoveSecurityService(ctx context.Context, client *gophercloud.ServiceClient, id string, opts RemoveSecurityServiceOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToShareNetworkRemoveSecurityServiceMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(removeSecurityServiceURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, removeSecurityServiceURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

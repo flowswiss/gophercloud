@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -122,9 +122,9 @@ func (r *SubnetPool) UnmarshalJSON(b []byte) error {
 	// Support for older neutron time format
 	var s1 struct {
 		tmp
-		DefaultPrefixLen interface{} `json:"default_prefixlen"`
-		MinPrefixLen     interface{} `json:"min_prefixlen"`
-		MaxPrefixLen     interface{} `json:"max_prefixlen"`
+		DefaultPrefixLen any `json:"default_prefixlen"`
+		MinPrefixLen     any `json:"min_prefixlen"`
+		MaxPrefixLen     any `json:"max_prefixlen"`
 
 		CreatedAt gophercloud.JSONRFC3339NoZ `json:"created_at"`
 		UpdatedAt gophercloud.JSONRFC3339NoZ `json:"updated_at"`
@@ -176,9 +176,9 @@ func (r *SubnetPool) UnmarshalJSON(b []byte) error {
 	// Support for newer neutron time format
 	var s2 struct {
 		tmp
-		DefaultPrefixLen interface{} `json:"default_prefixlen"`
-		MinPrefixLen     interface{} `json:"min_prefixlen"`
-		MaxPrefixLen     interface{} `json:"max_prefixlen"`
+		DefaultPrefixLen any `json:"default_prefixlen"`
+		MinPrefixLen     any `json:"min_prefixlen"`
+		MaxPrefixLen     any `json:"max_prefixlen"`
 
 		CreatedAt time.Time `json:"created_at"`
 		UpdatedAt time.Time `json:"updated_at"`
@@ -251,6 +251,10 @@ func (r SubnetPoolPage) NextPageURL() (string, error) {
 
 // IsEmpty determines whether or not a SubnetPoolPage is empty.
 func (r SubnetPoolPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	subnetpools, err := ExtractSubnetPools(r)
 	return len(subnetpools) == 0, err
 }

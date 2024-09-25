@@ -1,8 +1,8 @@
 package tenants
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Tenant is a grouping of users in the identity service.
@@ -27,6 +27,10 @@ type TenantPage struct {
 
 // IsEmpty determines whether or not a page of Tenants contains any results.
 func (r TenantPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	tenants, err := ExtractTenants(r)
 	return len(tenants) == 0, err
 }

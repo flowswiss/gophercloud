@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestHostRoute(t *testing.T) {
@@ -39,7 +39,7 @@ func TestHostRoute(t *testing.T) {
   }}
 `)
 
-	var dejson interface{}
+	var dejson any
 	err := json.Unmarshal(sejson, &dejson)
 	if err != nil {
 		t.Fatalf("%s", err)

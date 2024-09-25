@@ -1,13 +1,14 @@
 package testing
 
 import (
+	"context"
 	"testing"
 
-	common "github.com/gophercloud/gophercloud/openstack/common/extensions"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	common "github.com/gophercloud/gophercloud/v2/openstack/common/extensions"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/extensions"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 func TestList(t *testing.T) {
@@ -17,7 +18,7 @@ func TestList(t *testing.T) {
 	HandleListExtensionsSuccessfully(t)
 
 	count := 0
-	extensions.List(client.ServiceClient()).EachPage(func(page pagination.Page) (bool, error) {
+	err := extensions.List(client.ServiceClient()).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := extensions.ExtractExtensions(page)
 		th.AssertNoErr(t, err)
@@ -26,7 +27,7 @@ func TestList(t *testing.T) {
 			{
 				Updated:     "2013-01-20T00:00:00-00:00",
 				Name:        "Neutron Service Type Management",
-				Links:       []interface{}{},
+				Links:       []any{},
 				Namespace:   "http://docs.openstack.org/ext/neutron/service-type/api/v1.0",
 				Alias:       "service-type",
 				Description: "API for retrieving service providers for Neutron advanced services",
@@ -36,6 +37,7 @@ func TestList(t *testing.T) {
 
 		return true, nil
 	})
+	th.AssertNoErr(t, err)
 	th.CheckEquals(t, 1, count)
 }
 
@@ -45,7 +47,7 @@ func TestGet(t *testing.T) {
 
 	HandleGetExtensionsSuccessfully(t)
 
-	ext, err := extensions.Get(client.ServiceClient(), "agent").Extract()
+	ext, err := extensions.Get(context.TODO(), client.ServiceClient(), "agent").Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, ext.Updated, "2013-02-03T10:00:00-00:00")

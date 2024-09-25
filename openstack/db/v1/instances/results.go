@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/db/v1/datastores"
-	"github.com/gophercloud/gophercloud/openstack/db/v1/users"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/db/v1/datastores"
+	"github.com/gophercloud/gophercloud/v2/openstack/db/v1/users"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Volume represents information about an attached volume for a database instance.
@@ -173,6 +173,10 @@ type InstancePage struct {
 
 // IsEmpty checks to see whether the collection is empty.
 func (page InstancePage) IsEmpty() (bool, error) {
+	if page.StatusCode == 204 {
+		return true, nil
+	}
+
 	instances, err := ExtractInstances(page)
 	return len(instances) == 0, err
 }
@@ -228,5 +232,5 @@ type IsRootEnabledResult struct {
 
 // Extract is used to extract the data from a IsRootEnabledResult.
 func (r IsRootEnabledResult) Extract() (bool, error) {
-	return r.Body.(map[string]interface{})["rootEnabled"] == true, r.Err
+	return r.Body.(map[string]any)["rootEnabled"] == true, r.Err
 }

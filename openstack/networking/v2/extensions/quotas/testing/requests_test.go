@@ -1,14 +1,15 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/gophercloud/gophercloud"
-	fake "github.com/gophercloud/gophercloud/openstack/networking/v2/common"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/quotas"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	"github.com/gophercloud/gophercloud/v2"
+	fake "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/common"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/quotas"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestGet(t *testing.T) {
@@ -25,7 +26,7 @@ func TestGet(t *testing.T) {
 		fmt.Fprintf(w, GetResponseRaw)
 	})
 
-	q, err := quotas.Get(fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76").Extract()
+	q, err := quotas.Get(context.TODO(), fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76").Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, q, &GetResponse)
 }
@@ -44,7 +45,7 @@ func TestGetDetail(t *testing.T) {
 		fmt.Fprintf(w, GetDetailedResponseRaw)
 	})
 
-	q, err := quotas.GetDetail(fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76").Extract()
+	q, err := quotas.GetDetail(context.TODO(), fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76").Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, q, &GetDetailResponse)
 }
@@ -63,7 +64,7 @@ func TestUpdate(t *testing.T) {
 		fmt.Fprintf(w, UpdateRequestResponseRaw)
 	})
 
-	q, err := quotas.Update(fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76", quotas.UpdateOpts{
+	q, err := quotas.Update(context.TODO(), fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76", quotas.UpdateOpts{
 		FloatingIP:        gophercloud.IntToPointer(0),
 		Network:           gophercloud.IntToPointer(-1),
 		Port:              gophercloud.IntToPointer(5),

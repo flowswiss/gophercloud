@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Amphora is virtual machine, container, dedicated hardware, appliance or device that actually performs the task of
@@ -113,6 +113,10 @@ func (r AmphoraPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a AmphoraPage struct is empty.
 func (r AmphoraPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractAmphorae(r)
 	return len(is) == 0, err
 }

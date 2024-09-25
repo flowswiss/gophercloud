@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Message contains all the information associated with an OpenStack
@@ -65,6 +65,10 @@ type MessagePage struct {
 
 // IsEmpty returns true if a ListResult contains no Messages.
 func (r MessagePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	messages, err := ExtractMessages(r)
 	return len(messages) == 0, err
 }

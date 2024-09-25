@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // SecurityService contains all the information associated with an OpenStack
@@ -71,6 +71,10 @@ type SecurityServicePage struct {
 
 // IsEmpty returns true if a ListResult contains no SecurityServices.
 func (r SecurityServicePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	securityServices, err := ExtractSecurityServices(r)
 	return len(securityServices) == 0, err
 }

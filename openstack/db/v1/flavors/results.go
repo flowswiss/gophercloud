@@ -1,8 +1,8 @@
 package flavors
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // GetResult temporarily holds the response from a Get call.
@@ -45,6 +45,10 @@ type FlavorPage struct {
 
 // IsEmpty determines if a page contains any results.
 func (page FlavorPage) IsEmpty() (bool, error) {
+	if page.StatusCode == 204 {
+		return true, nil
+	}
+
 	flavors, err := ExtractFlavors(page)
 	return len(flavors) == 0, err
 }

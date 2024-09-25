@@ -1,16 +1,17 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/gophercloud/gophercloud"
-	fake "github.com/gophercloud/gophercloud/openstack/networking/v2/common"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/provider"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	nettest "github.com/gophercloud/gophercloud/openstack/networking/v2/networks/testing"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	"github.com/gophercloud/gophercloud/v2"
+	fake "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/common"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/provider"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
+	nettest "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks/testing"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestList(t *testing.T) {
@@ -33,7 +34,7 @@ func TestList(t *testing.T) {
 	}
 	var actual []NetworkWithExt
 
-	allPages, err := networks.List(fake.ServiceClient(), networks.ListOpts{}).AllPages()
+	allPages, err := networks.List(fake.ServiceClient(), networks.ListOpts{}).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 
 	err = networks.ExtractNetworksInto(allPages, &actual)
@@ -67,7 +68,7 @@ func TestGet(t *testing.T) {
 		provider.NetworkProviderExt
 	}
 
-	err := networks.Get(fake.ServiceClient(), "d32019d3-bc6e-4319-9c1d-6722fc136a22").ExtractInto(&s)
+	err := networks.Get(context.TODO(), fake.ServiceClient(), "d32019d3-bc6e-4319-9c1d-6722fc136a22").ExtractInto(&s)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, "d32019d3-bc6e-4319-9c1d-6722fc136a22", s.ID)
@@ -99,7 +100,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	options := networks.CreateOpts{Name: "private", AdminStateUp: gophercloud.Enabled}
-	err := networks.Create(fake.ServiceClient(), options).ExtractInto(&s)
+	err := networks.Create(context.TODO(), fake.ServiceClient(), options).ExtractInto(&s)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, "db193ab3-96e3-4cb3-8fc5-05f4296d0324", s.ID)
@@ -184,7 +185,7 @@ func TestCreateWithMultipleProvider(t *testing.T) {
 		Segments:          segments,
 	}
 
-	_, err := networks.Create(fake.ServiceClient(), providerCreateOpts).Extract()
+	_, err := networks.Create(context.TODO(), fake.ServiceClient(), providerCreateOpts).Extract()
 	th.AssertNoErr(t, err)
 }
 
@@ -192,12 +193,36 @@ func TestUpdate(t *testing.T) {
 	th.SetupHTTP()
 	defer th.TeardownHTTP()
 
+	iTrue := true
+	name := "new_network_name"
+	segments := []provider.Segment{
+		{NetworkType: "vxlan", PhysicalNetwork: "br-ex", SegmentationID: 615},
+	}
+	networkUpdateOpts := networks.UpdateOpts{Name: &name, AdminStateUp: gophercloud.Disabled, Shared: &iTrue}
+	providerUpdateOpts := provider.UpdateOptsExt{
+		UpdateOptsBuilder: networkUpdateOpts,
+		Segments:          &segments,
+	}
+
 	th.Mux.HandleFunc("/v2.0/networks/4e8e5957-649f-477b-9e5b-f1f75b21c03c", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
 		th.TestHeader(t, r, "Accept", "application/json")
-		th.TestJSONRequest(t, r, nettest.UpdateRequest)
+		th.TestJSONRequest(t, r, `{
+  "network": {
+    "admin_state_up": false,
+    "name": "new_network_name",
+    "segments": [
+      {
+        "provider:network_type": "vxlan",
+        "provider:physical_network": "br-ex",
+        "provider:segmentation_id": 615
+      }
+    ],
+    "shared": true
+  }
+}`)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -210,10 +235,7 @@ func TestUpdate(t *testing.T) {
 		provider.NetworkProviderExt
 	}
 
-	iTrue := true
-	name := "new_network_name"
-	options := networks.UpdateOpts{Name: &name, AdminStateUp: gophercloud.Disabled, Shared: &iTrue}
-	err := networks.Update(fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", options).ExtractInto(&s)
+	err := networks.Update(context.TODO(), fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", providerUpdateOpts).ExtractInto(&s)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, "4e8e5957-649f-477b-9e5b-f1f75b21c03c", s.ID)

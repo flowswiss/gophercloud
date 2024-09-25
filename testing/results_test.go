@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/gophercloud/gophercloud"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	"github.com/gophercloud/gophercloud/v2"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 var singleResponse = `
@@ -95,7 +95,7 @@ type TestPersonWithExtensionsNamed struct {
 func TestUnmarshalAnonymousStructs(t *testing.T) {
 	var actual TestPersonWithExtensions
 
-	var dejson interface{}
+	var dejson any
 	sejson := []byte(singleResponse)
 	err := json.Unmarshal(sejson, &dejson)
 	if err != nil {
@@ -118,7 +118,7 @@ func TestUnmarshalAnonymousStructs(t *testing.T) {
 func TestUnmarshalSliceOfAnonymousStructs(t *testing.T) {
 	var actual []TestPersonWithExtensions
 
-	var dejson interface{}
+	var dejson any
 	sejson := []byte(multiResponse)
 	err := json.Unmarshal(sejson, &dejson)
 	if err != nil {
@@ -143,7 +143,7 @@ func TestUnmarshalSliceOfAnonymousStructs(t *testing.T) {
 func TestUnmarshalSliceofStruct(t *testing.T) {
 	var actual []TestPerson
 
-	var dejson interface{}
+	var dejson any
 	sejson := []byte(multiResponse)
 	err := json.Unmarshal(sejson, &dejson)
 	if err != nil {
@@ -165,7 +165,7 @@ func TestUnmarshalSliceofStruct(t *testing.T) {
 func TestUnmarshalNamedStructs(t *testing.T) {
 	var actual TestPersonWithExtensionsNamed
 
-	var dejson interface{}
+	var dejson any
 	sejson := []byte(singleResponse)
 	err := json.Unmarshal(sejson, &dejson)
 	if err != nil {
@@ -187,7 +187,7 @@ func TestUnmarshalNamedStructs(t *testing.T) {
 func TestUnmarshalSliceOfNamedStructs(t *testing.T) {
 	var actual []TestPersonWithExtensionsNamed
 
-	var dejson interface{}
+	var dejson any
 	sejson := []byte(multiResponse)
 	err := json.Unmarshal(sejson, &dejson)
 	if err != nil {

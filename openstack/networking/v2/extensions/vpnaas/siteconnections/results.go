@@ -1,8 +1,8 @@
 package siteconnections
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type DPD struct {
@@ -114,6 +114,10 @@ func (r ConnectionPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a ConnectionPage struct is empty.
 func (r ConnectionPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractConnections(r)
 	return len(is) == 0, err
 }

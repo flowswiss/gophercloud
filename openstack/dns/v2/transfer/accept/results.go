@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -39,6 +39,10 @@ type TransferAcceptPage struct {
 
 // IsEmpty returns true if the page contains no results.
 func (r TransferAcceptPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	s, err := ExtractTransferAccepts(r)
 	return len(s) == 0, err
 }
@@ -81,7 +85,7 @@ type TransferAccept struct {
 
 	// Links includes HTTP references to the itself, useful for passing along
 	// to other APIs that might want a server reference.
-	Links map[string]interface{} `json:"links"`
+	Links map[string]any `json:"links"`
 }
 
 func (r *TransferAccept) UnmarshalJSON(b []byte) error {

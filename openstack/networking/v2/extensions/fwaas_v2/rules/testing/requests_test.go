@@ -1,15 +1,16 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/gophercloud/gophercloud"
-	fake "github.com/gophercloud/gophercloud/openstack/networking/v2/common"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/fwaas_v2/rules"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	"github.com/gophercloud/gophercloud/v2"
+	fake "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/common"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/fwaas_v2/rules"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestList(t *testing.T) {
@@ -37,6 +38,7 @@ func TestList(t *testing.T) {
             "id": "f03bd950-6c56-4f5e-a307-45967078f507",
             "name": "ssh_form_any",
             "tenant_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
+			"project_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
             "enabled": true,
             "action": "allow",
             "ip_version": 4,
@@ -53,6 +55,7 @@ func TestList(t *testing.T) {
             "id": "ab7bd950-6c56-4f5e-a307-45967078f890",
             "name": "deny_all_udp",
             "tenant_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
+			"project_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
             "enabled": true,
             "action": "deny",
             "ip_version": 4,
@@ -65,7 +68,7 @@ func TestList(t *testing.T) {
 
 	count := 0
 
-	rules.List(fake.ServiceClient(), rules.ListOpts{}).EachPage(func(page pagination.Page) (bool, error) {
+	err := rules.List(fake.ServiceClient(), rules.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := rules.ExtractRules(page)
 		if err != nil {
@@ -85,6 +88,7 @@ func TestList(t *testing.T) {
 				ID:                   "f03bd950-6c56-4f5e-a307-45967078f507",
 				Name:                 "ssh_form_any",
 				TenantID:             "80cf934d6ffb4ef5b244f1c512ad1e61",
+				ProjectID:            "80cf934d6ffb4ef5b244f1c512ad1e61",
 				Enabled:              true,
 				Action:               string(rules.ActionAllow),
 				IPVersion:            4,
@@ -101,6 +105,7 @@ func TestList(t *testing.T) {
 				ID:                   "ab7bd950-6c56-4f5e-a307-45967078f890",
 				Name:                 "deny_all_udp",
 				TenantID:             "80cf934d6ffb4ef5b244f1c512ad1e61",
+				ProjectID:            "80cf934d6ffb4ef5b244f1c512ad1e61",
 				Enabled:              true,
 				Action:               "deny",
 				IPVersion:            4,
@@ -112,6 +117,7 @@ func TestList(t *testing.T) {
 
 		return true, nil
 	})
+	th.AssertNoErr(t, err)
 
 	if count != 1 {
 		t.Errorf("Expected 1 page, got %d", count)
@@ -135,7 +141,8 @@ func TestCreate(t *testing.T) {
 		"destination_port": "22",
 		"name": "ssh_form_any",
 		"action": "allow",
-		"tenant_id": "80cf934d6ffb4ef5b244f1c512ad1e61"
+		"tenant_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
+		"project_id": "80cf934d6ffb4ef5b244f1c512ad1e61"
 	}
 }
       `)
@@ -157,6 +164,7 @@ func TestCreate(t *testing.T) {
 		"id": "f03bd950-6c56-4f5e-a307-45967078f507",
 		"name": "ssh_form_any",
 		"tenant_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
+		"project_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
 		"enabled": true,
 		"action": "allow",
 		"ip_version": 4,
@@ -168,6 +176,7 @@ func TestCreate(t *testing.T) {
 
 	options := rules.CreateOpts{
 		TenantID:             "80cf934d6ffb4ef5b244f1c512ad1e61",
+		ProjectID:            "80cf934d6ffb4ef5b244f1c512ad1e61",
 		Protocol:             rules.ProtocolTCP,
 		Description:          "ssh rule",
 		DestinationIPAddress: "192.168.1.0/24",
@@ -176,7 +185,7 @@ func TestCreate(t *testing.T) {
 		Action:               "allow",
 	}
 
-	_, err := rules.Create(fake.ServiceClient(), options).Extract()
+	_, err := rules.Create(context.TODO(), fake.ServiceClient(), options).Extract()
 	th.AssertNoErr(t, err)
 }
 
@@ -197,7 +206,8 @@ func TestCreateAnyProtocol(t *testing.T) {
 		"destination_ip_address": "192.168.1.0/24",
 		"name": "any_to_192.168.1.0/24",
 		"action": "allow",
-		"tenant_id": "80cf934d6ffb4ef5b244f1c512ad1e61"
+		"tenant_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
+		"project_id": "80cf934d6ffb4ef5b244f1c512ad1e61"
 	}
 }
       `)
@@ -219,6 +229,7 @@ func TestCreateAnyProtocol(t *testing.T) {
 		"id": "f03bd950-6c56-4f5e-a307-45967078f507",
 		"name": "any_to_192.168.1.0/24",
 		"tenant_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
+		"project_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
 		"enabled": true,
 		"action": "allow",
 		"ip_version": 4,
@@ -230,6 +241,7 @@ func TestCreateAnyProtocol(t *testing.T) {
 
 	options := rules.CreateOpts{
 		TenantID:             "80cf934d6ffb4ef5b244f1c512ad1e61",
+		ProjectID:            "80cf934d6ffb4ef5b244f1c512ad1e61",
 		Protocol:             rules.ProtocolAny,
 		Description:          "any to 192.168.1.0/24",
 		DestinationIPAddress: "192.168.1.0/24",
@@ -237,7 +249,7 @@ func TestCreateAnyProtocol(t *testing.T) {
 		Action:               "allow",
 	}
 
-	_, err := rules.Create(fake.ServiceClient(), options).Extract()
+	_, err := rules.Create(context.TODO(), fake.ServiceClient(), options).Extract()
 	th.AssertNoErr(t, err)
 }
 
@@ -266,6 +278,7 @@ func TestGet(t *testing.T) {
 		"id": "f03bd950-6c56-4f5e-a307-45967078f507",
 		"name": "ssh_form_any",
 		"tenant_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
+		"project_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
 		"enabled": true,
 		"action": "allow",
 		"ip_version": 4,
@@ -275,7 +288,7 @@ func TestGet(t *testing.T) {
         `)
 	})
 
-	rule, err := rules.Get(fake.ServiceClient(), "f03bd950-6c56-4f5e-a307-45967078f507").Extract()
+	rule, err := rules.Get(context.TODO(), fake.ServiceClient(), "f03bd950-6c56-4f5e-a307-45967078f507").Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, "tcp", rule.Protocol)
@@ -287,6 +300,7 @@ func TestGet(t *testing.T) {
 	th.AssertEquals(t, "f03bd950-6c56-4f5e-a307-45967078f507", rule.ID)
 	th.AssertEquals(t, "ssh_form_any", rule.Name)
 	th.AssertEquals(t, "80cf934d6ffb4ef5b244f1c512ad1e61", rule.TenantID)
+	th.AssertEquals(t, "80cf934d6ffb4ef5b244f1c512ad1e61", rule.ProjectID)
 	th.AssertEquals(t, true, rule.Enabled)
 	th.AssertEquals(t, "allow", rule.Action)
 	th.AssertEquals(t, 4, rule.IPVersion)
@@ -331,6 +345,7 @@ func TestUpdate(t *testing.T) {
 		"id": "f03bd950-6c56-4f5e-a307-45967078f507",
 		"name": "ssh_form_any",
 		"tenant_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
+		"project_id": "80cf934d6ffb4ef5b244f1c512ad1e61",
 		"enabled": false,
 		"action": "allow",
 		"ip_version": 4,
@@ -357,7 +372,7 @@ func TestUpdate(t *testing.T) {
 		Enabled:              gophercloud.Disabled,
 	}
 
-	_, err := rules.Update(fake.ServiceClient(), "f03bd950-6c56-4f5e-a307-45967078f507", options).Extract()
+	_, err := rules.Update(context.TODO(), fake.ServiceClient(), "f03bd950-6c56-4f5e-a307-45967078f507", options).Extract()
 	th.AssertNoErr(t, err)
 }
 
@@ -371,6 +386,6 @@ func TestDelete(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	res := rules.Delete(fake.ServiceClient(), "4ec89077-d057-4a2b-911f-60a3b47ee304")
+	res := rules.Delete(context.TODO(), fake.ServiceClient(), "4ec89077-d057-4a2b-911f-60a3b47ee304")
 	th.AssertNoErr(t, res.Err)
 }

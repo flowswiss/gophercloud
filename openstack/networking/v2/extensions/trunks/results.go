@@ -3,8 +3,8 @@ package trunks
 import (
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type Subport struct {
@@ -111,6 +111,10 @@ type TrunkPage struct {
 }
 
 func (page TrunkPage) IsEmpty() (bool, error) {
+	if page.StatusCode == 204 {
+		return true, nil
+	}
+
 	trunks, err := ExtractTrunks(page)
 	return len(trunks) == 0, err
 }

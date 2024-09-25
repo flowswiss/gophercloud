@@ -1,13 +1,14 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 	"testing"
 
-	"github.com/gophercloud/gophercloud/pagination"
-	"github.com/gophercloud/gophercloud/testhelper"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	"github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 // MarkerPager sample and test cases.
@@ -39,7 +40,9 @@ func createMarkerPaged(t *testing.T) pagination.Pager {
 	testhelper.SetupHTTP()
 
 	testhelper.Mux.HandleFunc("/page", func(w http.ResponseWriter, r *http.Request) {
-		r.ParseForm()
+		if err := r.ParseForm(); err != nil {
+			t.Errorf("Failed to parse request form %v", err)
+		}
 		ms := r.Form["marker"]
 		switch {
 		case len(ms) == 0:
@@ -83,7 +86,7 @@ func TestEnumerateMarker(t *testing.T) {
 	defer testhelper.TeardownHTTP()
 
 	callCount := 0
-	err := pager.EachPage(func(page pagination.Page) (bool, error) {
+	err := pager.EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		actual, err := ExtractMarkerStrings(page)
 		if err != nil {
 			return false, err
@@ -117,7 +120,7 @@ func TestAllPagesMarker(t *testing.T) {
 	pager := createMarkerPaged(t)
 	defer testhelper.TeardownHTTP()
 
-	page, err := pager.AllPages()
+	page, err := pager.AllPages(context.TODO())
 	testhelper.AssertNoErr(t, err)
 
 	expected := []string{"aaa", "bbb", "ccc", "ddd", "eee", "fff", "ggg", "hhh", "iii"}

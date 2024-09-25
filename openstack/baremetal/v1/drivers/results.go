@@ -1,8 +1,8 @@
 package drivers
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type driverResult struct {
@@ -16,11 +16,11 @@ func (r driverResult) Extract() (*Driver, error) {
 	return &s, err
 }
 
-func (r driverResult) ExtractInto(v interface{}) error {
+func (r driverResult) ExtractInto(v any) error {
 	return r.Result.ExtractIntoStructPtr(v, "")
 }
 
-func ExtractDriversInto(r pagination.Page, v interface{}) error {
+func ExtractDriversInto(r pagination.Page, v any) error {
 	return r.(DriverPage).Result.ExtractIntoSlicePtr(v, "drivers")
 }
 
@@ -50,6 +50,10 @@ type Driver struct {
 	// The default deploy interface used for a node with a dynamic driver,
 	// if no deploy interface is specified for the node.
 	DefaultDeployInterface string `json:"default_deploy_interface"`
+
+	// The default firmware interface used for a node with a dynamic driver,
+	// if no firmware interface is specified for the node.
+	DefaultFirmwareInterface string `json:"default_firmware_interface"`
 
 	// The default inspection interface used for a node with a dynamic driver,
 	// if no inspection interface is specified for the node.
@@ -95,6 +99,9 @@ type Driver struct {
 	// The enabled deploy interfaces for this driver.
 	EnabledDeployInterfaces []string `json:"enabled_deploy_interfaces"`
 
+	// The enabled firmware interfaces for this driver.
+	EnabledFirmwareInterfaces []string `json:"enabled_firmware_interfaces"`
+
 	// The enabled inspection interfaces for this driver.
 	EnabledInspectInterfaces []string `json:"enabled_inspect_interfaces"`
 
@@ -120,10 +127,10 @@ type Driver struct {
 	EnabledVendorInterfaces []string `json:"enabled_vendor_interfaces"`
 
 	//A list of relative links. Includes the self and bookmark links.
-	Links []interface{} `json:"links"`
+	Links []any `json:"links"`
 
 	// A list of links to driver properties.
-	Properties []interface{} `json:"properties"`
+	Properties []any `json:"properties"`
 }
 
 // DriverPage abstracts the raw results of making a ListDrivers() request
@@ -134,6 +141,10 @@ type DriverPage struct {
 
 // IsEmpty returns true if a page contains no Driver results.
 func (r DriverPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	s, err := ExtractDrivers(r)
 	return len(s) == 0, err
 }
@@ -166,7 +177,7 @@ type GetDriverResult struct {
 }
 
 // DriverProperties represents driver properties in the OpenStack Bare Metal API.
-type DriverProperties map[string]interface{}
+type DriverProperties map[string]any
 
 // Extract interprets any GetPropertiesResult as DriverProperties, if possible.
 func (r GetPropertiesResult) Extract() (*DriverProperties, error) {
@@ -182,7 +193,7 @@ type GetPropertiesResult struct {
 }
 
 // DiskProperties represents driver disk properties in the OpenStack Bare Metal API.
-type DiskProperties map[string]interface{}
+type DiskProperties map[string]any
 
 // Extract interprets any GetDiskPropertiesResult as DiskProperties, if possible.
 func (r GetDiskPropertiesResult) Extract() (*DiskProperties, error) {

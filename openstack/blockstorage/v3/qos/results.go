@@ -1,8 +1,8 @@
 package qos
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // QoS contains all the information associated with an OpenStack QoS specification.
@@ -29,7 +29,7 @@ func (r commonResult) Extract() (*QoS, error) {
 }
 
 // ExtractInto converts our response data into a QoS struct
-func (r commonResult) ExtractInto(qos interface{}) error {
+func (r commonResult) ExtractInto(qos any) error {
 	return r.Result.ExtractIntoStructPtr(qos, "qos_specs")
 }
 
@@ -49,6 +49,10 @@ type QoSPage struct {
 
 // IsEmpty determines if a QoSPage contains any results.
 func (page QoSPage) IsEmpty() (bool, error) {
+	if page.StatusCode == 204 {
+		return true, nil
+	}
+
 	qos, err := ExtractQoS(page)
 	return len(qos) == 0, err
 }
@@ -130,6 +134,10 @@ type AssociationPage struct {
 
 // IsEmpty indicates whether an Association page is empty.
 func (page AssociationPage) IsEmpty() (bool, error) {
+	if page.StatusCode == 204 {
+		return true, nil
+	}
+
 	v, err := ExtractAssociations(page)
 	return len(v) == 0, err
 }

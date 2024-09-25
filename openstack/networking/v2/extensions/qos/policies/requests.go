@@ -1,10 +1,12 @@
 package policies
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/ports"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // PortCreateOptsExt adds QoS options to the base ports.CreateOpts.
@@ -16,13 +18,13 @@ type PortCreateOptsExt struct {
 }
 
 // ToPortCreateMap casts a CreateOpts struct to a map.
-func (opts PortCreateOptsExt) ToPortCreateMap() (map[string]interface{}, error) {
+func (opts PortCreateOptsExt) ToPortCreateMap() (map[string]any, error) {
 	base, err := opts.CreateOptsBuilder.ToPortCreateMap()
 	if err != nil {
 		return nil, err
 	}
 
-	port := base["port"].(map[string]interface{})
+	port := base["port"].(map[string]any)
 
 	if opts.QoSPolicyID != "" {
 		port["qos_policy_id"] = opts.QoSPolicyID
@@ -41,13 +43,13 @@ type PortUpdateOptsExt struct {
 }
 
 // ToPortUpdateMap casts a UpdateOpts struct to a map.
-func (opts PortUpdateOptsExt) ToPortUpdateMap() (map[string]interface{}, error) {
+func (opts PortUpdateOptsExt) ToPortUpdateMap() (map[string]any, error) {
 	base, err := opts.UpdateOptsBuilder.ToPortUpdateMap()
 	if err != nil {
 		return nil, err
 	}
 
-	port := base["port"].(map[string]interface{})
+	port := base["port"].(map[string]any)
 
 	if opts.QoSPolicyID != nil {
 		qosPolicyID := *opts.QoSPolicyID
@@ -70,13 +72,13 @@ type NetworkCreateOptsExt struct {
 }
 
 // ToNetworkCreateMap casts a CreateOpts struct to a map.
-func (opts NetworkCreateOptsExt) ToNetworkCreateMap() (map[string]interface{}, error) {
+func (opts NetworkCreateOptsExt) ToNetworkCreateMap() (map[string]any, error) {
 	base, err := opts.CreateOptsBuilder.ToNetworkCreateMap()
 	if err != nil {
 		return nil, err
 	}
 
-	network := base["network"].(map[string]interface{})
+	network := base["network"].(map[string]any)
 
 	if opts.QoSPolicyID != "" {
 		network["qos_policy_id"] = opts.QoSPolicyID
@@ -95,13 +97,13 @@ type NetworkUpdateOptsExt struct {
 }
 
 // ToNetworkUpdateMap casts a UpdateOpts struct to a map.
-func (opts NetworkUpdateOptsExt) ToNetworkUpdateMap() (map[string]interface{}, error) {
+func (opts NetworkUpdateOptsExt) ToNetworkUpdateMap() (map[string]any, error) {
 	base, err := opts.UpdateOptsBuilder.ToNetworkUpdateMap()
 	if err != nil {
 		return nil, err
 	}
 
-	network := base["network"].(map[string]interface{})
+	network := base["network"].(map[string]any)
 
 	if opts.QoSPolicyID != nil {
 		qosPolicyID := *opts.QoSPolicyID
@@ -170,8 +172,8 @@ func List(c *gophercloud.ServiceClient, opts PolicyListOptsBuilder) pagination.P
 }
 
 // Get retrieves a specific QoS policy based on its ID.
-func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := c.Get(getURL(c, id), &r.Body, nil)
+func Get(ctx context.Context, c *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := c.Get(ctx, getURL(c, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -179,7 +181,7 @@ func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
 // CreateOptsBuilder allows to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToPolicyCreateMap() (map[string]interface{}, error)
+	ToPolicyCreateMap() (map[string]any, error)
 }
 
 // CreateOpts specifies parameters of a new QoS policy.
@@ -204,18 +206,18 @@ type CreateOpts struct {
 }
 
 // ToPolicyCreateMap constructs a request body from CreateOpts.
-func (opts CreateOpts) ToPolicyCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToPolicyCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "policy")
 }
 
 // Create requests the creation of a new QoS policy on the server.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToPolicyCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -225,7 +227,7 @@ func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r Create
 // UpdateOptsBuilder allows extensions to add additional parameters to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToPolicyUpdateMap() (map[string]interface{}, error)
+	ToPolicyUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts represents options used to update a QoS policy.
@@ -244,19 +246,19 @@ type UpdateOpts struct {
 }
 
 // ToPolicyUpdateMap builds a request body from UpdateOpts.
-func (opts UpdateOpts) ToPolicyUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToPolicyUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "policy")
 }
 
 // Update accepts a UpdateOpts struct and updates an existing policy using the
 // values provided.
-func Update(c *gophercloud.ServiceClient, policyID string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, c *gophercloud.ServiceClient, policyID string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToPolicyUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Put(updateURL(c, policyID), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := c.Put(ctx, updateURL(c, policyID), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -264,8 +266,8 @@ func Update(c *gophercloud.ServiceClient, policyID string, opts UpdateOptsBuilde
 }
 
 // Delete accepts a unique ID and deletes the QoS policy associated with it.
-func Delete(c *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := c.Delete(deleteURL(c, id), nil)
+func Delete(ctx context.Context, c *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := c.Delete(ctx, deleteURL(c, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

@@ -1,8 +1,10 @@
 package domains
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOptsBuilder allows extensions to add additional parameters to
@@ -41,9 +43,17 @@ func List(client *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pa
 	})
 }
 
+// ListAvailable enumerates the domains which are available to a specific user.
+func ListAvailable(client *gophercloud.ServiceClient) pagination.Pager {
+	url := listAvailableURL(client)
+	return pagination.NewPager(client, url, func(r pagination.PageResult) pagination.Page {
+		return DomainPage{pagination.LinkedPageBase{PageResult: r}}
+	})
+}
+
 // Get retrieves details on a single domain, by ID.
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(getURL(client, id), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -51,7 +61,7 @@ func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
 // CreateOptsBuilder allows extensions to add additional parameters to
 // the Create request.
 type CreateOptsBuilder interface {
-	ToDomainCreateMap() (map[string]interface{}, error)
+	ToDomainCreateMap() (map[string]any, error)
 }
 
 // CreateOpts provides options used to create a domain.
@@ -67,18 +77,18 @@ type CreateOpts struct {
 }
 
 // ToDomainCreateMap formats a CreateOpts into a create request.
-func (opts CreateOpts) ToDomainCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToDomainCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "domain")
 }
 
 // Create creates a new Domain.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToDomainCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -86,8 +96,8 @@ func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r Create
 }
 
 // Delete deletes a domain.
-func Delete(client *gophercloud.ServiceClient, domainID string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, domainID), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, domainID string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, domainID), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -95,7 +105,7 @@ func Delete(client *gophercloud.ServiceClient, domainID string) (r DeleteResult)
 // UpdateOptsBuilder allows extensions to add additional parameters to
 // the Update request.
 type UpdateOptsBuilder interface {
-	ToDomainUpdateMap() (map[string]interface{}, error)
+	ToDomainUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts represents parameters to update a domain.
@@ -111,18 +121,18 @@ type UpdateOpts struct {
 }
 
 // ToUpdateCreateMap formats a UpdateOpts into an update request.
-func (opts UpdateOpts) ToDomainUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToDomainUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "domain")
 }
 
 // Update modifies the attributes of a domain.
-func Update(client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToDomainUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Patch(updateURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Patch(ctx, updateURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

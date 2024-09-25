@@ -3,7 +3,7 @@ package apiversions
 import (
 	"time"
 
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // APIVersion represents an API version for Cinder.
@@ -32,6 +32,10 @@ type APIVersionPage struct {
 
 // IsEmpty checks whether an APIVersionPage struct is empty.
 func (r APIVersionPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractAPIVersions(r)
 	return len(is) == 0, err
 }

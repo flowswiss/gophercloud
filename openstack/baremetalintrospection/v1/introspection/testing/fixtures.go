@@ -6,10 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/baremetalintrospection/v1/introspection"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/baremetal/inventory"
+	inventorytesting "github.com/gophercloud/gophercloud/v2/openstack/baremetal/inventory/testing"
+	"github.com/gophercloud/gophercloud/v2/openstack/baremetalintrospection/v1/introspection"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 // IntrospectionListBody contains the canned body of a introspection.IntrospectionList response.
@@ -67,7 +69,7 @@ const IntrospectionStatus = `
 `
 
 // IntrospectionDataJSONSample contains sample data reported by the introspection process.
-const IntrospectionDataJSONSample = `
+var IntrospectionDataJSONSample = fmt.Sprintf(`
 {
     "all_interfaces": {
         "eth0": {
@@ -99,81 +101,20 @@ const IntrospectionDataJSONSample = `
             "pxe": true
         }
     },
-    "inventory": {
-        "bmc_address": "192.167.2.134",
-        "boot": {
-            "current_boot_mode": "bios",
-            "pxe_interface": "52:54:00:4e:3d:30"
-        },
-        "cpu": {
-            "architecture": "x86_64",
-            "count": 2,
-            "flags": [
-                "fpu",
-                "mmx",
-                "fxsr",
-                "sse",
-                "sse2"
-            ],
-            "frequency": "2100.084"
-        },
-        "disks": [
-            {
-                "hctl": null,
-                "model": "",
-                "name": "/dev/vda",
-                "rotational": true,
-                "serial": null,
-                "size": 13958643712,
-                "vendor": "0x1af4",
-                "wwn": null,
-                "wwn_vendor_extension": null,
-                "wwn_with_extension": null
-            }
-        ],
-        "hostname": "myawesomehost",
-        "interfaces": [
-            {
-                "client_id": null,
-                "has_carrier": true,
-                "ipv4_address": "172.24.42.101",
-                "lldp": [],
-                "mac_address": "52:54:00:47:20:4d",
-                "name": "eth1",
-                "product": "0x0001",
-                "vendor": "0x1af4"
-            },
-            {
-                "client_id": null,
-                "has_carrier": true,
-                "ipv4_address": "172.24.42.100",
-                "lldp": [
-                    [
-                        1,
-                        "04112233aabbcc"
-                    ],
-                    [
-                        5,
-                        "737730312d646973742d31622d623132"
-                    ]
-                ],
-                "mac_address": "52:54:00:4e:3d:30",
-                "name": "eth0",
-                "product": "0x0001",
-                "vendor": "0x1af4"
-            }
-        ],
-        "memory": {
-            "physical_mb": 2048,
-            "total": 2105864192
-        },
-        "system_vendor": {
-            "manufacturer": "Bochs",
-            "product_name": "Bochs",
-            "serial_number": "Not Specified"
-        }
-    },
+    "inventory": %s,
     "ipmi_address": "192.167.2.134",
+    "lldp_raw": {
+	"eth0": [
+	    [
+		1,
+		"04112233aabbcc"
+	    ],
+	    [
+		5,
+		"737730312d646973742d31622d623132"
+	    ]
+	]
+    },
     "local_gb": 12,
     "macs": [
         "52:54:00:4e:3d:30"
@@ -192,7 +133,7 @@ const IntrospectionDataJSONSample = `
         "wwn_with_extension": null
     }
 }
-`
+`, inventorytesting.InventorySample)
 
 // IntrospectionExtraHardwareJSONSample contains extra hardware sample data
 // reported by the introspection process.
@@ -326,8 +267,8 @@ var (
 		UUID:       "05ccda19-581b-49bf-8f5a-6ded99701d87",
 		StartedAt:  fooTimeStarted,
 		FinishedAt: fooTimeFinished,
-		Links: []interface{}{
-			map[string]interface{}{
+		Links: []any{
+			map[string]any{
 				"href": "http://127.0.0.1:5050/v1/introspection/05ccda19-581b-49bf-8f5a-6ded99701d87",
 				"rel":  "self",
 			},
@@ -343,8 +284,8 @@ var (
 		UUID:       "c244557e-899f-46fa-a1ff-5b2c6718616b",
 		StartedAt:  barTimeStarted,
 		FinishedAt: barTimeFinished,
-		Links: []interface{}{
-			map[string]interface{}{
+		Links: []any{
+			map[string]any{
 				"href": "http://127.0.0.1:5050/v1/introspection/c244557e-899f-46fa-a1ff-5b2c6718616b",
 				"rel":  "self",
 			},
@@ -354,7 +295,7 @@ var (
 	IntrospectionDataRes = introspection.Data{
 		CPUArch: "x86_64",
 		MACs:    []string{"52:54:00:4e:3d:30"},
-		RootDisk: introspection.RootDiskType{
+		RootDisk: inventory.RootDiskType{
 			Rotational: true,
 			Model:      "",
 			Name:       "/dev/vda",
@@ -372,69 +313,9 @@ var (
 		BootInterface: "52:54:00:4e:3d:30",
 		MemoryMB:      2048,
 		IPMIAddress:   "192.167.2.134",
-		Inventory: introspection.InventoryType{
-			SystemVendor: introspection.SystemVendorType{
-				Manufacturer: "Bochs",
-				ProductName:  "Bochs",
-				SerialNumber: "Not Specified",
-			},
-			BmcAddress: "192.167.2.134",
-			Boot: introspection.BootInfoType{
-				CurrentBootMode: "bios",
-				PXEInterface:    "52:54:00:4e:3d:30",
-			},
-			CPU: introspection.CPUType{
-				Count:        2,
-				Flags:        []string{"fpu", "mmx", "fxsr", "sse", "sse2"},
-				Frequency:    "2100.084",
-				Architecture: "x86_64",
-			},
-			Disks: []introspection.RootDiskType{
-				{
-					Rotational: true,
-					Model:      "",
-					Name:       "/dev/vda",
-					Size:       13958643712,
-					Vendor:     "0x1af4",
-				},
-			},
-			Interfaces: []introspection.InterfaceType{
-				{
-					Vendor:      "0x1af4",
-					HasCarrier:  true,
-					MACAddress:  "52:54:00:47:20:4d",
-					Name:        "eth1",
-					Product:     "0x0001",
-					IPV4Address: "172.24.42.101",
-					LLDP:        []introspection.LLDPTLVType{},
-				},
-				{
-					IPV4Address: "172.24.42.100",
-					MACAddress:  "52:54:00:4e:3d:30",
-					Name:        "eth0",
-					Product:     "0x0001",
-					HasCarrier:  true,
-					Vendor:      "0x1af4",
-					LLDP: []introspection.LLDPTLVType{
-						{
-							Type:  1,
-							Value: "04112233aabbcc",
-						},
-						{
-							Type:  5,
-							Value: "737730312d646973742d31622d623132",
-						},
-					},
-				},
-			},
-			Memory: introspection.MemoryType{
-				PhysicalMb: 2048.0,
-				Total:      2.105864192e+09,
-			},
-			Hostname: "myawesomehost",
-		},
-		Error:   "",
-		LocalGB: 12,
+		Inventory:     inventorytesting.Inventory,
+		Error:         "",
+		LocalGB:       12,
 		AllInterfaces: map[string]introspection.BaseInterfaceType{
 			"eth1": {
 				IP:  "172.24.42.101",
@@ -445,87 +326,99 @@ var (
 				IP:  "172.24.42.100",
 				MAC: "52:54:00:4e:3d:30",
 				PXE: true,
-				LLDPProcessed: map[string]interface{}{
+				LLDPProcessed: map[string]any{
 					"switch_chassis_id":  "11:22:33:aa:bb:cc",
 					"switch_system_name": "sw01-dist-1b-b12",
 				},
 			},
 		},
+		RawLLDP: map[string][]inventory.LLDPTLVType{
+			"eth0": {
+				{
+					Type:  1,
+					Value: "04112233aabbcc",
+				},
+				{
+					Type:  5,
+					Value: "737730312d646973742d31622d623132",
+				},
+			},
+		},
 	}
 
-	IntrospectionExtraHardware = introspection.ExtraHardwareDataType{
-		CPU: introspection.ExtraHardwareDataSection{
-			"logical": map[string]interface{}{
+	IntrospectionExtraHardware = inventory.ExtraDataType{
+		CPU: inventory.ExtraDataSection{
+			"logical": map[string]any{
 				"number": float64(16),
 			},
-			"physical": map[string]interface{}{
+			"physical": map[string]any{
 				"clock": float64(2105032704),
 				"cores": float64(8),
 				"flags": "lm fpu fpu_exception wp vme de",
 			},
 		},
-		Disk: introspection.ExtraHardwareDataSection{
-			"sda": map[string]interface{}{
+		Disk: inventory.ExtraDataSection{
+			"sda": map[string]any{
 				"rotational": float64(1),
 				"vendor":     "TEST",
 			},
 		},
-		Firmware: introspection.ExtraHardwareDataSection{
-			"bios": map[string]interface{}{
+		Firmware: inventory.ExtraDataSection{
+			"bios": map[string]any{
 				"date":   "01/01/1970",
 				"vendor": "test",
 			},
 		},
-		IPMI: introspection.ExtraHardwareDataSection{
-			"Fan1A RPM": map[string]interface{}{
+		IPMI: inventory.ExtraDataSection{
+			"Fan1A RPM": map[string]any{
 				"unit":  "RPM",
 				"value": float64(3120),
 			},
-			"Fan1B RPM": map[string]interface{}{
+			"Fan1B RPM": map[string]any{
 				"unit":  "RPM",
 				"value": float64(2280),
 			},
 		},
-		Memory: introspection.ExtraHardwareDataSection{
-			"bank0": map[string]interface{}{
+		Memory: inventory.ExtraDataSection{
+			"bank0": map[string]any{
 				"clock":       1600000000.0,
 				"description": "DIMM DDR3 Synchronous Registered (Buffered) 1600 MHz (0.6 ns)",
 			},
-			"bank1": map[string]interface{}{
+			"bank1": map[string]any{
 				"clock":       1600000000.0,
 				"description": "DIMM DDR3 Synchronous Registered (Buffered) 1600 MHz (0.6 ns)",
 			},
 		},
-		Network: introspection.ExtraHardwareDataSection{
-			"em1": map[string]interface{}{
+		Network: inventory.ExtraDataSection{
+			"em1": map[string]any{
 				"Autonegotiate": "on",
 				"loopback":      "off [fixed]",
 			},
-			"p2p1": map[string]interface{}{
+			"p2p1": map[string]any{
 				"Autonegotiate": "on",
 				"loopback":      "off [fixed]",
 			},
 		},
-		System: introspection.ExtraHardwareDataSection{
-			"ipmi": map[string]interface{}{
+		System: inventory.ExtraDataSection{
+			"ipmi": map[string]any{
 				"channel": float64(1),
 			},
-			"kernel": map[string]interface{}{
+			"kernel": map[string]any{
 				"arch":    "x86_64",
 				"version": "3.10.0",
 			},
-			"motherboard": map[string]interface{}{
+			"motherboard": map[string]any{
 				"vendor": "Test",
 			},
-			"product": map[string]interface{}{
+			"product": map[string]any{
 				"name":   "test",
 				"vendor": "Test",
 			},
 		},
 	}
 
-	IntrospectionNUMA = introspection.NUMATopology{
-		CPUs: []introspection.NUMACPU{
+	IntrospectionNUMA = inventory.NUMATopology{
+		CPUs: []inventory.NUMACPU{
 			{
 				CPU:            6,
 				NUMANode:       1,
@@ -537,7 +430,7 @@ var (
 				ThreadSiblings: []int{20, 44},
 			},
 		},
-		NICs: []introspection.NUMANIC{
+		NICs: []inventory.NUMANIC{
 			{
 				Name:     "p2p1",
 				NUMANode: 0,
@@ -547,7 +440,7 @@ var (
 				NUMANode: 1,
 			},
 		},
-		RAM: []introspection.NUMARAM{
+		RAM: []inventory.NUMARAM{
 			{
 				NUMANode: 0,
 				SizeKB:   99289532,
@@ -566,7 +459,9 @@ func HandleListIntrospectionsSuccessfully(t *testing.T) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		w.Header().Add("Content-Type", "application/json")
-		r.ParseForm()
+		if err := r.ParseForm(); err != nil {
+			t.Errorf("Failed to parse request form %v", err)
+		}
 
 		marker := r.Form.Get("marker")
 

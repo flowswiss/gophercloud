@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -55,13 +55,13 @@ type Execution struct {
 	Description string `json:"description"`
 
 	// Input contains the workflow input values.
-	Input map[string]interface{} `json:"-"`
+	Input map[string]any `json:"-"`
 
 	// Ouput contains the workflow output values.
-	Output map[string]interface{} `json:"-"`
+	Output map[string]any `json:"-"`
 
 	// Params contains workflow type specific parameters.
-	Params map[string]interface{} `json:"-"`
+	Params map[string]any `json:"-"`
 
 	// ProjectID is the project id owner of the execution.
 	ProjectID string `json:"project_id"`
@@ -132,6 +132,10 @@ type ExecutionPage struct {
 
 // IsEmpty checks if an ExecutionPage contains any results.
 func (r ExecutionPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	exec, err := ExtractExecutions(r)
 	return len(exec) == 0, err
 }

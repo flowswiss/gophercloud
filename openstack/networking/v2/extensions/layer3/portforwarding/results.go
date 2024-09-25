@@ -1,13 +1,17 @@
 package portforwarding
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type PortForwarding struct {
 	// The ID of the floating IP port forwarding
 	ID string `json:"id"`
+
+	// A text describing the rule, which helps users to manage/find easily
+	// theirs rules.
+	Description string `json:"description"`
 
 	// The ID of the Neutron port associated to the floating IP port forwarding.
 	InternalPortID string `json:"internal_port_id"`
@@ -62,7 +66,7 @@ func (r commonResult) Extract() (*PortForwarding, error) {
 	return &s, err
 }
 
-func (r commonResult) ExtractInto(v interface{}) error {
+func (r commonResult) ExtractInto(v any) error {
 	return r.Result.ExtractIntoStructPtr(v, "port_forwarding")
 }
 
@@ -88,6 +92,10 @@ func (r PortForwardingPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a PortForwardingPage struct is empty.
 func (r PortForwardingPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractPortForwardings(r)
 	return len(is) == 0, err
 }

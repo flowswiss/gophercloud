@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // CreateResult is the response of a Post operations. Call its Extract method to interpret it as a list of Workflows.
@@ -106,6 +106,10 @@ type WorkflowPage struct {
 
 // IsEmpty checks if an WorkflowPage contains any results.
 func (r WorkflowPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	exec, err := ExtractWorkflows(r)
 	return len(exec) == 0, err
 }

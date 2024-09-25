@@ -1,8 +1,8 @@
 package credentials
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Credential represents the Credential object
@@ -18,7 +18,7 @@ type Credential struct {
 	// The ID of the project the credential was created for.
 	ProjectID string `json:"project_id"`
 	// Links contains referencing links to the credential.
-	Links map[string]interface{} `json:"links"`
+	Links map[string]any `json:"links"`
 }
 
 type credentialResult struct {
@@ -56,6 +56,10 @@ type CredentialPage struct {
 
 // IsEmpty determines whether or not a CredentialPage contains any results.
 func (r CredentialPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	credentials, err := ExtractCredentials(r)
 	return len(credentials) == 0, err
 }

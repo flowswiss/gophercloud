@@ -7,29 +7,18 @@ import (
 	"strings"
 	"testing"
 
-	th "github.com/gophercloud/gophercloud/testhelper"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
-func TestTEFixFileRefs(t *testing.T) {
-	te := TE{
-		Bin: []byte(`string_to_replace: my fair lady`),
-		fileMaps: map[string]string{
-			"string_to_replace": "london bridge is falling down",
-		},
-	}
-	te.fixFileRefs()
-	th.AssertEquals(t, string(te.Bin), `london bridge is falling down: my fair lady`)
-}
-
 func TestToStringKeys(t *testing.T) {
-	var test1 interface{} = map[interface{}]interface{}{
+	var test1 any = map[any]any{
 		"Adam":  "Smith",
 		"Isaac": "Newton",
 	}
 	result1, err := toStringKeys(test1)
 	th.AssertNoErr(t, err)
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"Adam":  "Smith",
 		"Isaac": "Newton",
 	}

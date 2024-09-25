@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/v2"
 )
 
 type commonResult struct {
@@ -37,7 +37,7 @@ func (r *Quotas) UnmarshalJSON(b []byte) error {
 	type tmp Quotas
 	var s struct {
 		tmp
-		ID interface{} `json:"id"`
+		ID any `json:"id"`
 	}
 
 	err := json.Unmarshal(b, &s)

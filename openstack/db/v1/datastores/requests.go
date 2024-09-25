@@ -1,8 +1,10 @@
 package datastores
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // List will list all available datastore types that instances can use.
@@ -13,8 +15,8 @@ func List(client *gophercloud.ServiceClient) pagination.Pager {
 }
 
 // Get will retrieve the details of a specified datastore type.
-func Get(client *gophercloud.ServiceClient, datastoreID string) (r GetResult) {
-	resp, err := client.Get(resourceURL(client, datastoreID), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, datastoreID string) (r GetResult) {
+	resp, err := client.Get(ctx, resourceURL(client, datastoreID), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -28,8 +30,8 @@ func ListVersions(client *gophercloud.ServiceClient, datastoreID string) paginat
 }
 
 // GetVersion will retrieve the details of a specified datastore version.
-func GetVersion(client *gophercloud.ServiceClient, datastoreID, versionID string) (r GetVersionResult) {
-	resp, err := client.Get(versionURL(client, datastoreID, versionID), &r.Body, nil)
+func GetVersion(ctx context.Context, client *gophercloud.ServiceClient, datastoreID, versionID string) (r GetVersionResult) {
+	resp, err := client.Get(ctx, versionURL(client, datastoreID, versionID), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

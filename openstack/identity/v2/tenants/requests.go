@@ -1,8 +1,10 @@
 package tenants
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOpts filters the Tenants that are returned by the List call.
@@ -44,23 +46,23 @@ type CreateOpts struct {
 // CreateOptsBuilder enables extensions to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToTenantCreateMap() (map[string]interface{}, error)
+	ToTenantCreateMap() (map[string]any, error)
 }
 
 // ToTenantCreateMap assembles a request body based on the contents of
 // a CreateOpts.
-func (opts CreateOpts) ToTenantCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToTenantCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "tenant")
 }
 
 // Create is the operation responsible for creating new tenant.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToTenantCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200, 201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -68,8 +70,8 @@ func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r Create
 }
 
 // Get requests details on a single tenant by ID.
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(getURL(client, id), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -77,7 +79,7 @@ func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
 // UpdateOptsBuilder allows extensions to add additional parameters to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToTenantUpdateMap() (map[string]interface{}, error)
+	ToTenantUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts specifies the base attributes that may be updated on an existing
@@ -94,18 +96,18 @@ type UpdateOpts struct {
 }
 
 // ToTenantUpdateMap formats an UpdateOpts structure into a request body.
-func (opts UpdateOpts) ToTenantUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToTenantUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "tenant")
 }
 
 // Update is the operation responsible for updating exist tenants by their TenantID.
-func Update(client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToTenantUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Put(updateURL(client, id), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Put(ctx, updateURL(client, id), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -113,8 +115,8 @@ func Update(client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder
 }
 
 // Delete is the operation responsible for permanently deleting a tenant.
-func Delete(client *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, id), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

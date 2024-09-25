@@ -1,14 +1,16 @@
 package snapshots
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // CreateOptsBuilder allows extensions to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToSnapshotCreateMap() (map[string]interface{}, error)
+	ToSnapshotCreateMap() (map[string]any, error)
 }
 
 // CreateOpts contains the options for create a Snapshot. This object is
@@ -32,20 +34,20 @@ type CreateOpts struct {
 
 // ToSnapshotCreateMap assembles a request body based on the contents of a
 // CreateOpts.
-func (opts CreateOpts) ToSnapshotCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToSnapshotCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "snapshot")
 }
 
 // Create will create a new Snapshot based on the values in CreateOpts. To extract
 // the Snapshot object from the response, call the Extract method on the
 // CreateResult.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToSnapshotCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200, 201, 202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -114,15 +116,15 @@ func ListDetail(client *gophercloud.ServiceClient, opts ListOptsBuilder) paginat
 }
 
 // Delete will delete an existing Snapshot with the given UUID.
-func Delete(client *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, id), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Get will get a single snapshot with given UUID
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(getURL(client, id), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -130,7 +132,7 @@ func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
 // UpdateOptsBuilder allows extensions to add additional parameters to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToSnapshotUpdateMap() (map[string]interface{}, error)
+	ToSnapshotUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts contain options for updating an existing Snapshot. This object is passed
@@ -145,20 +147,71 @@ type UpdateOpts struct {
 
 // ToSnapshotUpdateMap assembles a request body based on the contents of an
 // UpdateOpts.
-func (opts UpdateOpts) ToSnapshotUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToSnapshotUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "snapshot")
 }
 
 // Update will update the Snapshot with provided information. To extract the updated
 // Snapshot from the response, call the Extract method on the UpdateResult.
-func Update(client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToSnapshotUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Put(updateURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Put(ctx, updateURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// ResetStatusOptsBuilder allows extensions to add additional parameters to the
+// ResetStatus request.
+type ResetStatusOptsBuilder interface {
+	ToSnapshotResetStatusMap() (map[string]any, error)
+}
+
+// ResetStatusOpts contains options for resetting a Snapshot status.
+// For more information about these parameters, please, refer to the shared file systems API v2,
+// Snapshot Actions, ResetStatus share documentation.
+type ResetStatusOpts struct {
+	// Status is a snapshot status to reset to. Can be "available", "error",
+	// "creating", "deleting", "manage_starting", "manage_error",
+	// "unmanage_starting", "unmanage_error" or "error_deleting".
+	Status string `json:"status"`
+}
+
+// ToSnapshotResetStatusMap assembles a request body based on the contents of a
+// ResetStatusOpts.
+func (opts ResetStatusOpts) ToSnapshotResetStatusMap() (map[string]any, error) {
+	return gophercloud.BuildRequestBody(opts, "reset_status")
+}
+
+// ResetStatus will reset the existing snapshot status. ResetStatusResult contains only the error.
+// To extract it, call the ExtractErr method on the ResetStatusResult.
+func ResetStatus(ctx context.Context, client *gophercloud.ServiceClient, id string, opts ResetStatusOptsBuilder) (r ResetStatusResult) {
+	b, err := opts.ToSnapshotResetStatusMap()
+	if err != nil {
+		r.Err = err
+		return
+	}
+
+	resp, err := client.Post(ctx, resetStatusURL(client, id), b, nil, &gophercloud.RequestOpts{
+		OkCodes: []int{202},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// ForceDelete will delete the existing snapshot in any state. ForceDeleteResult contains only the error.
+// To extract it, call the ExtractErr method on the ForceDeleteResult.
+func ForceDelete(ctx context.Context, client *gophercloud.ServiceClient, id string) (r ForceDeleteResult) {
+	b := map[string]any{
+		"force_delete": nil,
+	}
+	resp, err := client.Post(ctx, forceDeleteURL(client, id), b, nil, &gophercloud.RequestOpts{
+		OkCodes: []int{202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return

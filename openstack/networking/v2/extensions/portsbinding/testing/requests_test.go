@@ -1,12 +1,14 @@
 package testing
 
 import (
+	"context"
 	"testing"
+	"time"
 
-	fake "github.com/gophercloud/gophercloud/openstack/networking/v2/common"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/portsbinding"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	fake "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/common"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/portsbinding"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/ports"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestList(t *testing.T) {
@@ -40,6 +42,8 @@ func TestList(t *testing.T) {
 				ID:             "d80b1a3b-4fc1-49f3-952e-1e2ab7081d8b",
 				SecurityGroups: []string{},
 				DeviceID:       "9ae135f4-b6e0-4dad-9e91-3c223e385824",
+				CreatedAt:      time.Date(2019, time.June, 30, 4, 15, 37, 0, time.UTC),
+				UpdatedAt:      time.Date(2019, time.June, 30, 5, 18, 49, 0, time.UTC),
 			},
 			PortsBindingExt: portsbinding.PortsBindingExt{
 				VNICType: "normal",
@@ -48,7 +52,7 @@ func TestList(t *testing.T) {
 		},
 	}
 
-	allPages, err := ports.List(fake.ServiceClient(), ports.ListOpts{}).AllPages()
+	allPages, err := ports.List(fake.ServiceClient(), ports.ListOpts{}).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 
 	err = ports.ExtractPortsInto(allPages, &actual)
@@ -68,7 +72,7 @@ func TestGet(t *testing.T) {
 		portsbinding.PortsBindingExt
 	}
 
-	err := ports.Get(fake.ServiceClient(), "46d4bfb9-b26e-41f3-bd2e-e6dcc1ccedb2").ExtractInto(&s)
+	err := ports.Get(context.TODO(), fake.ServiceClient(), "46d4bfb9-b26e-41f3-bd2e-e6dcc1ccedb2").ExtractInto(&s)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Status, "ACTIVE")
@@ -88,7 +92,7 @@ func TestGet(t *testing.T) {
 	th.AssertEquals(t, s.HostID, "devstack")
 	th.AssertEquals(t, s.VNICType, "normal")
 	th.AssertEquals(t, s.VIFType, "ovs")
-	th.AssertDeepEquals(t, s.VIFDetails, map[string]interface{}{"port_filter": true, "ovs_hybrid_plug": true})
+	th.AssertDeepEquals(t, s.VIFDetails, map[string]any{"port_filter": true, "ovs_hybrid_plug": true})
 }
 
 func TestCreate(t *testing.T) {
@@ -119,7 +123,7 @@ func TestCreate(t *testing.T) {
 		VNICType:          "normal",
 	}
 
-	err := ports.Create(fake.ServiceClient(), createOpts).ExtractInto(&s)
+	err := ports.Create(context.TODO(), fake.ServiceClient(), createOpts).ExtractInto(&s)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Status, "DOWN")
@@ -139,7 +143,7 @@ func TestCreate(t *testing.T) {
 }
 
 func TestRequiredCreateOpts(t *testing.T) {
-	res := ports.Create(fake.ServiceClient(), portsbinding.CreateOptsExt{CreateOptsBuilder: ports.CreateOpts{}})
+	res := ports.Create(context.TODO(), fake.ServiceClient(), portsbinding.CreateOptsExt{CreateOptsBuilder: ports.CreateOpts{}})
 	if res.Err == nil {
 		t.Fatalf("Expected error, got none")
 	}
@@ -172,7 +176,7 @@ func TestUpdate(t *testing.T) {
 		VNICType:          "normal",
 	}
 
-	err := ports.Update(fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d", updateOpts).ExtractInto(&s)
+	err := ports.Update(context.TODO(), fake.ServiceClient(), "65c0ee9f-d634-4522-8954-51021b570b0d", updateOpts).ExtractInto(&s)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "new_port_name")

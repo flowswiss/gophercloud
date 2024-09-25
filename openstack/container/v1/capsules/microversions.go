@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ExtractV132 is a function that accepts a result and extracts a capsule resource.
@@ -49,7 +49,7 @@ type CapsuleV132 struct {
 
 	// Links includes HTTP references to the itself, useful for passing along to
 	// other APIs that might want a capsule reference.
-	Links []interface{} `json:"links"`
+	Links []any `json:"links"`
 
 	// The capsule restart policy
 	RestartPolicy map[string]string `json:"restart_policy"`

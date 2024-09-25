@@ -1,12 +1,17 @@
 package servers
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"net"
+	"regexp"
+	"strings"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOptsBuilder allows extensions to add additional parameters to the
@@ -94,7 +99,22 @@ func (opts ListOpts) ToServerListQuery() (string, error) {
 	return q.String(), err
 }
 
-// List makes a request against the API to list servers accessible to you.
+// ListSimple makes a request against the API to list servers accessible to you.
+func ListSimple(client *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pager {
+	url := listURL(client)
+	if opts != nil {
+		query, err := opts.ToServerListQuery()
+		if err != nil {
+			return pagination.Pager{Err: err}
+		}
+		url += query
+	}
+	return pagination.NewPager(client, url, func(r pagination.PageResult) pagination.Page {
+		return ServerPage{pagination.LinkedPageBase{PageResult: r}}
+	})
+}
+
+// List makes a request against the API to list servers details accessible to you.
 func List(client *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pager {
 	url := listDetailURL(client)
 	if opts != nil {
@@ -109,10 +129,151 @@ func List(client *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pa
 	})
 }
 
-// CreateOptsBuilder allows extensions to add additional parameters to the
-// Create request.
-type CreateOptsBuilder interface {
-	ToServerCreateMap() (map[string]interface{}, error)
+// SchedulerHintOptsBuilder builds the scheduler hints into a serializable format.
+type SchedulerHintOptsBuilder interface {
+	ToSchedulerHintsMap() (map[string]any, error)
+}
+
+// SchedulerHintOpts represents a set of scheduling hints that are passed to the
+// OpenStack scheduler.
+type SchedulerHintOpts struct {
+	// Group specifies a Server Group to place the instance in.
+	Group string
+
+	// DifferentHost will place the instance on a compute node that does not
+	// host the given instances.
+	DifferentHost []string
+
+	// SameHost will place the instance on a compute node that hosts the given
+	// instances.
+	SameHost []string
+
+	// Query is a conditional statement that results in compute nodes able to
+	// host the instance.
+	Query []any
+
+	// TargetCell specifies a cell name where the instance will be placed.
+	TargetCell string `json:"target_cell,omitempty"`
+
+	// DifferentCell specifies cells names where an instance should not be placed.
+	DifferentCell []string `json:"different_cell,omitempty"`
+
+	// BuildNearHostIP specifies a subnet of compute nodes to host the instance.
+	BuildNearHostIP string
+
+	// AdditionalProperies are arbitrary key/values that are not validated by nova.
+	AdditionalProperties map[string]any
+}
+
+// ToSchedulerHintsMap assembles a request body for scheduler hints.
+func (opts SchedulerHintOpts) ToSchedulerHintsMap() (map[string]any, error) {
+	sh := make(map[string]any)
+
+	uuidRegex, _ := regexp.Compile("^[a-z0-9]{8}-[a-z0-9]{4}-[1-5][a-z0-9]{3}-[a-z0-9]{4}-[a-z0-9]{12}$")
+
+	if opts.Group != "" {
+		if !uuidRegex.MatchString(opts.Group) {
+			err := gophercloud.ErrInvalidInput{}
+			err.Argument = "servers.schedulerhints.SchedulerHintOpts.Group"
+			err.Value = opts.Group
+			err.Info = "Group must be a UUID"
+			return nil, err
+		}
+		sh["group"] = opts.Group
+	}
+
+	if len(opts.DifferentHost) > 0 {
+		for _, diffHost := range opts.DifferentHost {
+			if !uuidRegex.MatchString(diffHost) {
+				err := gophercloud.ErrInvalidInput{}
+				err.Argument = "servers.schedulerhints.SchedulerHintOpts.DifferentHost"
+				err.Value = opts.DifferentHost
+				err.Info = "The hosts must be in UUID format."
+				return nil, err
+			}
+		}
+		sh["different_host"] = opts.DifferentHost
+	}
+
+	if len(opts.SameHost) > 0 {
+		for _, sameHost := range opts.SameHost {
+			if !uuidRegex.MatchString(sameHost) {
+				err := gophercloud.ErrInvalidInput{}
+				err.Argument = "servers.schedulerhints.SchedulerHintOpts.SameHost"
+				err.Value = opts.SameHost
+				err.Info = "The hosts must be in UUID format."
+				return nil, err
+			}
+		}
+		sh["same_host"] = opts.SameHost
+	}
+
+	/*
+		Query can be something simple like:
+			 [">=", "$free_ram_mb", 1024]
+
+			Or more complex like:
+				['and',
+					['>=', '$free_ram_mb', 1024],
+					['>=', '$free_disk_mb', 200 * 1024]
+				]
+
+		Because of the possible complexity, just make sure the length is a minimum of 3.
+	*/
+	if len(opts.Query) > 0 {
+		if len(opts.Query) < 3 {
+			err := gophercloud.ErrInvalidInput{}
+			err.Argument = "servers.schedulerhints.SchedulerHintOpts.Query"
+			err.Value = opts.Query
+			err.Info = "Must be a conditional statement in the format of [op,variable,value]"
+			return nil, err
+		}
+
+		// The query needs to be sent as a marshalled string.
+		b, err := json.Marshal(opts.Query)
+		if err != nil {
+			err := gophercloud.ErrInvalidInput{}
+			err.Argument = "servers.schedulerhints.SchedulerHintOpts.Query"
+			err.Value = opts.Query
+			err.Info = "Must be a conditional statement in the format of [op,variable,value]"
+			return nil, err
+		}
+
+		sh["query"] = string(b)
+	}
+
+	if opts.TargetCell != "" {
+		sh["target_cell"] = opts.TargetCell
+	}
+
+	if len(opts.DifferentCell) > 0 {
+		sh["different_cell"] = opts.DifferentCell
+	}
+
+	if opts.BuildNearHostIP != "" {
+		if _, _, err := net.ParseCIDR(opts.BuildNearHostIP); err != nil {
+			err := gophercloud.ErrInvalidInput{}
+			err.Argument = "servers.schedulerhints.SchedulerHintOpts.BuildNearHostIP"
+			err.Value = opts.BuildNearHostIP
+			err.Info = "Must be a valid subnet in the form 192.168.1.1/24"
+			return nil, err
+		}
+		ipParts := strings.Split(opts.BuildNearHostIP, "/")
+		sh["build_near_host_ip"] = ipParts[0]
+		sh["cidr"] = "/" + ipParts[1]
+	}
+
+	if opts.AdditionalProperties != nil {
+		for k, v := range opts.AdditionalProperties {
+			sh[k] = v
+		}
+	}
+
+	if len(sh) == 0 {
+		return sh, nil
+	}
+
+	return map[string]any{"os:scheduler_hints": sh}, nil
 }
 
 // Network is used within CreateOpts to control a new server's network
@@ -135,6 +296,91 @@ type Network struct {
 	//
 	// Requires microversion 2.32 through 2.36 or 2.42 or later.
 	Tag string
+}
+
+type (
+	// DestinationType represents the type of medium being used as the
+	// destination of the bootable device.
+	DestinationType string
+
+	// SourceType represents the type of medium being used as the source of the
+	// bootable device.
+	SourceType string
+)
+
+const (
+	// DestinationLocal DestinationType is for using an ephemeral disk as the
+	// destination.
+	DestinationLocal DestinationType = "local"
+
+	// DestinationVolume DestinationType is for using a volume as the destination.
+	DestinationVolume DestinationType = "volume"
+
+	// SourceBlank SourceType is for a "blank" or empty source.
+	SourceBlank SourceType = "blank"
+
+	// SourceImage SourceType is for using images as the source of a block device.
+	SourceImage SourceType = "image"
+
+	// SourceSnapshot SourceType is for using a volume snapshot as the source of
+	// a block device.
+	SourceSnapshot SourceType = "snapshot"
+
+	// SourceVolume SourceType is for using a volume as the source of block
+	// device.
+	SourceVolume SourceType = "volume"
+)
+
+// BlockDevice is a structure with options for creating block devices in a
+// server. The block device may be created from an image, snapshot, new volume,
+// or existing volume. The destination may be a new volume, existing volume
+// which will be attached to the instance, ephemeral disk, or boot device.
+type BlockDevice struct {
+	// SourceType must be one of: "volume", "snapshot", "image", or "blank".
+	SourceType SourceType `json:"source_type" required:"true"`
+
+	// UUID is the unique identifier for the existing volume, snapshot, or
+	// image (see above).
+	UUID string `json:"uuid,omitempty"`
+
+	// BootIndex is the boot index. It defaults to 0.
+	BootIndex int `json:"boot_index"`
+
+	// DeleteOnTermination specifies whether or not to delete the attached volume
+	// when the server is deleted. Defaults to `false`.
+	DeleteOnTermination bool `json:"delete_on_termination"`
+
+	// DestinationType is the type that gets created. Possible values are "volume"
+	// and "local".
+	DestinationType DestinationType `json:"destination_type,omitempty"`
+
+	// GuestFormat specifies the format of the block device.
+	// Not specifying this will cause the device to be formatted to the default in Nova
+	// which is currently vfat.
+	// https://opendev.org/openstack/nova/src/commit/d0b459423dd81644e8d9382b6c87fabaa4f03ad4/nova/privsep/fs.py#L257
+	GuestFormat string `json:"guest_format,omitempty"`
+
+	// VolumeSize is the size of the volume to create (in gigabytes). This can be
+	// omitted for existing volumes.
+	VolumeSize int `json:"volume_size,omitempty"`
+
+	// DeviceType specifies the device type of the block devices.
+	// Examples of this are disk, cdrom, floppy, lun, etc.
+	DeviceType string `json:"device_type,omitempty"`
+
+	// DiskBus is the bus type of the block devices.
+	// Examples of this are ide, usb, virtio, scsi, etc.
+	DiskBus string `json:"disk_bus,omitempty"`
+
+	// VolumeType is the volume type of the block device.
+	// This requires Compute API microversion 2.67 or later.
+	VolumeType string `json:"volume_type,omitempty"`
+
+	// Tag is an arbitrary string that can be applied to a block device.
+	// Information about the device tags can be obtained from the metadata API
+	// and the config drive, allowing devices to be easily identified.
+	// This requires Compute API microversion 2.42 or later.
+	Tag string `json:"tag,omitempty"`
 }
 
 // Personality is an array of files that are injected into the server at launch.
@@ -162,6 +408,31 @@ func (f *File) MarshalJSON() ([]byte, error) {
 		Contents: base64.StdEncoding.EncodeToString(f.Contents),
 	}
 	return json.Marshal(file)
+}
+
+// DiskConfig represents one of the two possible settings for the DiskConfig
+// option when creating, rebuilding, or resizing servers: Auto or Manual.
+type DiskConfig string
+
+const (
+	// Auto builds a server with a single partition the size of the target flavor
+	// disk and automatically adjusts the filesystem to fit the entire partition.
+	// Auto may only be used with images and servers that use a single EXT3
+	// partition.
+	Auto DiskConfig = "AUTO"
+
+	// Manual builds a server using whatever partition scheme and filesystem are
+	// present in the source image. If the target flavor disk is larger, the
+	// remaining space is left unpartitioned. This enables images to have non-EXT3
+	// filesystems, multiple partitions, and so on, and enables you to manage the
+	// disk configuration. It also results in slightly shorter boot times.
+	Manual DiskConfig = "MANUAL"
+)
+
+// CreateOptsBuilder allows extensions to add additional parameters to the
+// Create request.
+type CreateOptsBuilder interface {
+	ToServerCreateMap() (map[string]any, error)
 }
 
 // CreateOpts specifies server creation parameters.
@@ -193,7 +464,7 @@ type CreateOpts struct {
 	// tenant.
 	// Starting with microversion 2.37 networks can also be an "auto" or "none"
 	// string.
-	Networks interface{} `json:"-"`
+	Networks any `json:"-"`
 
 	// Metadata contains key-value pairs (up to 255 bytes each) to attach to the
 	// server.
@@ -225,11 +496,25 @@ type CreateOpts struct {
 	// Tags allows a server to be tagged with single-word metadata.
 	// Requires microversion 2.52 or later.
 	Tags []string `json:"tags,omitempty"`
+
+	// (Available from 2.90) Hostname specifies the hostname to configure for the
+	// instance in the metadata service. Starting with microversion 2.94, this can
+	// be a Fully Qualified Domain Name (FQDN) of up to 255 characters in length.
+	// If not set, OpenStack will derive the server's hostname from the Name field.
+	Hostname string `json:"hostname,omitempty"`
+
+	// BlockDevice describes the mapping of various block devices.
+	BlockDevice []BlockDevice `json:"block_device_mapping_v2,omitempty"`
+
+	// DiskConfig [optional] controls how the created server's disk is partitioned.
+	DiskConfig DiskConfig `json:"OS-DCF:diskConfig,omitempty"`
 }
 
 // ToServerCreateMap assembles a request body based on the contents of a
 // CreateOpts.
-func (opts CreateOpts) ToServerCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToServerCreateMap() (map[string]any, error) {
+	// We intentionally don't envelope the body here since we want to strip
+	// some fields out and modify others
 	b, err := gophercloud.BuildRequestBody(opts, "")
 	if err != nil {
 		return nil, err
@@ -246,9 +531,9 @@ func (opts CreateOpts) ToServerCreateMap() (map[string]interface{}, error) {
 	}
 
 	if len(opts.SecurityGroups) > 0 {
-		securityGroups := make([]map[string]interface{}, len(opts.SecurityGroups))
+		securityGroups := make([]map[string]any, len(opts.SecurityGroups))
 		for i, groupName := range opts.SecurityGroups {
-			securityGroups[i] = map[string]interface{}{"name": groupName}
+			securityGroups[i] = map[string]any{"name": groupName}
 		}
 		b["security_groups"] = securityGroups
 	}
@@ -256,9 +541,9 @@ func (opts CreateOpts) ToServerCreateMap() (map[string]interface{}, error) {
 	switch v := opts.Networks.(type) {
 	case []Network:
 		if len(v) > 0 {
-			networks := make([]map[string]interface{}, len(v))
+			networks := make([]map[string]any, len(v))
 			for i, net := range v {
-				networks[i] = make(map[string]interface{})
+				networks[i] = make(map[string]any)
 				if net.UUID != "" {
 					networks[i]["uuid"] = net.UUID
 				}
@@ -290,39 +575,54 @@ func (opts CreateOpts) ToServerCreateMap() (map[string]interface{}, error) {
 		b["max_count"] = opts.Max
 	}
 
-	return map[string]interface{}{"server": b}, nil
+	// Now we do our enveloping
+	b = map[string]any{"server": b}
+
+	return b, nil
 }
 
 // Create requests a server to be provisioned to the user in the current tenant.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
-	reqBody, err := opts.ToServerCreateMap()
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder, hintOpts SchedulerHintOptsBuilder) (r CreateResult) {
+	b, err := opts.ToServerCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(listURL(client), reqBody, &r.Body, nil)
+
+	if hintOpts != nil {
+		sh, err := hintOpts.ToSchedulerHintsMap()
+		if err != nil {
+			r.Err = err
+			return
+		}
+		maps.Copy(b, sh)
+	}
+
+	resp, err := client.Post(ctx, createURL(client), b, &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{200, 202},
+	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Delete requests that a server previously provisioned be removed from your
 // account.
-func Delete(client *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, id), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // ForceDelete forces the deletion of a server.
-func ForceDelete(client *gophercloud.ServiceClient, id string) (r ActionResult) {
-	resp, err := client.Post(actionURL(client, id), map[string]interface{}{"forceDelete": ""}, nil, nil)
+func ForceDelete(ctx context.Context, client *gophercloud.ServiceClient, id string) (r ActionResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"forceDelete": ""}, nil, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Get requests details on a single server, by ID.
-func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := client.Get(getURL(client, id), &r.Body, &gophercloud.RequestOpts{
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, id), &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200, 203},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -332,7 +632,7 @@ func Get(client *gophercloud.ServiceClient, id string) (r GetResult) {
 // UpdateOptsBuilder allows extensions to add additional attributes to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToServerUpdateMap() (map[string]interface{}, error)
+	ToServerUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts specifies the base attributes that may be updated on an existing
@@ -351,18 +651,18 @@ type UpdateOpts struct {
 }
 
 // ToServerUpdateMap formats an UpdateOpts structure into a request body.
-func (opts UpdateOpts) ToServerUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToServerUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "server")
 }
 
 // Update requests that various attributes of the indicated server be changed.
-func Update(client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToServerUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Put(updateURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Put(ctx, updateURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -371,13 +671,13 @@ func Update(client *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder
 
 // ChangeAdminPassword alters the administrator or root password for a specified
 // server.
-func ChangeAdminPassword(client *gophercloud.ServiceClient, id, newPassword string) (r ActionResult) {
-	b := map[string]interface{}{
+func ChangeAdminPassword(ctx context.Context, client *gophercloud.ServiceClient, id, newPassword string) (r ActionResult) {
+	b := map[string]any{
 		"changePassword": map[string]string{
 			"adminPass": newPassword,
 		},
 	}
-	resp, err := client.Post(actionURL(client, id), b, nil, nil)
+	resp, err := client.Post(ctx, actionURL(client, id), b, nil, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -397,7 +697,7 @@ const (
 // RebootOptsBuilder allows extensions to add additional parameters to the
 // reboot request.
 type RebootOptsBuilder interface {
-	ToServerRebootMap() (map[string]interface{}, error)
+	ToServerRebootMap() (map[string]any, error)
 }
 
 // RebootOpts provides options to the reboot request.
@@ -407,32 +707,32 @@ type RebootOpts struct {
 }
 
 // ToServerRebootMap builds a body for the reboot request.
-func (opts RebootOpts) ToServerRebootMap() (map[string]interface{}, error) {
+func (opts RebootOpts) ToServerRebootMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "reboot")
 }
 
 /*
-	Reboot requests that a given server reboot.
+Reboot requests that a given server reboot.
 
-	Two methods exist for rebooting a server:
+Two methods exist for rebooting a server:
 
-	HardReboot (aka PowerCycle) starts the server instance by physically cutting
-	power to the machine, or if a VM, terminating it at the hypervisor level.
-	It's done. Caput. Full stop.
-	Then, after a brief while, power is restored or the VM instance restarted.
+HardReboot (aka PowerCycle) starts the server instance by physically cutting
+power to the machine, or if a VM, terminating it at the hypervisor level.
+It's done. Caput. Full stop.
+Then, after a brief while, power is restored or the VM instance restarted.
 
-	SoftReboot (aka OSReboot) simply tells the OS to restart under its own
-	procedure.
-	E.g., in Linux, asking it to enter runlevel 6, or executing
-	"sudo shutdown -r now", or by asking Windows to rtart the machine.
+SoftReboot (aka OSReboot) simply tells the OS to restart under its own
+procedure.
+E.g., in Linux, asking it to enter runlevel 6, or executing
+"sudo shutdown -r now", or by asking Windows to rtart the machine.
 */
-func Reboot(client *gophercloud.ServiceClient, id string, opts RebootOptsBuilder) (r ActionResult) {
+func Reboot(ctx context.Context, client *gophercloud.ServiceClient, id string, opts RebootOptsBuilder) (r ActionResult) {
 	b, err := opts.ToServerRebootMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(actionURL(client, id), b, nil, nil)
+	resp, err := client.Post(ctx, actionURL(client, id), b, nil, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -440,7 +740,7 @@ func Reboot(client *gophercloud.ServiceClient, id string, opts RebootOptsBuilder
 // RebuildOptsBuilder allows extensions to provide additional parameters to the
 // rebuild request.
 type RebuildOptsBuilder interface {
-	ToServerRebuildMap() (map[string]interface{}, error)
+	ToServerRebuildMap() (map[string]any, error)
 }
 
 // RebuildOpts represents the configuration options used in a server rebuild
@@ -468,27 +768,37 @@ type RebuildOpts struct {
 	// Personality [optional] includes files to inject into the server at launch.
 	// Rebuild will base64-encode file contents for you.
 	Personality Personality `json:"personality,omitempty"`
+
+	// DiskConfig controls how the rebuilt server's disk is partitioned.
+	DiskConfig DiskConfig `json:"OS-DCF:diskConfig,omitempty"`
 }
 
 // ToServerRebuildMap formats a RebuildOpts struct into a map for use in JSON
-func (opts RebuildOpts) ToServerRebuildMap() (map[string]interface{}, error) {
+func (opts RebuildOpts) ToServerRebuildMap() (map[string]any, error) {
+	if opts.DiskConfig != "" && opts.DiskConfig != Auto && opts.DiskConfig != Manual {
+		err := gophercloud.ErrInvalidInput{}
+		err.Argument = "servers.RebuildOpts.DiskConfig"
+		err.Info = "Must be either diskconfig.Auto or diskconfig.Manual"
+		return nil, err
+	}
+
 	b, err := gophercloud.BuildRequestBody(opts, "")
 	if err != nil {
 		return nil, err
 	}
 
-	return map[string]interface{}{"rebuild": b}, nil
+	return map[string]any{"rebuild": b}, nil
 }
 
 // Rebuild will reprovision the server according to the configuration options
 // provided in the RebuildOpts struct.
-func Rebuild(client *gophercloud.ServiceClient, id string, opts RebuildOptsBuilder) (r RebuildResult) {
+func Rebuild(ctx context.Context, client *gophercloud.ServiceClient, id string, opts RebuildOptsBuilder) (r RebuildResult) {
 	b, err := opts.ToServerRebuildMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(actionURL(client, id), b, &r.Body, nil)
+	resp, err := client.Post(ctx, actionURL(client, id), b, &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -496,7 +806,7 @@ func Rebuild(client *gophercloud.ServiceClient, id string, opts RebuildOptsBuild
 // ResizeOptsBuilder allows extensions to add additional parameters to the
 // resize request.
 type ResizeOptsBuilder interface {
-	ToServerResizeMap() (map[string]interface{}, error)
+	ToServerResizeMap() (map[string]any, error)
 }
 
 // ResizeOpts represents the configuration options used to control a Resize
@@ -504,11 +814,21 @@ type ResizeOptsBuilder interface {
 type ResizeOpts struct {
 	// FlavorRef is the ID of the flavor you wish your server to become.
 	FlavorRef string `json:"flavorRef" required:"true"`
+
+	// DiskConfig [optional] controls how the resized server's disk is partitioned.
+	DiskConfig DiskConfig `json:"OS-DCF:diskConfig,omitempty"`
 }
 
 // ToServerResizeMap formats a ResizeOpts as a map that can be used as a JSON
 // request body for the Resize request.
-func (opts ResizeOpts) ToServerResizeMap() (map[string]interface{}, error) {
+func (opts ResizeOpts) ToServerResizeMap() (map[string]any, error) {
+	if opts.DiskConfig != "" && opts.DiskConfig != Auto && opts.DiskConfig != Manual {
+		err := gophercloud.ErrInvalidInput{}
+		err.Argument = "servers.ResizeOpts.DiskConfig"
+		err.Info = "Must be either diskconfig.Auto or diskconfig.Manual"
+		return nil, err
+	}
+
 	return gophercloud.BuildRequestBody(opts, "resize")
 }
 
@@ -521,21 +841,21 @@ func (opts ResizeOpts) ToServerResizeMap() (map[string]interface{}, error) {
 // While in this state, you can explore the use of the new server's
 // configuration. If you like it, call ConfirmResize() to commit the resize
 // permanently. Otherwise, call RevertResize() to restore the old configuration.
-func Resize(client *gophercloud.ServiceClient, id string, opts ResizeOptsBuilder) (r ActionResult) {
+func Resize(ctx context.Context, client *gophercloud.ServiceClient, id string, opts ResizeOptsBuilder) (r ActionResult) {
 	b, err := opts.ToServerResizeMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(actionURL(client, id), b, nil, nil)
+	resp, err := client.Post(ctx, actionURL(client, id), b, nil, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // ConfirmResize confirms a previous resize operation on a server.
 // See Resize() for more details.
-func ConfirmResize(client *gophercloud.ServiceClient, id string) (r ActionResult) {
-	resp, err := client.Post(actionURL(client, id), map[string]interface{}{"confirmResize": nil}, nil, &gophercloud.RequestOpts{
+func ConfirmResize(ctx context.Context, client *gophercloud.ServiceClient, id string) (r ActionResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"confirmResize": nil}, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{201, 202, 204},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -544,8 +864,8 @@ func ConfirmResize(client *gophercloud.ServiceClient, id string) (r ActionResult
 
 // RevertResize cancels a previous resize operation on a server.
 // See Resize() for more details.
-func RevertResize(client *gophercloud.ServiceClient, id string) (r ActionResult) {
-	resp, err := client.Post(actionURL(client, id), map[string]interface{}{"revertResize": nil}, nil, nil)
+func RevertResize(ctx context.Context, client *gophercloud.ServiceClient, id string) (r ActionResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"revertResize": nil}, nil, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -553,7 +873,7 @@ func RevertResize(client *gophercloud.ServiceClient, id string) (r ActionResult)
 // ResetMetadataOptsBuilder allows extensions to add additional parameters to
 // the Reset request.
 type ResetMetadataOptsBuilder interface {
-	ToMetadataResetMap() (map[string]interface{}, error)
+	ToMetadataResetMap() (map[string]any, error)
 }
 
 // MetadataOpts is a map that contains key-value pairs.
@@ -561,14 +881,14 @@ type MetadataOpts map[string]string
 
 // ToMetadataResetMap assembles a body for a Reset request based on the contents
 // of a MetadataOpts.
-func (opts MetadataOpts) ToMetadataResetMap() (map[string]interface{}, error) {
-	return map[string]interface{}{"metadata": opts}, nil
+func (opts MetadataOpts) ToMetadataResetMap() (map[string]any, error) {
+	return map[string]any{"metadata": opts}, nil
 }
 
 // ToMetadataUpdateMap assembles a body for an Update request based on the
 // contents of a MetadataOpts.
-func (opts MetadataOpts) ToMetadataUpdateMap() (map[string]interface{}, error) {
-	return map[string]interface{}{"metadata": opts}, nil
+func (opts MetadataOpts) ToMetadataUpdateMap() (map[string]any, error) {
+	return map[string]any{"metadata": opts}, nil
 }
 
 // ResetMetadata will create multiple new key-value pairs for the given server
@@ -576,13 +896,13 @@ func (opts MetadataOpts) ToMetadataUpdateMap() (map[string]interface{}, error) {
 // Note: Using this operation will erase any already-existing metadata and
 // create the new metadata provided. To keep any already-existing metadata,
 // use the UpdateMetadatas or UpdateMetadata function.
-func ResetMetadata(client *gophercloud.ServiceClient, id string, opts ResetMetadataOptsBuilder) (r ResetMetadataResult) {
+func ResetMetadata(ctx context.Context, client *gophercloud.ServiceClient, id string, opts ResetMetadataOptsBuilder) (r ResetMetadataResult) {
 	b, err := opts.ToMetadataResetMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Put(metadataURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Put(ctx, metadataURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -590,8 +910,8 @@ func ResetMetadata(client *gophercloud.ServiceClient, id string, opts ResetMetad
 }
 
 // Metadata requests all the metadata for the given server ID.
-func Metadata(client *gophercloud.ServiceClient, id string) (r GetMetadataResult) {
-	resp, err := client.Get(metadataURL(client, id), &r.Body, nil)
+func Metadata(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetMetadataResult) {
+	resp, err := client.Get(ctx, metadataURL(client, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -599,19 +919,19 @@ func Metadata(client *gophercloud.ServiceClient, id string) (r GetMetadataResult
 // UpdateMetadataOptsBuilder allows extensions to add additional parameters to
 // the Create request.
 type UpdateMetadataOptsBuilder interface {
-	ToMetadataUpdateMap() (map[string]interface{}, error)
+	ToMetadataUpdateMap() (map[string]any, error)
 }
 
 // UpdateMetadata updates (or creates) all the metadata specified by opts for
 // the given server ID. This operation does not affect already-existing metadata
 // that is not specified by opts.
-func UpdateMetadata(client *gophercloud.ServiceClient, id string, opts UpdateMetadataOptsBuilder) (r UpdateMetadataResult) {
+func UpdateMetadata(ctx context.Context, client *gophercloud.ServiceClient, id string, opts UpdateMetadataOptsBuilder) (r UpdateMetadataResult) {
 	b, err := opts.ToMetadataUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(metadataURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, metadataURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -621,7 +941,7 @@ func UpdateMetadata(client *gophercloud.ServiceClient, id string, opts UpdateMet
 // MetadatumOptsBuilder allows extensions to add additional parameters to the
 // Create request.
 type MetadatumOptsBuilder interface {
-	ToMetadatumCreateMap() (map[string]interface{}, string, error)
+	ToMetadatumCreateMap() (map[string]any, string, error)
 }
 
 // MetadatumOpts is a map of length one that contains a key-value pair.
@@ -629,14 +949,14 @@ type MetadatumOpts map[string]string
 
 // ToMetadatumCreateMap assembles a body for a Create request based on the
 // contents of a MetadataumOpts.
-func (opts MetadatumOpts) ToMetadatumCreateMap() (map[string]interface{}, string, error) {
+func (opts MetadatumOpts) ToMetadatumCreateMap() (map[string]any, string, error) {
 	if len(opts) != 1 {
 		err := gophercloud.ErrInvalidInput{}
 		err.Argument = "servers.MetadatumOpts"
 		err.Info = "Must have 1 and only 1 key-value pair"
 		return nil, "", err
 	}
-	metadatum := map[string]interface{}{"meta": opts}
+	metadatum := map[string]any{"meta": opts}
 	var key string
 	for k := range metadatum["meta"].(MetadatumOpts) {
 		key = k
@@ -646,13 +966,13 @@ func (opts MetadatumOpts) ToMetadatumCreateMap() (map[string]interface{}, string
 
 // CreateMetadatum will create or update the key-value pair with the given key
 // for the given server ID.
-func CreateMetadatum(client *gophercloud.ServiceClient, id string, opts MetadatumOptsBuilder) (r CreateMetadatumResult) {
+func CreateMetadatum(ctx context.Context, client *gophercloud.ServiceClient, id string, opts MetadatumOptsBuilder) (r CreateMetadatumResult) {
 	b, key, err := opts.ToMetadatumCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Put(metadatumURL(client, id, key), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Put(ctx, metadatumURL(client, id, key), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -661,16 +981,16 @@ func CreateMetadatum(client *gophercloud.ServiceClient, id string, opts Metadatu
 
 // Metadatum requests the key-value pair with the given key for the given
 // server ID.
-func Metadatum(client *gophercloud.ServiceClient, id, key string) (r GetMetadatumResult) {
-	resp, err := client.Get(metadatumURL(client, id, key), &r.Body, nil)
+func Metadatum(ctx context.Context, client *gophercloud.ServiceClient, id, key string) (r GetMetadatumResult) {
+	resp, err := client.Get(ctx, metadatumURL(client, id, key), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // DeleteMetadatum will delete the key-value pair with the given key for the
 // given server ID.
-func DeleteMetadatum(client *gophercloud.ServiceClient, id, key string) (r DeleteMetadatumResult) {
-	resp, err := client.Delete(metadatumURL(client, id, key), nil)
+func DeleteMetadatum(ctx context.Context, client *gophercloud.ServiceClient, id, key string) (r DeleteMetadatumResult) {
+	resp, err := client.Delete(ctx, metadatumURL(client, id, key), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -694,7 +1014,7 @@ func ListAddressesByNetwork(client *gophercloud.ServiceClient, id, network strin
 // CreateImageOptsBuilder allows extensions to add additional parameters to the
 // CreateImage request.
 type CreateImageOptsBuilder interface {
-	ToServerCreateImageMap() (map[string]interface{}, error)
+	ToServerCreateImageMap() (map[string]any, error)
 }
 
 // CreateImageOpts provides options to pass to the CreateImage request.
@@ -709,19 +1029,19 @@ type CreateImageOpts struct {
 
 // ToServerCreateImageMap formats a CreateImageOpts structure into a request
 // body.
-func (opts CreateImageOpts) ToServerCreateImageMap() (map[string]interface{}, error) {
+func (opts CreateImageOpts) ToServerCreateImageMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "createImage")
 }
 
 // CreateImage makes a request against the nova API to schedule an image to be
 // created of the server
-func CreateImage(client *gophercloud.ServiceClient, id string, opts CreateImageOptsBuilder) (r CreateImageResult) {
+func CreateImage(ctx context.Context, client *gophercloud.ServiceClient, id string, opts CreateImageOptsBuilder) (r CreateImageResult) {
 	b, err := opts.ToServerCreateImageMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(actionURL(client, id), b, nil, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, actionURL(client, id), b, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{202},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -730,8 +1050,8 @@ func CreateImage(client *gophercloud.ServiceClient, id string, opts CreateImageO
 
 // GetPassword makes a request against the nova API to get the encrypted
 // administrative password.
-func GetPassword(client *gophercloud.ServiceClient, serverId string) (r GetPasswordResult) {
-	resp, err := client.Get(passwordURL(client, serverId), &r.Body, nil)
+func GetPassword(ctx context.Context, client *gophercloud.ServiceClient, serverId string) (r GetPasswordResult) {
+	resp, err := client.Get(ctx, passwordURL(client, serverId), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -739,7 +1059,7 @@ func GetPassword(client *gophercloud.ServiceClient, serverId string) (r GetPassw
 // ShowConsoleOutputOptsBuilder is the interface types must satisfy in order to be
 // used as ShowConsoleOutput options
 type ShowConsoleOutputOptsBuilder interface {
-	ToServerShowConsoleOutputMap() (map[string]interface{}, error)
+	ToServerShowConsoleOutputMap() (map[string]any, error)
 }
 
 // ShowConsoleOutputOpts satisfies the ShowConsoleOutputOptsBuilder
@@ -750,20 +1070,300 @@ type ShowConsoleOutputOpts struct {
 }
 
 // ToServerShowConsoleOutputMap formats a ShowConsoleOutputOpts structure into a request body.
-func (opts ShowConsoleOutputOpts) ToServerShowConsoleOutputMap() (map[string]interface{}, error) {
+func (opts ShowConsoleOutputOpts) ToServerShowConsoleOutputMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "os-getConsoleOutput")
 }
 
 // ShowConsoleOutput makes a request against the nova API to get console log from the server
-func ShowConsoleOutput(client *gophercloud.ServiceClient, id string, opts ShowConsoleOutputOptsBuilder) (r ShowConsoleOutputResult) {
+func ShowConsoleOutput(ctx context.Context, client *gophercloud.ServiceClient, id string, opts ShowConsoleOutputOptsBuilder) (r ShowConsoleOutputResult) {
 	b, err := opts.ToServerShowConsoleOutputMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(actionURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, actionURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// EvacuateOptsBuilder allows extensions to add additional parameters to the
+// the Evacuate request.
+type EvacuateOptsBuilder interface {
+	ToEvacuateMap() (map[string]any, error)
+}
+
+// EvacuateOpts specifies Evacuate action parameters.
+type EvacuateOpts struct {
+	// The name of the host to which the server is evacuated
+	Host string `json:"host,omitempty"`
+
+	// Indicates whether server is on shared storage
+	OnSharedStorage bool `json:"onSharedStorage"`
+
+	// An administrative password to access the evacuated server
+	AdminPass string `json:"adminPass,omitempty"`
+}
+
+// ToServerGroupCreateMap constructs a request body from CreateOpts.
+func (opts EvacuateOpts) ToEvacuateMap() (map[string]any, error) {
+	return gophercloud.BuildRequestBody(opts, "evacuate")
+}
+
+// Evacuate will Evacuate a failed instance to another host.
+func Evacuate(ctx context.Context, client *gophercloud.ServiceClient, id string, opts EvacuateOptsBuilder) (r EvacuateResult) {
+	b, err := opts.ToEvacuateMap()
+	if err != nil {
+		r.Err = err
+		return
+	}
+	resp, err := client.Post(ctx, actionURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{200},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// InjectNetworkInfo will inject the network info into a server
+func InjectNetworkInfo(ctx context.Context, client *gophercloud.ServiceClient, id string) (r InjectNetworkResult) {
+	b := map[string]any{
+		"injectNetworkInfo": nil,
+	}
+	resp, err := client.Post(ctx, actionURL(client, id), b, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// Lock is the operation responsible for locking a Compute server.
+func Lock(ctx context.Context, client *gophercloud.ServiceClient, id string) (r LockResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"lock": nil}, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// Unlock is the operation responsible for unlocking a Compute server.
+func Unlock(ctx context.Context, client *gophercloud.ServiceClient, id string) (r UnlockResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"unlock": nil}, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// Migrate will initiate a migration of the instance to another host.
+func Migrate(ctx context.Context, client *gophercloud.ServiceClient, id string) (r MigrateResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"migrate": nil}, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// LiveMigrateOptsBuilder allows extensions to add additional parameters to the
+// LiveMigrate request.
+type LiveMigrateOptsBuilder interface {
+	ToLiveMigrateMap() (map[string]any, error)
+}
+
+// LiveMigrateOpts specifies parameters of live migrate action.
+type LiveMigrateOpts struct {
+	// The host to which to migrate the server.
+	// If this parameter is None, the scheduler chooses a host.
+	Host *string `json:"host"`
+
+	// Set to True to migrate local disks by using block migration.
+	// If the source or destination host uses shared storage and you set
+	// this value to True, the live migration fails.
+	BlockMigration *bool `json:"block_migration,omitempty"`
+
+	// Set to True to enable over commit when the destination host is checked
+	// for available disk space. Set to False to disable over commit. This setting
+	// affects only the libvirt virt driver.
+	DiskOverCommit *bool `json:"disk_over_commit,omitempty"`
+}
+
+// ToLiveMigrateMap constructs a request body from LiveMigrateOpts.
+func (opts LiveMigrateOpts) ToLiveMigrateMap() (map[string]any, error) {
+	return gophercloud.BuildRequestBody(opts, "os-migrateLive")
+}
+
+// LiveMigrate will initiate a live-migration (without rebooting) of the instance to another host.
+func LiveMigrate(ctx context.Context, client *gophercloud.ServiceClient, id string, opts LiveMigrateOptsBuilder) (r MigrateResult) {
+	b, err := opts.ToLiveMigrateMap()
+	if err != nil {
+		r.Err = err
+		return
+	}
+	resp, err := client.Post(ctx, actionURL(client, id), b, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// Pause is the operation responsible for pausing a Compute server.
+func Pause(ctx context.Context, client *gophercloud.ServiceClient, id string) (r PauseResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"pause": nil}, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// Unpause is the operation responsible for unpausing a Compute server.
+func Unpause(ctx context.Context, client *gophercloud.ServiceClient, id string) (r UnpauseResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"unpause": nil}, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// RescueOptsBuilder is an interface that allows extensions to override the
+// default structure of a Rescue request.
+type RescueOptsBuilder interface {
+	ToServerRescueMap() (map[string]any, error)
+}
+
+// RescueOpts represents the configuration options used to control a Rescue
+// option.
+type RescueOpts struct {
+	// AdminPass is the desired administrative password for the instance in
+	// RESCUE mode.
+	// If it's left blank, the server will generate a password.
+	AdminPass string `json:"adminPass,omitempty"`
+
+	// RescueImageRef contains reference on an image that needs to be used as
+	// rescue image.
+	// If it's left blank, the server will be rescued with the default image.
+	RescueImageRef string `json:"rescue_image_ref,omitempty"`
+}
+
+// ToServerRescueMap formats a RescueOpts as a map that can be used as a JSON
+// request body for the Rescue request.
+func (opts RescueOpts) ToServerRescueMap() (map[string]any, error) {
+	return gophercloud.BuildRequestBody(opts, "rescue")
+}
+
+// Rescue instructs the provider to place the server into RESCUE mode.
+func Rescue(ctx context.Context, client *gophercloud.ServiceClient, id string, opts RescueOptsBuilder) (r RescueResult) {
+	b, err := opts.ToServerRescueMap()
+	if err != nil {
+		r.Err = err
+		return
+	}
+	resp, err := client.Post(ctx, actionURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{200},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// Unrescue instructs the provider to return the server from RESCUE mode.
+func Unrescue(ctx context.Context, client *gophercloud.ServiceClient, id string) (r UnrescueResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"unrescue": nil}, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// ResetNetwork will reset the network of a server
+func ResetNetwork(ctx context.Context, client *gophercloud.ServiceClient, id string) (r ResetNetworkResult) {
+	b := map[string]any{
+		"resetNetwork": nil,
+	}
+	resp, err := client.Post(ctx, actionURL(client, id), b, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// ServerState refers to the states usable in ResetState Action
+type ServerState string
+
+const (
+	// StateActive returns the state of the server as active
+	StateActive ServerState = "active"
+
+	// StateError returns the state of the server as error
+	StateError ServerState = "error"
+)
+
+// ResetState will reset the state of a server
+func ResetState(ctx context.Context, client *gophercloud.ServiceClient, id string, state ServerState) (r ResetStateResult) {
+	stateMap := map[string]any{"state": state}
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"os-resetState": stateMap}, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// Shelve is the operation responsible for shelving a Compute server.
+func Shelve(ctx context.Context, client *gophercloud.ServiceClient, id string) (r ShelveResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"shelve": nil}, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// ShelveOffload is the operation responsible for Shelve-Offload a Compute server.
+func ShelveOffload(ctx context.Context, client *gophercloud.ServiceClient, id string) (r ShelveOffloadResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"shelveOffload": nil}, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// UnshelveOptsBuilder allows extensions to add additional parameters to the
+// Unshelve request.
+type UnshelveOptsBuilder interface {
+	ToUnshelveMap() (map[string]any, error)
+}
+
+// UnshelveOpts specifies parameters of shelve-offload action.
+type UnshelveOpts struct {
+	// Sets the availability zone to unshelve a server
+	// Available only after nova 2.77
+	AvailabilityZone string `json:"availability_zone,omitempty"`
+}
+
+func (opts UnshelveOpts) ToUnshelveMap() (map[string]any, error) {
+	// Key 'availabilty_zone' is required if the unshelve action is an object
+	// i.e {"unshelve": {}} will be rejected
+	b, err := gophercloud.BuildRequestBody(opts, "unshelve")
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := b["unshelve"].(map[string]any)["availability_zone"]; !ok {
+		b["unshelve"] = nil
+	}
+
+	return b, err
+}
+
+// Unshelve is the operation responsible for unshelve a Compute server.
+func Unshelve(ctx context.Context, client *gophercloud.ServiceClient, id string, opts UnshelveOptsBuilder) (r UnshelveResult) {
+	b, err := opts.ToUnshelveMap()
+	if err != nil {
+		r.Err = err
+		return
+	}
+	resp, err := client.Post(ctx, actionURL(client, id), b, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// Start is the operation responsible for starting a Compute server.
+func Start(ctx context.Context, client *gophercloud.ServiceClient, id string) (r StartResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"os-start": nil}, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// Stop is the operation responsible for stopping a Compute server.
+func Stop(ctx context.Context, client *gophercloud.ServiceClient, id string) (r StopResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"os-stop": nil}, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// Suspend is the operation responsible for suspending a Compute server.
+func Suspend(ctx context.Context, client *gophercloud.ServiceClient, id string) (r SuspendResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"suspend": nil}, nil, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// Resume is the operation responsible for resuming a Compute server.
+func Resume(ctx context.Context, client *gophercloud.ServiceClient, id string) (r ResumeResult) {
+	resp, err := client.Post(ctx, actionURL(client, id), map[string]any{"resume": nil}, nil, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

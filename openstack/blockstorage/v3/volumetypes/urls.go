@@ -1,6 +1,6 @@
 package volumetypes
 
-import "github.com/gophercloud/gophercloud"
+import "github.com/gophercloud/gophercloud/v2"
 
 func listURL(c *gophercloud.ServiceClient) string {
 	return c.ServiceURL("types")
@@ -48,4 +48,24 @@ func accessURL(client *gophercloud.ServiceClient, id string) string {
 
 func accessActionURL(client *gophercloud.ServiceClient, id string) string {
 	return client.ServiceURL("types", id, "action")
+}
+
+func createEncryptionURL(client *gophercloud.ServiceClient, id string) string {
+	return client.ServiceURL("types", id, "encryption")
+}
+
+func deleteEncryptionURL(client *gophercloud.ServiceClient, id, encryptionID string) string {
+	return client.ServiceURL("types", id, "encryption", encryptionID)
+}
+
+func getEncryptionURL(client *gophercloud.ServiceClient, id string) string {
+	return client.ServiceURL("types", id, "encryption")
+}
+
+func getEncryptionSpecURL(client *gophercloud.ServiceClient, id, key string) string {
+	return client.ServiceURL("types", id, "encryption", key)
+}
+
+func updateEncryptionURL(client *gophercloud.ServiceClient, id, encryptionID string) string {
+	return client.ServiceURL("types", id, "encryption", encryptionID)
 }

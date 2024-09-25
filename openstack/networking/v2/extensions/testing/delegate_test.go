@@ -1,15 +1,16 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
-	common "github.com/gophercloud/gophercloud/openstack/common/extensions"
-	fake "github.com/gophercloud/gophercloud/openstack/networking/v2/common"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
+	common "github.com/gophercloud/gophercloud/v2/openstack/common/extensions"
+	fake "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/common"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
 func TestList(t *testing.T) {
@@ -40,7 +41,7 @@ func TestList(t *testing.T) {
 
 	count := 0
 
-	extensions.List(fake.ServiceClient()).EachPage(func(page pagination.Page) (bool, error) {
+	err := extensions.List(fake.ServiceClient()).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := extensions.ExtractExtensions(page)
 		if err != nil {
@@ -52,7 +53,7 @@ func TestList(t *testing.T) {
 				Extension: common.Extension{
 					Updated:     "2013-01-20T00:00:00-00:00",
 					Name:        "Neutron Service Type Management",
-					Links:       []interface{}{},
+					Links:       []any{},
 					Namespace:   "http://docs.openstack.org/ext/neutron/service-type/api/v1.0",
 					Alias:       "service-type",
 					Description: "API for retrieving service providers for Neutron advanced services",
@@ -64,6 +65,7 @@ func TestList(t *testing.T) {
 
 		return true, nil
 	})
+	th.AssertNoErr(t, err)
 
 	if count != 1 {
 		t.Errorf("Expected 1 page, got %d", count)
@@ -95,7 +97,7 @@ func TestGet(t *testing.T) {
     `)
 	})
 
-	ext, err := extensions.Get(fake.ServiceClient(), "agent").Extract()
+	ext, err := extensions.Get(context.TODO(), fake.ServiceClient(), "agent").Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, ext.Updated, "2013-02-03T10:00:00-00:00")

@@ -3,8 +3,8 @@ package groups
 import (
 	"encoding/json"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Group helps manage related users.
@@ -19,10 +19,10 @@ type Group struct {
 	ID string `json:"id"`
 
 	// Extra is a collection of miscellaneous key/values.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 
 	// Links contains referencing links to the group.
-	Links map[string]interface{} `json:"links"`
+	Links map[string]any `json:"links"`
 
 	// Name is the name of the group.
 	Name string `json:"name"`
@@ -32,7 +32,7 @@ func (r *Group) UnmarshalJSON(b []byte) error {
 	type tmp Group
 	var s struct {
 		tmp
-		Extra map[string]interface{} `json:"extra"`
+		Extra map[string]any `json:"extra"`
 	}
 	err := json.Unmarshal(b, &s)
 	if err != nil {
@@ -45,12 +45,12 @@ func (r *Group) UnmarshalJSON(b []byte) error {
 	if s.Extra != nil {
 		r.Extra = s.Extra
 	} else {
-		var result interface{}
+		var result any
 		err := json.Unmarshal(b, &result)
 		if err != nil {
 			return err
 		}
-		if resultMap, ok := result.(map[string]interface{}); ok {
+		if resultMap, ok := result.(map[string]any); ok {
 			r.Extra = gophercloud.RemainingKeys(Group{}, resultMap)
 		}
 	}
@@ -93,6 +93,10 @@ type GroupPage struct {
 
 // IsEmpty determines whether or not a page of Groups contains any results.
 func (r GroupPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	groups, err := ExtractGroups(r)
 	return len(groups) == 0, err
 }

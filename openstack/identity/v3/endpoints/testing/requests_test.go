@@ -1,15 +1,16 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/endpoints"
-	"github.com/gophercloud/gophercloud/pagination"
-	th "github.com/gophercloud/gophercloud/testhelper"
-	"github.com/gophercloud/gophercloud/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/endpoints"
+	"github.com/gophercloud/gophercloud/v2/pagination"
+	th "github.com/gophercloud/gophercloud/v2/testhelper"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 func TestCreateSuccessful(t *testing.T) {
@@ -50,7 +51,7 @@ func TestCreateSuccessful(t *testing.T) {
     `)
 	})
 
-	actual, err := endpoints.Create(client.ServiceClient(), endpoints.CreateOpts{
+	actual, err := endpoints.Create(context.TODO(), client.ServiceClient(), endpoints.CreateOpts{
 		Availability: gophercloud.AvailabilityPublic,
 		Name:         "the-endiest-of-points",
 		Region:       "underground",
@@ -118,7 +119,7 @@ func TestListEndpoints(t *testing.T) {
 	})
 
 	count := 0
-	endpoints.List(client.ServiceClient(), endpoints.ListOpts{}).EachPage(func(page pagination.Page) (bool, error) {
+	err := endpoints.List(client.ServiceClient(), endpoints.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := endpoints.ExtractEndpoints(page)
 		if err != nil {
@@ -149,6 +150,7 @@ func TestListEndpoints(t *testing.T) {
 		th.AssertDeepEquals(t, expected, actual)
 		return true, nil
 	})
+	th.AssertNoErr(t, err)
 	th.AssertEquals(t, 1, count)
 }
 
@@ -186,7 +188,7 @@ func TestUpdateEndpoint(t *testing.T) {
 	`)
 	})
 
-	actual, err := endpoints.Update(client.ServiceClient(), "12", endpoints.UpdateOpts{
+	actual, err := endpoints.Update(context.TODO(), client.ServiceClient(), "12", endpoints.UpdateOpts{
 		Name:   "renamed",
 		Region: "somewhere-else",
 	}).Extract()
@@ -217,6 +219,6 @@ func TestDeleteEndpoint(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	res := endpoints.Delete(client.ServiceClient(), "34")
+	res := endpoints.Delete(context.TODO(), client.ServiceClient(), "34")
 	th.AssertNoErr(t, res.Err)
 }

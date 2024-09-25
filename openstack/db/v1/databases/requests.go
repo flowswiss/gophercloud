@@ -1,13 +1,15 @@
 package databases
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // CreateOptsBuilder builds create options
 type CreateOptsBuilder interface {
-	ToDBCreateMap() (map[string]interface{}, error)
+	ToDBCreateMap() (map[string]any, error)
 }
 
 // CreateOpts is the struct responsible for configuring a database; often in
@@ -33,7 +35,7 @@ type CreateOpts struct {
 
 // ToMap is a helper function to convert individual DB create opt structures
 // into sub-maps.
-func (opts CreateOpts) ToMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToMap() (map[string]any, error) {
 	if len(opts.Name) > 64 {
 		err := gophercloud.ErrInvalidInput{}
 		err.Argument = "databases.CreateOpts.Name"
@@ -48,8 +50,8 @@ func (opts CreateOpts) ToMap() (map[string]interface{}, error) {
 type BatchCreateOpts []CreateOpts
 
 // ToDBCreateMap renders a JSON map for creating DBs.
-func (opts BatchCreateOpts) ToDBCreateMap() (map[string]interface{}, error) {
-	dbs := make([]map[string]interface{}, len(opts))
+func (opts BatchCreateOpts) ToDBCreateMap() (map[string]any, error) {
+	dbs := make([]map[string]any, len(opts))
 	for i, db := range opts {
 		dbMap, err := db.ToMap()
 		if err != nil {
@@ -57,18 +59,18 @@ func (opts BatchCreateOpts) ToDBCreateMap() (map[string]interface{}, error) {
 		}
 		dbs[i] = dbMap
 	}
-	return map[string]interface{}{"databases": dbs}, nil
+	return map[string]any{"databases": dbs}, nil
 }
 
 // Create will create a new database within the specified instance. If the
 // specified instance does not exist, a 404 error will be returned.
-func Create(client *gophercloud.ServiceClient, instanceID string, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, instanceID string, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToDBCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(baseURL(client, instanceID), &b, nil, nil)
+	resp, err := client.Post(ctx, baseURL(client, instanceID), &b, nil, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -84,8 +86,8 @@ func List(client *gophercloud.ServiceClient, instanceID string) pagination.Pager
 
 // Delete will permanently delete the database within a specified instance.
 // All contained data inside the database will also be permanently deleted.
-func Delete(client *gophercloud.ServiceClient, instanceID, dbName string) (r DeleteResult) {
-	resp, err := client.Delete(dbURL(client, instanceID, dbName), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, instanceID, dbName string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, dbURL(client, instanceID, dbName), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

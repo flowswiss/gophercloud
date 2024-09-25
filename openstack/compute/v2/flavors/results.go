@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -15,6 +15,12 @@ type commonResult struct {
 // CreateResult is the response of a Get operations. Call its Extract method to
 // interpret it as a Flavor.
 type CreateResult struct {
+	commonResult
+}
+
+// UpdateResult is the response of a Put operation. Call its Extract method to
+// interpret it as a Flavor.
+type UpdateResult struct {
 	commonResult
 }
 
@@ -69,13 +75,24 @@ type Flavor struct {
 
 	// Ephemeral is the amount of ephemeral disk space, measured in GB.
 	Ephemeral int `json:"OS-FLV-EXT-DATA:ephemeral"`
+
+	// Description is a free form description of the flavor. Limited to
+	// 65535 characters in length. Only printable characters are allowed.
+	// New in version 2.55
+	Description string `json:"description"`
+
+	// Properties is a dictionary of the flavor’s extra-specs key-and-value
+	// pairs. This will only be included if the user is allowed by policy to
+	// index flavor extra_specs
+	// New in version 2.61
+	ExtraSpecs map[string]string `json:"extra_specs"`
 }
 
 func (r *Flavor) UnmarshalJSON(b []byte) error {
 	type tmp Flavor
 	var s struct {
 		tmp
-		Swap interface{} `json:"swap"`
+		Swap any `json:"swap"`
 	}
 	err := json.Unmarshal(b, &s)
 	if err != nil {
@@ -110,6 +127,10 @@ type FlavorPage struct {
 
 // IsEmpty determines if a FlavorPage contains any results.
 func (page FlavorPage) IsEmpty() (bool, error) {
+	if page.StatusCode == 204 {
+		return true, nil
+	}
+
 	flavors, err := ExtractFlavors(page)
 	return len(flavors) == 0, err
 }
@@ -144,6 +165,10 @@ type AccessPage struct {
 
 // IsEmpty indicates whether an AccessPage is empty.
 func (page AccessPage) IsEmpty() (bool, error) {
+	if page.StatusCode == 204 {
+		return true, nil
+	}
+
 	v, err := ExtractAccesses(page)
 	return len(v) == 0, err
 }

@@ -1,11 +1,12 @@
 package policies
 
 import (
+	"context"
 	"net/url"
 	"strings"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 const policyTypeMaxLength = 255
@@ -67,7 +68,7 @@ func List(client *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pa
 // CreateOptsBuilder allows extensions to add additional parameters to
 // the Create request.
 type CreateOptsBuilder interface {
-	ToPolicyCreateMap() (map[string]interface{}, error)
+	ToPolicyCreateMap() (map[string]any, error)
 }
 
 // CreateOpts provides options used to create a policy.
@@ -79,11 +80,11 @@ type CreateOpts struct {
 	Blob []byte `json:"-" required:"true"`
 
 	// Extra is free-form extra key/value pairs to describe the policy.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 }
 
 // ToPolicyCreateMap formats a CreateOpts into a create request.
-func (opts CreateOpts) ToPolicyCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToPolicyCreateMap() (map[string]any, error) {
 	if len(opts.Type) > policyTypeMaxLength {
 		return nil, StringFieldLengthExceedsLimit{
 			Field: "type",
@@ -96,7 +97,7 @@ func (opts CreateOpts) ToPolicyCreateMap() (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	if v, ok := b["policy"].(map[string]interface{}); ok {
+	if v, ok := b["policy"].(map[string]any); ok {
 		v["blob"] = string(opts.Blob)
 
 		if opts.Extra != nil {
@@ -110,13 +111,13 @@ func (opts CreateOpts) ToPolicyCreateMap() (map[string]interface{}, error) {
 }
 
 // Create creates a new Policy.
-func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToPolicyCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Post(createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Post(ctx, createURL(client), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{201},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -124,8 +125,8 @@ func Create(client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r Create
 }
 
 // Get retrieves details on a single policy, by ID.
-func Get(client *gophercloud.ServiceClient, policyID string) (r GetResult) {
-	resp, err := client.Get(getURL(client, policyID), &r.Body, nil)
+func Get(ctx context.Context, client *gophercloud.ServiceClient, policyID string) (r GetResult) {
+	resp, err := client.Get(ctx, getURL(client, policyID), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -133,7 +134,7 @@ func Get(client *gophercloud.ServiceClient, policyID string) (r GetResult) {
 // UpdateOptsBuilder allows extensions to add additional parameters to
 // the Update request.
 type UpdateOptsBuilder interface {
-	ToPolicyUpdateMap() (map[string]interface{}, error)
+	ToPolicyUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts provides options for updating a policy.
@@ -145,11 +146,11 @@ type UpdateOpts struct {
 	Blob []byte `json:"-"`
 
 	// Extra is free-form extra key/value pairs to describe the policy.
-	Extra map[string]interface{} `json:"-"`
+	Extra map[string]any `json:"-"`
 }
 
 // ToPolicyUpdateMap formats a UpdateOpts into an update request.
-func (opts UpdateOpts) ToPolicyUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToPolicyUpdateMap() (map[string]any, error) {
 	if len(opts.Type) > policyTypeMaxLength {
 		return nil, StringFieldLengthExceedsLimit{
 			Field: "type",
@@ -162,7 +163,7 @@ func (opts UpdateOpts) ToPolicyUpdateMap() (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	if v, ok := b["policy"].(map[string]interface{}); ok {
+	if v, ok := b["policy"].(map[string]any); ok {
 		if len(opts.Blob) != 0 {
 			v["blob"] = string(opts.Blob)
 		}
@@ -178,13 +179,13 @@ func (opts UpdateOpts) ToPolicyUpdateMap() (map[string]interface{}, error) {
 }
 
 // Update updates an existing Role.
-func Update(client *gophercloud.ServiceClient, policyID string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, client *gophercloud.ServiceClient, policyID string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToPolicyUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := client.Patch(updateURL(client, policyID), &b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := client.Patch(ctx, updateURL(client, policyID), &b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -192,8 +193,8 @@ func Update(client *gophercloud.ServiceClient, policyID string, opts UpdateOptsB
 }
 
 // Delete deletes a policy.
-func Delete(client *gophercloud.ServiceClient, policyID string) (r DeleteResult) {
-	resp, err := client.Delete(deleteURL(client, policyID), nil)
+func Delete(ctx context.Context, client *gophercloud.ServiceClient, policyID string) (r DeleteResult) {
+	resp, err := client.Delete(ctx, deleteURL(client, policyID), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }

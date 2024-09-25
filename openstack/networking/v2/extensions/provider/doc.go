@@ -29,7 +29,7 @@ Example to List Networks with Provider Information
 
 	var allNetworks []NetworkWithProvider
 
-	allPages, err := networks.List(networkClient, nil).AllPages()
+	allPages, err := networks.List(networkClient, nil).AllPages(context.TODO())
 	if err != nil {
 		panic(err)
 	}
@@ -60,12 +60,12 @@ Example to Create a Provider Network
 		Shared:       &iTrue,
 	}
 
-	createOpts : provider.CreateOptsExt{
+	createOpts := provider.CreateOptsExt{
 		CreateOptsBuilder: networkCreateOpts,
 		Segments:          segments,
 	}
 
-	network, err := networks.Create(networkClient, createOpts).Extract()
+	network, err := networks.Create(context.TODO(), networkClient, createOpts).Extract()
 	if err != nil {
 		panic(err)
 	}

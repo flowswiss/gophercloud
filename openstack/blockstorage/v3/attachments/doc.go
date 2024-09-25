@@ -12,7 +12,7 @@ Example to List Attachments
 	}
 
 	client.Microversion = "3.27"
-	allPages, err := attachments.List(client, listOpts).AllPages()
+	allPages, err := attachments.List(client, listOpts).AllPages(context.TODO())
 	if err != nil {
 		panic(err)
 	}
@@ -29,12 +29,12 @@ Example to List Attachments
 Example to Create Attachment
 
 	createOpts := &attachments.CreateOpts{
-		InstanceiUUID: "uuid",
+		InstanceUUID: "uuid",
 		VolumeUUID: "uuid"
 	}
 
 	client.Microversion = "3.27"
-	attachment, err := attachments.Create(client, createOpts).Extract()
+	attachment, err := attachments.Create(context.TODO(), client, createOpts).Extract()
 	if err != nil {
 		panic(err)
 	}
@@ -44,7 +44,7 @@ Example to Create Attachment
 Example to Get Attachment
 
 	client.Microversion = "3.27"
-	attachment, err := attachments.Get(client, "uuid").Extract()
+	attachment, err := attachments.Get(context.TODO(), client, "uuid").Extract()
 	if err != nil {
 		panic(err)
 	}
@@ -54,13 +54,13 @@ Example to Get Attachment
 Example to Update Attachment
 
 	opts := &attachments.UpdateOpts{
-		Connector: map[string]interface{}{
+		Connector: map[string]any{
 			"mode": "ro",
 		}
 	}
 
 	client.Microversion = "3.27"
-	attachment, err := attachments.Update(client, "uuid", opts).Extract()
+	attachment, err := attachments.Update(context.TODO(), client, "uuid", opts).Extract()
 	if err != nil {
 		panic(err)
 	}
@@ -70,7 +70,7 @@ Example to Update Attachment
 Example to Complete Attachment
 
 	client.Microversion = "3.44"
-	err := attachments.Complete(client, "uuid").ExtractErr()
+	err := attachments.Complete(context.TODO(), client, "uuid").ExtractErr()
 	if err != nil {
 		panic(err)
 	}
@@ -78,10 +78,9 @@ Example to Complete Attachment
 Example to Delete Attachment
 
 	client.Microversion = "3.27"
-	err := attachments.Delete(client, "uuid").ExtractErr()
+	err := attachments.Delete(context.TODO(), client, "uuid").ExtractErr()
 	if err != nil {
 		panic(err)
 	}
-
 */
 package attachments

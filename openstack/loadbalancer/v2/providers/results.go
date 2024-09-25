@@ -1,8 +1,8 @@
 package providers
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Provider is the Octavia driver that implements the load balancing mechanism
@@ -36,6 +36,10 @@ func (r ProviderPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a ProviderPage struct is empty.
 func (r ProviderPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractProviders(r)
 	return len(is) == 0, err
 }

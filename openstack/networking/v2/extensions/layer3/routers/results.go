@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // GatewayInfo represents the information of an external gateway for any
@@ -14,6 +14,7 @@ type GatewayInfo struct {
 	NetworkID        string            `json:"network_id,omitempty"`
 	EnableSNAT       *bool             `json:"enable_snat,omitempty"`
 	ExternalFixedIPs []ExternalFixedIP `json:"external_fixed_ips,omitempty"`
+	QoSPolicyID      string            `json:"qos_policy_id,omitempty"`
 }
 
 // ExternalFixedIP is the IP address and subnet ID of the external gateway of a
@@ -100,6 +101,10 @@ func (r RouterPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a RouterPage struct is empty.
 func (r RouterPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractRouters(r)
 	return len(is) == 0, err
 }
@@ -209,7 +214,7 @@ type L3Agent struct {
 
 	// Configurations is a configuration specific key/value pairs that are
 	// determined by the agent binary and type.
-	Configurations map[string]interface{} `json:"configurations"`
+	Configurations map[string]any `json:"configurations"`
 
 	// CreatedAt is a creation timestamp.
 	CreatedAt time.Time `json:"-"`
@@ -233,7 +238,7 @@ type L3Agent struct {
 	HAState string `json:"ha_state"`
 
 	// ResourceVersions is a list agent known objects and version numbers
-	ResourceVersions map[string]interface{} `json:"resource_versions"`
+	ResourceVersions map[string]any `json:"resource_versions"`
 }
 
 // UnmarshalJSON helps to convert the timestamps into the time.Time type.
@@ -263,6 +268,10 @@ type ListL3AgentsPage struct {
 }
 
 func (r ListL3AgentsPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	v, err := ExtractL3Agents(r)
 	return len(v) == 0, err
 }

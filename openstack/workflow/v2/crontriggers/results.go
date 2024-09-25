@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type commonResult struct {
@@ -63,10 +63,10 @@ type CronTrigger struct {
 	WorkflowName string `json:"workflow_name"`
 
 	// WorkflowInput contains the workflow input values.
-	WorkflowInput map[string]interface{} `json:"-"`
+	WorkflowInput map[string]any `json:"-"`
 
 	// WorkflowParams contains workflow type specific parameters.
-	WorkflowParams map[string]interface{} `json:"-"`
+	WorkflowParams map[string]any `json:"-"`
 
 	// CreatedAt contains the cron trigger creation date.
 	CreatedAt time.Time `json:"-"`
@@ -130,6 +130,10 @@ type CronTriggerPage struct {
 
 // IsEmpty checks if an CronTriggerPage contains any results.
 func (r CronTriggerPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	exec, err := ExtractCronTriggers(r)
 	return len(exec) == 0, err
 }

@@ -1,8 +1,10 @@
 package policies
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // ListOptsBuilder allows extensions to add additional parameters to the
@@ -18,6 +20,7 @@ type ListOptsBuilder interface {
 // and is either `asc' or `desc'. Marker and Limit are used for pagination.
 type ListOpts struct {
 	TenantID    string `q:"tenant_id"`
+	ProjectID   string `q:"project_id"`
 	Name        string `q:"name"`
 	Description string `q:"description"`
 	Shared      *bool  `q:"shared"`
@@ -60,7 +63,7 @@ func List(c *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pager {
 // extensions decorate or modify the common logic, it is useful for them to
 // satisfy a basic interface in order for them to be used.
 type CreateOptsBuilder interface {
-	ToFirewallPolicyCreateMap() (map[string]interface{}, error)
+	ToFirewallPolicyCreateMap() (map[string]any, error)
 }
 
 // CreateOpts contains all the values needed to create a new firewall policy.
@@ -68,6 +71,7 @@ type CreateOpts struct {
 	// Only required if the caller has an admin role and wants to create a firewall policy
 	// for another tenant.
 	TenantID      string   `json:"tenant_id,omitempty"`
+	ProjectID     string   `json:"project_id,omitempty"`
 	Name          string   `json:"name,omitempty"`
 	Description   string   `json:"description,omitempty"`
 	Shared        *bool    `json:"shared,omitempty"`
@@ -76,24 +80,24 @@ type CreateOpts struct {
 }
 
 // ToFirewallPolicyCreateMap casts a CreateOpts struct to a map.
-func (opts CreateOpts) ToFirewallPolicyCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToFirewallPolicyCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "firewall_policy")
 }
 
 // Create accepts a CreateOpts struct and uses the values to create a new firewall policy
-func Create(c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToFirewallPolicyCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	_, r.Err = c.Post(rootURL(c), b, &r.Body, nil)
+	_, r.Err = c.Post(ctx, rootURL(c), b, &r.Body, nil)
 	return
 }
 
 // Get retrieves a particular firewall policy based on its unique ID.
-func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
-	_, r.Err = c.Get(resourceURL(c, id), &r.Body, nil)
+func Get(ctx context.Context, c *gophercloud.ServiceClient, id string) (r GetResult) {
+	_, r.Err = c.Get(ctx, resourceURL(c, id), &r.Body, nil)
 	return
 }
 
@@ -102,7 +106,7 @@ func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
 // extensions decorate or modify the common logic, it is useful for them to
 // satisfy a basic interface in order for them to be used.
 type UpdateOptsBuilder interface {
-	ToFirewallPolicyUpdateMap() (map[string]interface{}, error)
+	ToFirewallPolicyUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts contains the values used when updating a firewall policy.
@@ -115,31 +119,31 @@ type UpdateOpts struct {
 }
 
 // ToFirewallPolicyUpdateMap casts a CreateOpts struct to a map.
-func (opts UpdateOpts) ToFirewallPolicyUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToFirewallPolicyUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "firewall_policy")
 }
 
 // Update allows firewall policies to be updated.
-func Update(c *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, c *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToFirewallPolicyUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	_, r.Err = c.Put(resourceURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
+	_, r.Err = c.Put(ctx, resourceURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	return
 }
 
 // Delete will permanently delete a particular firewall policy based on its unique ID.
-func Delete(c *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	_, r.Err = c.Delete(resourceURL(c, id), nil)
+func Delete(ctx context.Context, c *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	_, r.Err = c.Delete(ctx, resourceURL(c, id), nil)
 	return
 }
 
 type InsertRuleOptsBuilder interface {
-	ToFirewallPolicyInsertRuleMap() (map[string]interface{}, error)
+	ToFirewallPolicyInsertRuleMap() (map[string]any, error)
 }
 
 type InsertRuleOpts struct {
@@ -148,25 +152,25 @@ type InsertRuleOpts struct {
 	InsertAfter  string `json:"insert_after,omitempty" xor:"InsertBefore"`
 }
 
-func (opts InsertRuleOpts) ToFirewallPolicyInsertRuleMap() (map[string]interface{}, error) {
+func (opts InsertRuleOpts) ToFirewallPolicyInsertRuleMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "")
 }
 
-func InsertRule(c *gophercloud.ServiceClient, id string, opts InsertRuleOptsBuilder) (r InsertRuleResult) {
+func InsertRule(ctx context.Context, c *gophercloud.ServiceClient, id string, opts InsertRuleOptsBuilder) (r InsertRuleResult) {
 	b, err := opts.ToFirewallPolicyInsertRuleMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	_, r.Err = c.Put(insertURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
+	_, r.Err = c.Put(ctx, insertURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	return
 }
 
-func RemoveRule(c *gophercloud.ServiceClient, id, ruleID string) (r RemoveRuleResult) {
-	b := map[string]interface{}{"firewall_rule_id": ruleID}
-	_, r.Err = c.Put(removeURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
+func RemoveRule(ctx context.Context, c *gophercloud.ServiceClient, id, ruleID string) (r RemoveRuleResult) {
+	b := map[string]any{"firewall_rule_id": ruleID}
+	_, r.Err = c.Put(ctx, removeURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	return

@@ -1,8 +1,10 @@
 package endpointgroups
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"context"
+
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 type EndpointType string
@@ -18,7 +20,7 @@ const (
 // CreateOptsBuilder allows extensions to add additional parameters to the
 // Create request.
 type CreateOptsBuilder interface {
-	ToEndpointGroupCreateMap() (map[string]interface{}, error)
+	ToEndpointGroupCreateMap() (map[string]any, error)
 }
 
 // CreateOpts contains all the values needed to create a new endpoint group
@@ -44,26 +46,26 @@ type CreateOpts struct {
 }
 
 // ToEndpointGroupCreateMap casts a CreateOpts struct to a map.
-func (opts CreateOpts) ToEndpointGroupCreateMap() (map[string]interface{}, error) {
+func (opts CreateOpts) ToEndpointGroupCreateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "endpoint_group")
 }
 
 // Create accepts a CreateOpts struct and uses the values to create a new
 // endpoint group.
-func Create(c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToEndpointGroupCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Post(rootURL(c), b, &r.Body, nil)
+	resp, err := c.Post(ctx, rootURL(c), b, &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
 
 // Get retrieves a particular endpoint group based on its unique ID.
-func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
-	resp, err := c.Get(resourceURL(c, id), &r.Body, nil)
+func Get(ctx context.Context, c *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := c.Get(ctx, resourceURL(c, id), &r.Body, nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -110,8 +112,8 @@ func List(c *gophercloud.ServiceClient, opts ListOptsBuilder) pagination.Pager {
 
 // Delete will permanently delete a particular endpoint group based on its
 // unique ID.
-func Delete(c *gophercloud.ServiceClient, id string) (r DeleteResult) {
-	resp, err := c.Delete(resourceURL(c, id), nil)
+func Delete(ctx context.Context, c *gophercloud.ServiceClient, id string) (r DeleteResult) {
+	resp, err := c.Delete(ctx, resourceURL(c, id), nil)
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
@@ -119,7 +121,7 @@ func Delete(c *gophercloud.ServiceClient, id string) (r DeleteResult) {
 // UpdateOptsBuilder allows extensions to add additional parameters to the
 // Update request.
 type UpdateOptsBuilder interface {
-	ToEndpointGroupUpdateMap() (map[string]interface{}, error)
+	ToEndpointGroupUpdateMap() (map[string]any, error)
 }
 
 // UpdateOpts contains the values used when updating an endpoint group.
@@ -129,18 +131,18 @@ type UpdateOpts struct {
 }
 
 // ToEndpointGroupUpdateMap casts an UpdateOpts struct to a map.
-func (opts UpdateOpts) ToEndpointGroupUpdateMap() (map[string]interface{}, error) {
+func (opts UpdateOpts) ToEndpointGroupUpdateMap() (map[string]any, error) {
 	return gophercloud.BuildRequestBody(opts, "endpoint_group")
 }
 
 // Update allows endpoint groups to be updated.
-func Update(c *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
+func Update(ctx context.Context, c *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToEndpointGroupUpdateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	resp, err := c.Put(resourceURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := c.Put(ctx, resourceURL(c, id), b, &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

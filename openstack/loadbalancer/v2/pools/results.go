@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/monitors"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/monitors"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // SessionPersistence represents the session persistence feature of the load
@@ -15,15 +15,20 @@ import (
 // types of persistence are supported:
 //
 // SOURCE_IP:   With this mode, all connections originating from the same source
-//              IP address, will be handled by the same Member of the Pool.
+//
+//	IP address, will be handled by the same Member of the Pool.
+//
 // HTTP_COOKIE: With this persistence mode, the load balancing function will
-//              create a cookie on the first request from a client. Subsequent
-//              requests containing the same cookie value will be handled by
-//              the same Member of the Pool.
+//
+//	create a cookie on the first request from a client. Subsequent
+//	requests containing the same cookie value will be handled by
+//	the same Member of the Pool.
+//
 // APP_COOKIE:  With this persistence mode, the load balancing function will
-//              rely on a cookie established by the backend application. All
-//              requests carrying the same cookie value will be handled by the
-//              same Member of the Pool.
+//
+//	rely on a cookie established by the backend application. All
+//	requests carrying the same cookie value will be handled by the
+//	same Member of the Pool.
 type SessionPersistence struct {
 	// The type of persistence mode.
 	Type string `json:"type"`
@@ -59,7 +64,7 @@ type Pool struct {
 	Description string `json:"description"`
 
 	// A list of listeners objects IDs.
-	Listeners []ListenerID `json:"listeners"` //[]map[string]interface{}
+	Listeners []ListenerID `json:"listeners"` //[]map[string]any
 
 	// A list of member objects IDs.
 	Members []Member `json:"members"`
@@ -89,6 +94,37 @@ type Pool struct {
 	// Indicates whether connections in the same session will be processed by the
 	// same Pool member or not.
 	Persistence SessionPersistence `json:"session_persistence"`
+
+	// A list of ALPN protocols. Available protocols: http/1.0, http/1.1,
+	// h2. Available from microversion 2.24.
+	ALPNProtocols []string `json:"alpn_protocols"`
+
+	// The reference of the key manager service secret containing a PEM
+	// format CA certificate bundle for tls_enabled pools. Available from
+	// microversion 2.8.
+	CATLSContainerRef string `json:"ca_tls_container_ref"`
+
+	// The reference of the key manager service secret containing a PEM
+	// format CA revocation list file for tls_enabled pools. Available from
+	// microversion 2.8.
+	CRLContainerRef string `json:"crl_container_ref"`
+
+	// When true connections to backend member servers will use TLS
+	// encryption. Default is false. Available from microversion 2.8.
+	TLSEnabled bool `json:"tls_enabled"`
+
+	// List of ciphers in OpenSSL format (colon-separated). Available from
+	// microversion 2.15.
+	TLSCiphers string `json:"tls_ciphers"`
+
+	// The reference to the key manager service secret containing a PKCS12
+	// format certificate/key bundle for tls_enabled pools for TLS client
+	// authentication to the member servers. Available from microversion 2.8.
+	TLSContainerRef string `json:"tls_container_ref"`
+
+	// A list of TLS protocol versions. Available versions: SSLv3, TLSv1,
+	// TLSv1.1, TLSv1.2, TLSv1.3. Available from microversion 2.17.
+	TLSVersions []string `json:"tls_versions"`
 
 	// The load balancer provider.
 	Provider string `json:"provider"`
@@ -130,6 +166,10 @@ func (r PoolPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a PoolPage struct is empty.
 func (r PoolPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractPools(r)
 	return len(is) == 0, err
 }
@@ -260,6 +300,10 @@ func (r MemberPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a MemberPage struct is empty.
 func (r MemberPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractMembers(r)
 	return len(is) == 0, err
 }

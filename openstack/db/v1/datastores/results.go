@@ -1,8 +1,8 @@
 package datastores
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Version represents a version API resource. Multiple versions belong to a Datastore.
@@ -47,6 +47,10 @@ type DatastorePage struct {
 
 // IsEmpty indicates whether a Datastore collection is empty.
 func (r DatastorePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractDatastores(r)
 	return len(is) == 0, err
 }
@@ -77,6 +81,10 @@ type VersionPage struct {
 
 // IsEmpty indicates whether a collection of version resources is empty.
 func (r VersionPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractVersions(r)
 	return len(is) == 0, err
 }

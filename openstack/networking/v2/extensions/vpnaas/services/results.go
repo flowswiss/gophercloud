@@ -1,8 +1,8 @@
 package services
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Service is a VPN Service
@@ -72,6 +72,10 @@ func (r ServicePage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a ServicePage struct is empty.
 func (r ServicePage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractServices(r)
 	return len(is) == 0, err
 }

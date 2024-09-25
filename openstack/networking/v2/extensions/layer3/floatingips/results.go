@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // FloatingIP represents a floating IP resource. A floating IP is an external
@@ -107,7 +107,7 @@ func (r commonResult) Extract() (*FloatingIP, error) {
 	return &s, err
 }
 
-func (r commonResult) ExtractInto(v interface{}) error {
+func (r commonResult) ExtractInto(v any) error {
 	return r.Result.ExtractIntoStructPtr(v, "floatingip")
 }
 
@@ -157,6 +157,10 @@ func (r FloatingIPPage) NextPageURL() (string, error) {
 
 // IsEmpty checks whether a FloatingIPPage struct is empty.
 func (r FloatingIPPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	is, err := ExtractFloatingIPs(r)
 	return len(is) == 0, err
 }
@@ -172,6 +176,6 @@ func ExtractFloatingIPs(r pagination.Page) ([]FloatingIP, error) {
 	return s.FloatingIPs, err
 }
 
-func ExtractFloatingIPsInto(r pagination.Page, v interface{}) error {
+func ExtractFloatingIPsInto(r pagination.Page, v any) error {
 	return r.(FloatingIPPage).Result.ExtractIntoSlicePtr(v, "floatingips")
 }

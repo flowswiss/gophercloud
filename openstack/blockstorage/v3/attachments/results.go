@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Attachment contains all the information associated with an OpenStack
@@ -29,7 +29,7 @@ type Attachment struct {
 	AttachMode string `json:"attach_mode"`
 	// ConnectionInfo is the required info for a node to make a connection
 	// provided by the driver.
-	ConnectionInfo map[string]interface{} `json:"connection_info"`
+	ConnectionInfo map[string]any `json:"connection_info"`
 }
 
 // UnmarshalJSON is our unmarshalling helper
@@ -60,6 +60,10 @@ type AttachmentPage struct {
 
 // IsEmpty returns true if a ListResult contains no Attachments.
 func (r AttachmentPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	attachments, err := ExtractAttachments(r)
 	return len(attachments) == 0, err
 }
@@ -84,13 +88,13 @@ func (r commonResult) Extract() (*Attachment, error) {
 }
 
 // ExtractInto converts our response data into a attachment struct.
-func (r commonResult) ExtractInto(a interface{}) error {
+func (r commonResult) ExtractInto(a any) error {
 	return r.Result.ExtractIntoStructPtr(a, "attachment")
 }
 
 // ExtractAttachmentsInto similar to ExtractInto but operates on a List of
 // attachments.
-func ExtractAttachmentsInto(r pagination.Page, a interface{}) error {
+func ExtractAttachmentsInto(r pagination.Page, a any) error {
 	return r.(AttachmentPage).Result.ExtractIntoSlicePtr(a, "attachments")
 }
 

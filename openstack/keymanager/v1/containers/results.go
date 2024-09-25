@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/pagination"
 )
 
 // Container represents a container in the key manager service.
@@ -108,6 +108,10 @@ type ContainerPage struct {
 
 // IsEmpty determines whether or not a page of Container contains any results.
 func (r ContainerPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	containers, err := ExtractContainers(r)
 	return len(containers) == 0, err
 }
@@ -172,28 +176,17 @@ func (r *Consumer) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type consumerResult struct {
-	gophercloud.Result
-}
-
-// Extract interprets any consumerResult as a Consumer.
-func (r consumerResult) Extract() (*Consumer, error) {
-	var s *Consumer
-	err := r.ExtractInto(&s)
-	return s, err
-}
-
 // CreateConsumerResult is the response from a CreateConsumer operation.
 // Call its Extract method to interpret it as a container.
 type CreateConsumerResult struct {
-	// This is not a typo.
+	// This is not a typo: the API returns a Container, not a Consumer
 	commonResult
 }
 
 // DeleteConsumerResult is the response from a DeleteConsumer operation.
 // Call its Extract to interpret it as a container.
 type DeleteConsumerResult struct {
-	// This is not a typo.
+	// This is not a typo: the API returns a Container, not a Consumer
 	commonResult
 }
 
@@ -204,6 +197,10 @@ type ConsumerPage struct {
 
 // IsEmpty determines whether or not a page of consumers contains any results.
 func (r ConsumerPage) IsEmpty() (bool, error) {
+	if r.StatusCode == 204 {
+		return true, nil
+	}
+
 	consumers, err := ExtractConsumers(r)
 	return len(consumers) == 0, err
 }
