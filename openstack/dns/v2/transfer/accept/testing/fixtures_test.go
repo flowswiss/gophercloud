@@ -126,38 +126,38 @@ var SecondTransferAccept = transferAccepts.TransferAccept{
 var ExpectedTransferAcceptSlice = []transferAccepts.TransferAccept{FirstTransferAccept, SecondTransferAccept}
 
 // HandleListSuccessfully configures the test server to respond to a List request.
-func HandleListSuccessfully(t *testing.T) {
+func HandleListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
 	baseURL := "/zones/tasks/transfer_accepts"
-	th.Mux.HandleFunc(baseURL,
+	fakeServer.Mux.HandleFunc(baseURL,
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "GET")
 			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprintf(w, ListOutput)
+			fmt.Fprint(w, ListOutput)
 		})
 }
 
 // HandleFilteredListSuccessfully configures the test server to respond to a List request with Opts.
-func HandleFilteredListSuccessfully(t *testing.T) {
+func HandleFilteredListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
 	baseURL := "/zones/tasks/transfer_accepts"
-	th.Mux.HandleFunc(baseURL,
+	fakeServer.Mux.HandleFunc(baseURL,
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "GET")
 			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprintf(w, FilteredListOutput)
+			fmt.Fprint(w, FilteredListOutput)
 		})
 }
 
 // HandleGetSuccessfully configures the test server to respond to a List request.
-func HandleGetSuccessfully(t *testing.T) {
+func HandleGetSuccessfully(t *testing.T, fakeServer th.FakeServer) {
 	baseURL := "/zones/tasks/transfer_accepts"
-	th.Mux.HandleFunc(s.Join([]string{baseURL, FirstTransferAccept.ID}, "/"),
+	fakeServer.Mux.HandleFunc(s.Join([]string{baseURL, FirstTransferAccept.ID}, "/"),
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "GET")
 			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprintf(w, GetOutput)
+			fmt.Fprint(w, GetOutput)
 		})
 }
 
@@ -190,9 +190,9 @@ const CreateTransferAcceptResponse = `
 var CreatedTransferAccept = FirstTransferAccept
 
 // HandleTransferRequestCreationSuccessfully configures the test server to respond to a Create request.
-func HandleCreateSuccessfully(t *testing.T) {
+func HandleCreateSuccessfully(t *testing.T, fakeServer th.FakeServer) {
 	baseURL := "/zones/tasks/transfer_accepts"
-	th.Mux.HandleFunc(baseURL,
+	fakeServer.Mux.HandleFunc(baseURL,
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
 			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
@@ -200,6 +200,6 @@ func HandleCreateSuccessfully(t *testing.T) {
 
 			w.WriteHeader(http.StatusCreated)
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprintf(w, CreateTransferAcceptResponse)
+			fmt.Fprint(w, CreateTransferAcceptResponse)
 		})
 }

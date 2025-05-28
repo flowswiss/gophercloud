@@ -15,6 +15,12 @@ type ListOptsBuilder interface {
 
 // ListOpts allows to manage the output of the request.
 type ListOpts struct {
+	// The name of the flavor to filter by.
+	Name string `q:"name"`
+	// The flavor profile id to filter by.
+	FlavorProfileID string `q:"flavor_profile_id"`
+	// The enabled status of the flavor to filter by.
+	Enabled *bool `q:"enabled"`
 	// The fields that you want the server to return
 	Fields []string `q:"fields"`
 }
@@ -62,7 +68,7 @@ type CreateOpts struct {
 	FlavorProfileId string `json:"flavor_profile_id" required:"true"`
 
 	// If the resource is available for use. The default is True.
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // ToFlavorCreateMap builds a request body from CreateOpts.
@@ -100,13 +106,13 @@ type UpdateOptsBuilder interface {
 // operation.
 type UpdateOpts struct {
 	// Human-readable name for the Loadbalancer. Does not have to be unique.
-	Name string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty"`
 
 	// Human-readable description for the Flavor.
-	Description string `json:"description,omitempty"`
+	Description *string `json:"description,omitempty"`
 
 	// If the resource is available for use.
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // ToFlavorUpdateMap builds a request body from UpdateOpts.
@@ -121,7 +127,7 @@ func (opts UpdateOpts) ToFlavorUpdateMap() (map[string]any, error) {
 
 // Update is an operation which modifies the attributes of the specified
 // Flavor.
-func Update(ctx context.Context, c *gophercloud.ServiceClient, id string, opts UpdateOpts) (r UpdateResult) {
+func Update(ctx context.Context, c *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToFlavorUpdateMap()
 	if err != nil {
 		r.Err = err

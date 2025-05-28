@@ -227,49 +227,49 @@ const DeleteConsumerRequest = `
 
 // HandleListContainersSuccessfully creates an HTTP handler at `/containers` on the
 // test handler mux that responds with a list of two containers.
-func HandleListContainersSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/containers", func(w http.ResponseWriter, r *http.Request) {
+func HandleListContainersSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/containers", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ListResponse)
+		fmt.Fprint(w, ListResponse)
 	})
 }
 
 // HandleGetContainerSuccessfully creates an HTTP handler at `/containers` on the
 // test handler mux that responds with a single resource.
-func HandleGetContainerSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/containers/dfdb88f3-4ddb-4525-9da6-066453caa9b0", func(w http.ResponseWriter, r *http.Request) {
+func HandleGetContainerSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/containers/dfdb88f3-4ddb-4525-9da6-066453caa9b0", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetResponse)
+		fmt.Fprint(w, GetResponse)
 	})
 }
 
 // HandleCreateContainerSuccessfully creates an HTTP handler at `/containers` on the
 // test handler mux that tests resource creation.
-func HandleCreateContainerSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/containers", func(w http.ResponseWriter, r *http.Request) {
+func HandleCreateContainerSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/containers", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, CreateRequest)
 
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, GetResponse)
+		fmt.Fprint(w, GetResponse)
 	})
 }
 
 // HandleDeleteContainerSuccessfully creates an HTTP handler at `/containers` on the
 // test handler mux that tests resource deletion.
-func HandleDeleteContainerSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/containers/dfdb88f3-4ddb-4525-9da6-066453caa9b0", func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteContainerSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/containers/dfdb88f3-4ddb-4525-9da6-066453caa9b0", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -280,42 +280,42 @@ func HandleDeleteContainerSuccessfully(t *testing.T) {
 // HandleListConsumersSuccessfully creates an HTTP handler at
 // `/containers/uuid/consumers` on the test handler mux that responds with
 // a list of consumers.
-func HandleListConsumersSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/containers/dfdb88f3-4ddb-4525-9da6-066453caa9b0/consumers", func(w http.ResponseWriter, r *http.Request) {
+func HandleListConsumersSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/containers/dfdb88f3-4ddb-4525-9da6-066453caa9b0/consumers", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ListConsumersResponse)
+		fmt.Fprint(w, ListConsumersResponse)
 	})
 }
 
 // HandleCreateConsumerSuccessfully creates an HTTP handler at
 // `/containers/uuid/consumers` on the test handler mux that tests resource
 // creation.
-func HandleCreateConsumerSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/containers/dfdb88f3-4ddb-4525-9da6-066453caa9b0/consumers", func(w http.ResponseWriter, r *http.Request) {
+func HandleCreateConsumerSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/containers/dfdb88f3-4ddb-4525-9da6-066453caa9b0/consumers", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, CreateConsumerRequest)
 
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, CreateConsumerResponse)
+		fmt.Fprint(w, CreateConsumerResponse)
 	})
 }
 
 // HandleDeleteConsumerSuccessfully creates an HTTP handler at
 // `/containers/uuid/consumers` on the test handler mux that tests resource
 // deletion.
-func HandleDeleteConsumerSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/containers/dfdb88f3-4ddb-4525-9da6-066453caa9b0/consumers", func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteConsumerSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/containers/dfdb88f3-4ddb-4525-9da6-066453caa9b0/consumers", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, CreateConsumerRequest)
 
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetResponse)
+		fmt.Fprint(w, GetResponse)
 	})
 }

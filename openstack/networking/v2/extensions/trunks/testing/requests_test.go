@@ -13,10 +13,10 @@ import (
 )
 
 func TestCreate(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/trunks", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/trunks", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -25,7 +25,7 @@ func TestCreate(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, CreateResponse)
+		fmt.Fprint(w, CreateResponse)
 	})
 
 	iTrue := true
@@ -46,12 +46,12 @@ func TestCreate(t *testing.T) {
 			},
 		},
 	}
-	_, err := trunks.Create(context.TODO(), fake.ServiceClient(), options).Extract()
+	_, err := trunks.Create(context.TODO(), fake.ServiceClient(fakeServer), options).Extract()
 	if err == nil {
 		t.Fatalf("Failed to detect missing parent PortID field")
 	}
 	options.PortID = "c373d2fa-3d3b-4492-924c-aff54dea19b6"
-	n, err := trunks.Create(context.TODO(), fake.ServiceClient(), options).Extract()
+	n, err := trunks.Create(context.TODO(), fake.ServiceClient(fakeServer), options).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, n.Status, "ACTIVE")
@@ -61,10 +61,10 @@ func TestCreate(t *testing.T) {
 }
 
 func TestCreateNoSubports(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/trunks", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/trunks", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -73,7 +73,7 @@ func TestCreateNoSubports(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, CreateNoSubportsResponse)
+		fmt.Fprint(w, CreateNoSubportsResponse)
 	})
 
 	iTrue := true
@@ -83,7 +83,7 @@ func TestCreateNoSubports(t *testing.T) {
 		AdminStateUp: &iTrue,
 		PortID:       "c373d2fa-3d3b-4492-924c-aff54dea19b6",
 	}
-	n, err := trunks.Create(context.TODO(), fake.ServiceClient(), options).Extract()
+	n, err := trunks.Create(context.TODO(), fake.ServiceClient(fakeServer), options).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, n.Status, "ACTIVE")
@@ -91,34 +91,34 @@ func TestCreateNoSubports(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/trunks/f6a9718c-5a64-43e3-944f-4deccad8e78c", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/trunks/f6a9718c-5a64-43e3-944f-4deccad8e78c", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	res := trunks.Delete(context.TODO(), fake.ServiceClient(), "f6a9718c-5a64-43e3-944f-4deccad8e78c")
+	res := trunks.Delete(context.TODO(), fake.ServiceClient(fakeServer), "f6a9718c-5a64-43e3-944f-4deccad8e78c")
 	th.AssertNoErr(t, res.Err)
 }
 
 func TestList(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/trunks", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/trunks", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, ListResponse)
+		fmt.Fprint(w, ListResponse)
 	})
 
-	client := fake.ServiceClient()
+	client := fake.ServiceClient(fakeServer)
 	count := 0
 
 	err := trunks.List(client, trunks.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
@@ -143,20 +143,20 @@ func TestList(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/trunks/f6a9718c-5a64-43e3-944f-4deccad8e78c", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/trunks/f6a9718c-5a64-43e3-944f-4deccad8e78c", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, GetResponse)
+		fmt.Fprint(w, GetResponse)
 	})
 
-	n, err := trunks.Get(context.TODO(), fake.ServiceClient(), "f6a9718c-5a64-43e3-944f-4deccad8e78c").Extract()
+	n, err := trunks.Get(context.TODO(), fake.ServiceClient(fakeServer), "f6a9718c-5a64-43e3-944f-4deccad8e78c").Extract()
 	th.AssertNoErr(t, err)
 	expectedTrunks, err := ExpectedTrunkSlice()
 	th.AssertNoErr(t, err)
@@ -164,10 +164,10 @@ func TestGet(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/trunks/f6a9718c-5a64-43e3-944f-4deccad8e78c", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/trunks/f6a9718c-5a64-43e3-944f-4deccad8e78c", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -177,7 +177,7 @@ func TestUpdate(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, UpdateResponse)
+		fmt.Fprint(w, UpdateResponse)
 	})
 
 	iFalse := false
@@ -188,7 +188,7 @@ func TestUpdate(t *testing.T) {
 		AdminStateUp: &iFalse,
 		Description:  &description,
 	}
-	n, err := trunks.Update(context.TODO(), fake.ServiceClient(), "f6a9718c-5a64-43e3-944f-4deccad8e78c", options).Extract()
+	n, err := trunks.Update(context.TODO(), fake.ServiceClient(fakeServer), "f6a9718c-5a64-43e3-944f-4deccad8e78c", options).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, n.Name, name)
@@ -197,20 +197,20 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestGetSubports(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/trunks/f6a9718c-5a64-43e3-944f-4deccad8e78c/get_subports", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/trunks/f6a9718c-5a64-43e3-944f-4deccad8e78c/get_subports", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, ListSubportsResponse)
+		fmt.Fprint(w, ListSubportsResponse)
 	})
 
-	client := fake.ServiceClient()
+	client := fake.ServiceClient(fakeServer)
 
 	subports, err := trunks.GetSubports(context.TODO(), client, "f6a9718c-5a64-43e3-944f-4deccad8e78c").Extract()
 	th.AssertNoErr(t, err)
@@ -248,10 +248,10 @@ func TestMissingFields(t *testing.T) {
 }
 
 func TestAddSubports(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/trunks/f6a9718c-5a64-43e3-944f-4deccad8e78c/add_subports", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/trunks/f6a9718c-5a64-43e3-944f-4deccad8e78c/add_subports", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -259,10 +259,10 @@ func TestAddSubports(t *testing.T) {
 		th.TestJSONRequest(t, r, AddSubportsRequest)
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, AddSubportsResponse)
+		fmt.Fprint(w, AddSubportsResponse)
 	})
 
-	client := fake.ServiceClient()
+	client := fake.ServiceClient(fakeServer)
 
 	opts := trunks.AddSubportsOpts{
 		Subports: ExpectedSubports,
@@ -276,10 +276,10 @@ func TestAddSubports(t *testing.T) {
 }
 
 func TestRemoveSubports(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/trunks/f6a9718c-5a64-43e3-944f-4deccad8e78c/remove_subports", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/trunks/f6a9718c-5a64-43e3-944f-4deccad8e78c/remove_subports", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -287,10 +287,10 @@ func TestRemoveSubports(t *testing.T) {
 		th.TestJSONRequest(t, r, RemoveSubportsRequest)
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, RemoveSubportsResponse)
+		fmt.Fprint(w, RemoveSubportsResponse)
 	})
 
-	client := fake.ServiceClient()
+	client := fake.ServiceClient(fakeServer)
 
 	opts := trunks.RemoveSubportsOpts{
 		Subports: []trunks.RemoveSubport{

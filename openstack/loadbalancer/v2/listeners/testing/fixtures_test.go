@@ -206,8 +206,8 @@ var (
 )
 
 // HandleListenerListSuccessfully sets up the test server to respond to a listener List request.
-func HandleListenerListSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/listeners", func(w http.ResponseWriter, r *http.Request) {
+func HandleListenerListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/listeners", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -218,9 +218,9 @@ func HandleListenerListSuccessfully(t *testing.T) {
 		marker := r.Form.Get("marker")
 		switch marker {
 		case "":
-			fmt.Fprintf(w, ListenersListBody)
+			fmt.Fprint(w, ListenersListBody)
 		case "45e08a3e-a78f-4b40-a229-1e7e23eee1ab":
-			fmt.Fprintf(w, `{ "listeners": [] }`)
+			fmt.Fprint(w, `{ "listeners": [] }`)
 		default:
 			t.Fatalf("/v2.0/lbaas/listeners invoked with unexpected marker=[%s]", marker)
 		}
@@ -229,8 +229,8 @@ func HandleListenerListSuccessfully(t *testing.T) {
 
 // HandleListenerCreationSuccessfully sets up the test server to respond to a listener creation request
 // with a given response.
-func HandleListenerCreationSuccessfully(t *testing.T, response string) {
-	th.Mux.HandleFunc("/v2.0/lbaas/listeners", func(w http.ResponseWriter, r *http.Request) {
+func HandleListenerCreationSuccessfully(t *testing.T, fakeServer th.FakeServer, response string) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/listeners", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, `{
@@ -255,24 +255,24 @@ func HandleListenerCreationSuccessfully(t *testing.T, response string) {
 
 		w.WriteHeader(http.StatusAccepted)
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, response)
+		fmt.Fprint(w, response)
 	})
 }
 
 // HandleListenerGetSuccessfully sets up the test server to respond to a listener Get request.
-func HandleListenerGetSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/listeners/4ec89087-d057-4e2c-911f-60a3b47ee304", func(w http.ResponseWriter, r *http.Request) {
+func HandleListenerGetSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/listeners/4ec89087-d057-4e2c-911f-60a3b47ee304", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
 
-		fmt.Fprintf(w, SingleListenerBody)
+		fmt.Fprint(w, SingleListenerBody)
 	})
 }
 
 // HandleListenerDeletionSuccessfully sets up the test server to respond to a listener deletion request.
-func HandleListenerDeletionSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/listeners/4ec89087-d057-4e2c-911f-60a3b47ee304", func(w http.ResponseWriter, r *http.Request) {
+func HandleListenerDeletionSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/listeners/4ec89087-d057-4e2c-911f-60a3b47ee304", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -281,8 +281,8 @@ func HandleListenerDeletionSuccessfully(t *testing.T) {
 }
 
 // HandleListenerUpdateSuccessfully sets up the test server to respond to a listener Update request.
-func HandleListenerUpdateSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/listeners/4ec89087-d057-4e2c-911f-60a3b47ee304", func(w http.ResponseWriter, r *http.Request) {
+func HandleListenerUpdateSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/listeners/4ec89087-d057-4e2c-911f-60a3b47ee304", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
@@ -304,17 +304,17 @@ func HandleListenerUpdateSuccessfully(t *testing.T) {
 			}
 		}`)
 
-		fmt.Fprintf(w, PostUpdateListenerBody)
+		fmt.Fprint(w, PostUpdateListenerBody)
 	})
 }
 
 // HandleListenerGetStatsTree sets up the test server to respond to a listener Get stats tree request.
-func HandleListenerGetStatsTree(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/listeners/4ec89087-d057-4e2c-911f-60a3b47ee304/stats", func(w http.ResponseWriter, r *http.Request) {
+func HandleListenerGetStatsTree(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/listeners/4ec89087-d057-4e2c-911f-60a3b47ee304/stats", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
 
-		fmt.Fprintf(w, GetListenerStatsBody)
+		fmt.Fprint(w, GetListenerStatsBody)
 	})
 }

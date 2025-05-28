@@ -77,6 +77,15 @@ type Router struct {
 
 	// Tags optionally set via extensions/attributestags
 	Tags []string `json:"tags"`
+
+	// RevisionNumber optionally set via extensions/standard-attr-revisions
+	RevisionNumber int `json:"revision_number"`
+
+	// Timestamp when the router was created
+	CreatedAt time.Time `json:"created_at"`
+
+	// Timestamp when the router was last updated
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // RouterPage is the page returned by a pager when traversing over a
@@ -113,11 +122,14 @@ func (r RouterPage) IsEmpty() (bool, error) {
 // and extracts the elements into a slice of Router structs. In other words,
 // a generic collection is mapped into a relevant slice.
 func ExtractRouters(r pagination.Page) ([]Router, error) {
-	var s struct {
-		Routers []Router `json:"routers"`
-	}
-	err := (r.(RouterPage)).ExtractInto(&s)
-	return s.Routers, err
+	var s []Router
+	err := ExtractRoutersInto(r, &s)
+	return s, err
+}
+
+// ExtractRoutersInto extracts the elements into a slice of Router structs.
+func ExtractRoutersInto(r pagination.Page, v any) error {
+	return r.(RouterPage).Result.ExtractIntoSlicePtr(v, "routers")
 }
 
 type commonResult struct {

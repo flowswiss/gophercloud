@@ -82,8 +82,8 @@ var (
 	}
 )
 
-func HandleFlavorProfileListSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/flavorprofiles", func(w http.ResponseWriter, r *http.Request) {
+func HandleFlavorProfileListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/flavorprofiles", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -94,17 +94,17 @@ func HandleFlavorProfileListSuccessfully(t *testing.T) {
 		marker := r.Form.Get("marker")
 		switch marker {
 		case "":
-			fmt.Fprintf(w, FlavorProfilesListBody)
+			fmt.Fprint(w, FlavorProfilesListBody)
 		case "3a0d060b-fcec-4250-9ab6-940b806a12dd":
-			fmt.Fprintf(w, `{ "flavors": [] }`)
+			fmt.Fprint(w, `{ "flavors": [] }`)
 		default:
 			t.Fatalf("/v2.0/lbaas/flavors invoked with unexpected marker=[%s]", marker)
 		}
 	})
 }
 
-func HandleFlavorProfileCreationSuccessfully(t *testing.T, response string) {
-	th.Mux.HandleFunc("/v2.0/lbaas/flavorprofiles", func(w http.ResponseWriter, r *http.Request) {
+func HandleFlavorProfileCreationSuccessfully(t *testing.T, fakeServer th.FakeServer, response string) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/flavorprofiles", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, `{
@@ -117,22 +117,22 @@ func HandleFlavorProfileCreationSuccessfully(t *testing.T, response string) {
 
 		w.WriteHeader(http.StatusAccepted)
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, response)
+		fmt.Fprint(w, response)
 	})
 }
 
-func HandleFlavorProfileGetSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/flavorprofiles/dcd65be5-f117-4260-ab3d-b32cc5bd1272", func(w http.ResponseWriter, r *http.Request) {
+func HandleFlavorProfileGetSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/flavorprofiles/dcd65be5-f117-4260-ab3d-b32cc5bd1272", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
 
-		fmt.Fprintf(w, SingleFlavorProfileBody)
+		fmt.Fprint(w, SingleFlavorProfileBody)
 	})
 }
 
-func HandleFlavorProfileDeletionSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/flavorprofiles/dcd65be5-f117-4260-ab3d-b32cc5bd1272", func(w http.ResponseWriter, r *http.Request) {
+func HandleFlavorProfileDeletionSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/flavorprofiles/dcd65be5-f117-4260-ab3d-b32cc5bd1272", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -140,8 +140,8 @@ func HandleFlavorProfileDeletionSuccessfully(t *testing.T) {
 	})
 }
 
-func HandleFlavorProfileUpdateSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/flavorprofiles/dcd65be5-f117-4260-ab3d-b32cc5bd1272", func(w http.ResponseWriter, r *http.Request) {
+func HandleFlavorProfileUpdateSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/flavorprofiles/dcd65be5-f117-4260-ab3d-b32cc5bd1272", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
@@ -154,6 +154,6 @@ func HandleFlavorProfileUpdateSuccessfully(t *testing.T) {
 			}
 		}`)
 
-		fmt.Fprintf(w, PostUpdateFlavorBody)
+		fmt.Fprint(w, PostUpdateFlavorBody)
 	})
 }

@@ -9,14 +9,14 @@ import (
 	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
-func HandleListExtensionsSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/extensions", func(w http.ResponseWriter, r *http.Request) {
+func HandleListExtensionsSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/extensions", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 
-		fmt.Fprintf(w, `
+		fmt.Fprint(w, `
 {
 		"extensions": [
 				{
@@ -33,15 +33,15 @@ func HandleListExtensionsSuccessfully(t *testing.T) {
 	})
 }
 
-func HandleGetExtensionsSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/extensions/agent", func(w http.ResponseWriter, r *http.Request) {
+func HandleGetExtensionsSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/extensions/agent", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, `
+		fmt.Fprint(w, `
 {
 		"extension": {
 				"updated": "2013-02-03T10:00:00-00:00",

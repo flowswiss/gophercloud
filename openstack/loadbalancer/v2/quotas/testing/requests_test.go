@@ -13,58 +13,58 @@ import (
 )
 
 func TestGet_1(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/quotas/0a73845280574ad389c292f6a74afa76", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/quotas/0a73845280574ad389c292f6a74afa76", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, GetResponseRaw_1)
+		fmt.Fprint(w, GetResponseRaw_1)
 	})
 
-	q, err := quotas.Get(context.TODO(), fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76").Extract()
+	q, err := quotas.Get(context.TODO(), fake.ServiceClient(fakeServer), "0a73845280574ad389c292f6a74afa76").Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, q, &GetResponse)
 }
 
 func TestGet_2(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/quotas/0a73845280574ad389c292f6a74afa76", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/quotas/0a73845280574ad389c292f6a74afa76", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, GetResponseRaw_2)
+		fmt.Fprint(w, GetResponseRaw_2)
 	})
 
-	q, err := quotas.Get(context.TODO(), fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76").Extract()
+	q, err := quotas.Get(context.TODO(), fake.ServiceClient(fakeServer), "0a73845280574ad389c292f6a74afa76").Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, q, &GetResponse)
 }
 
 func TestUpdate_1(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/quotas/0a73845280574ad389c292f6a74afa76", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/quotas/0a73845280574ad389c292f6a74afa76", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 
-		fmt.Fprintf(w, UpdateRequestResponseRaw_1)
+		fmt.Fprint(w, UpdateRequestResponseRaw_1)
 	})
 
-	q, err := quotas.Update(context.TODO(), fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76", quotas.UpdateOpts{
+	q, err := quotas.Update(context.TODO(), fake.ServiceClient(fakeServer), "0a73845280574ad389c292f6a74afa76", quotas.UpdateOpts{
 		Loadbalancer:  gophercloud.IntToPointer(20),
 		Listener:      gophercloud.IntToPointer(40),
 		Member:        gophercloud.IntToPointer(200),
@@ -79,20 +79,20 @@ func TestUpdate_1(t *testing.T) {
 }
 
 func TestUpdate_2(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/quotas/0a73845280574ad389c292f6a74afa76", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/quotas/0a73845280574ad389c292f6a74afa76", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 
-		fmt.Fprintf(w, UpdateRequestResponseRaw_2)
+		fmt.Fprint(w, UpdateRequestResponseRaw_2)
 	})
 
-	q, err := quotas.Update(context.TODO(), fake.ServiceClient(), "0a73845280574ad389c292f6a74afa76", quotas.UpdateOpts{
+	q, err := quotas.Update(context.TODO(), fake.ServiceClient(fakeServer), "0a73845280574ad389c292f6a74afa76", quotas.UpdateOpts{
 		Loadbalancer:  gophercloud.IntToPointer(20),
 		Listener:      gophercloud.IntToPointer(40),
 		Member:        gophercloud.IntToPointer(200),

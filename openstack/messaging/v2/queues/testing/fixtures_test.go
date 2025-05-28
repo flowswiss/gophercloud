@@ -7,7 +7,7 @@ import (
 
 	"github.com/gophercloud/gophercloud/v2/openstack/messaging/v2/queues"
 	th "github.com/gophercloud/gophercloud/v2/testhelper"
-	fake "github.com/gophercloud/gophercloud/v2/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 // QueueName is the name of the queue
@@ -215,18 +215,18 @@ var ExpectedShare = queues.QueueShare{
 }
 
 // HandleListSuccessfully configures the test server to respond to a List request.
-func HandleListSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2/queues",
+func HandleListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2/queues",
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "GET")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 			w.Header().Add("Content-Type", "application/json")
 			next := r.RequestURI
 
 			switch next {
 			case "/v2/queues?limit=1&with_count=true":
-				fmt.Fprintf(w, ListQueuesResponse1)
+				fmt.Fprint(w, ListQueuesResponse1)
 			case "/v2/queues?marker=london":
 				fmt.Fprint(w, ListQueuesResponse2)
 			case "/v2/queues?marker=beijing":
@@ -236,11 +236,11 @@ func HandleListSuccessfully(t *testing.T) {
 }
 
 // HandleCreateSuccessfully configures the test server to respond to a Create request.
-func HandleCreateSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s", QueueName),
+func HandleCreateSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s", QueueName),
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "PUT")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestJSONRequest(t, r, CreateQueueRequest)
 
 			w.WriteHeader(http.StatusNoContent)
@@ -248,71 +248,71 @@ func HandleCreateSuccessfully(t *testing.T) {
 }
 
 // HandleUpdateSuccessfully configures the test server to respond to an Update request.
-func HandleUpdateSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s", QueueName),
+func HandleUpdateSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s", QueueName),
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "PATCH")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestJSONRequest(t, r, UpdateQueueRequest)
 
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprintf(w, UpdateQueueResponse)
+			fmt.Fprint(w, UpdateQueueResponse)
 		})
 }
 
 // HandleGetSuccessfully configures the test server to respond to a Get request.
-func HandleGetSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s", QueueName),
+func HandleGetSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s", QueueName),
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "GET")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprintf(w, GetQueueResponse)
+			fmt.Fprint(w, GetQueueResponse)
 		})
 }
 
 // HandleDeleteSuccessfully configures the test server to respond to a Delete request.
-func HandleDeleteSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s", QueueName),
+func HandleDeleteSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s", QueueName),
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "DELETE")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			w.WriteHeader(http.StatusNoContent)
 		})
 }
 
 // HandleGetSuccessfully configures the test server to respond to a Get request.
-func HandleGetStatsSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s/stats", QueueName),
+func HandleGetStatsSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s/stats", QueueName),
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "GET")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprintf(w, GetStatsResponse)
+			fmt.Fprint(w, GetStatsResponse)
 		})
 }
 
 // HandleShareSuccessfully configures the test server to respond to a Share request.
-func HandleShareSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s/share", QueueName),
+func HandleShareSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s/share", QueueName),
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestJSONRequest(t, r, CreateShareRequest)
 
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprintf(w, CreateShareResponse)
+			fmt.Fprint(w, CreateShareResponse)
 		})
 }
 
 // HandlePurgeSuccessfully configures the test server to respond to a Purge request.
-func HandlePurgeSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s/purge", QueueName),
+func HandlePurgeSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc(fmt.Sprintf("/v2/queues/%s/purge", QueueName),
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestJSONRequest(t, r, CreatePurgeRequest)
 
 			w.WriteHeader(http.StatusNoContent)

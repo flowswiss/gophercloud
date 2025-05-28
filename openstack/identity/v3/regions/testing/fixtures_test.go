@@ -164,62 +164,62 @@ var ExpectedRegionsSlice = []regions.Region{FirstRegion, SecondRegion}
 
 // HandleListRegionsSuccessfully creates an HTTP handler at `/regions` on the
 // test handler mux that responds with a list of two regions.
-func HandleListRegionsSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/regions", func(w http.ResponseWriter, r *http.Request) {
+func HandleListRegionsSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/regions", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ListOutput)
+		fmt.Fprint(w, ListOutput)
 	})
 }
 
 // HandleGetRegionSuccessfully creates an HTTP handler at `/regions` on the
 // test handler mux that responds with a single region.
-func HandleGetRegionSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/regions/RegionOne-West", func(w http.ResponseWriter, r *http.Request) {
+func HandleGetRegionSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/regions/RegionOne-West", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetOutput)
+		fmt.Fprint(w, GetOutput)
 	})
 }
 
 // HandleCreateRegionSuccessfully creates an HTTP handler at `/regions` on the
 // test handler mux that tests region creation.
-func HandleCreateRegionSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/regions", func(w http.ResponseWriter, r *http.Request) {
+func HandleCreateRegionSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/regions", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, CreateRequest)
 
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, GetOutput)
+		fmt.Fprint(w, GetOutput)
 	})
 }
 
 // HandleUpdateRegionSuccessfully creates an HTTP handler at `/regions` on the
 // test handler mux that tests region update.
-func HandleUpdateRegionSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/regions/RegionOne-West", func(w http.ResponseWriter, r *http.Request) {
+func HandleUpdateRegionSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/regions/RegionOne-West", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PATCH")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, UpdateRequest)
 
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, UpdateOutput)
+		fmt.Fprint(w, UpdateOutput)
 	})
 }
 
 // HandleDeleteRegionSuccessfully creates an HTTP handler at `/regions` on the
 // test handler mux that tests region deletion.
-func HandleDeleteRegionSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/regions/RegionOne-West", func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteRegionSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/regions/RegionOne-West", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 

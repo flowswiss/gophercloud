@@ -13,22 +13,22 @@ import (
 )
 
 func TestList(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, SubnetListResult)
+		fmt.Fprint(w, SubnetListResult)
 	})
 
 	count := 0
 
-	err := subnets.List(fake.ServiceClient(), subnets.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
+	err := subnets.List(fake.ServiceClient(fakeServer), subnets.ListOpts{}).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
 		count++
 		actual, err := subnets.ExtractSubnets(page)
 		if err != nil {
@@ -55,20 +55,20 @@ func TestList(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets/54d6f61d-db07-451c-9ab3-b9609b6b6f0b", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets/54d6f61d-db07-451c-9ab3-b9609b6b6f0b", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, SubnetGetResult)
+		fmt.Fprint(w, SubnetGetResult)
 	})
 
-	s, err := subnets.Get(context.TODO(), fake.ServiceClient(), "54d6f61d-db07-451c-9ab3-b9609b6b6f0b").Extract()
+	s, err := subnets.Get(context.TODO(), fake.ServiceClient(fakeServer), "54d6f61d-db07-451c-9ab3-b9609b6b6f0b").Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "my_subnet")
@@ -91,10 +91,10 @@ func TestGet(t *testing.T) {
 }
 
 func TestCreate(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -104,7 +104,7 @@ func TestCreate(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetCreateResult)
+		fmt.Fprint(w, SubnetCreateResult)
 	})
 
 	var gatewayIP = "192.168.199.1"
@@ -128,7 +128,7 @@ func TestCreate(t *testing.T) {
 		},
 		SubnetPoolID: "b80340c7-9960-4f67-a99c-02501656284b",
 	}
-	s, err := subnets.Create(context.TODO(), fake.ServiceClient(), opts).Extract()
+	s, err := subnets.Create(context.TODO(), fake.ServiceClient(fakeServer), opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "")
@@ -153,10 +153,10 @@ func TestCreate(t *testing.T) {
 }
 
 func TestCreateNoGateway(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -166,7 +166,7 @@ func TestCreateNoGateway(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetCreateWithNoGatewayResponse)
+		fmt.Fprint(w, SubnetCreateWithNoGatewayResponse)
 	})
 
 	var noGateway = ""
@@ -183,7 +183,7 @@ func TestCreateNoGateway(t *testing.T) {
 		},
 		DNSNameservers: []string{},
 	}
-	s, err := subnets.Create(context.TODO(), fake.ServiceClient(), opts).Extract()
+	s, err := subnets.Create(context.TODO(), fake.ServiceClient(fakeServer), opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "")
@@ -204,10 +204,10 @@ func TestCreateNoGateway(t *testing.T) {
 }
 
 func TestCreateDefaultGateway(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -217,7 +217,7 @@ func TestCreateDefaultGateway(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetCreateWithDefaultGatewayResponse)
+		fmt.Fprint(w, SubnetCreateWithDefaultGatewayResponse)
 	})
 
 	opts := subnets.CreateOpts{
@@ -232,7 +232,7 @@ func TestCreateDefaultGateway(t *testing.T) {
 		},
 		DNSNameservers: []string{},
 	}
-	s, err := subnets.Create(context.TODO(), fake.ServiceClient(), opts).Extract()
+	s, err := subnets.Create(context.TODO(), fake.ServiceClient(fakeServer), opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "")
@@ -253,10 +253,10 @@ func TestCreateDefaultGateway(t *testing.T) {
 }
 
 func TestCreateIPv6RaAddressMode(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -266,7 +266,7 @@ func TestCreateIPv6RaAddressMode(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetCreateWithIPv6RaAddressModeResponse)
+		fmt.Fprint(w, SubnetCreateWithIPv6RaAddressModeResponse)
 	})
 
 	var gatewayIP = "2001:db8:0:a::1"
@@ -278,7 +278,7 @@ func TestCreateIPv6RaAddressMode(t *testing.T) {
 		IPv6AddressMode: "slaac",
 		IPv6RAMode:      "slaac",
 	}
-	s, err := subnets.Create(context.TODO(), fake.ServiceClient(), opts).Extract()
+	s, err := subnets.Create(context.TODO(), fake.ServiceClient(fakeServer), opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "")
@@ -294,10 +294,10 @@ func TestCreateIPv6RaAddressMode(t *testing.T) {
 }
 
 func TestCreateWithNoCIDR(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -307,7 +307,7 @@ func TestCreateWithNoCIDR(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetCreateResult)
+		fmt.Fprint(w, SubnetCreateResult)
 	})
 
 	opts := subnets.CreateOpts{
@@ -319,7 +319,7 @@ func TestCreateWithNoCIDR(t *testing.T) {
 		},
 		SubnetPoolID: "b80340c7-9960-4f67-a99c-02501656284b",
 	}
-	s, err := subnets.Create(context.TODO(), fake.ServiceClient(), opts).Extract()
+	s, err := subnets.Create(context.TODO(), fake.ServiceClient(fakeServer), opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "")
@@ -343,10 +343,10 @@ func TestCreateWithNoCIDR(t *testing.T) {
 }
 
 func TestCreateWithPrefixlen(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -356,7 +356,7 @@ func TestCreateWithPrefixlen(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetCreateResult)
+		fmt.Fprint(w, SubnetCreateResult)
 	})
 
 	opts := subnets.CreateOpts{
@@ -369,7 +369,7 @@ func TestCreateWithPrefixlen(t *testing.T) {
 		SubnetPoolID: "b80340c7-9960-4f67-a99c-02501656284b",
 		Prefixlen:    12,
 	}
-	s, err := subnets.Create(context.TODO(), fake.ServiceClient(), opts).Extract()
+	s, err := subnets.Create(context.TODO(), fake.ServiceClient(fakeServer), opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "")
@@ -393,27 +393,30 @@ func TestCreateWithPrefixlen(t *testing.T) {
 }
 
 func TestRequiredCreateOpts(t *testing.T) {
-	res := subnets.Create(context.TODO(), fake.ServiceClient(), subnets.CreateOpts{})
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
+
+	res := subnets.Create(context.TODO(), fake.ServiceClient(fakeServer), subnets.CreateOpts{})
 	if res.Err == nil {
 		t.Fatalf("Expected error, got none")
 	}
 
-	res = subnets.Create(context.TODO(), fake.ServiceClient(), subnets.CreateOpts{NetworkID: "foo"})
+	res = subnets.Create(context.TODO(), fake.ServiceClient(fakeServer), subnets.CreateOpts{NetworkID: "foo"})
 	if res.Err == nil {
 		t.Fatalf("Expected error, got none")
 	}
 
-	res = subnets.Create(context.TODO(), fake.ServiceClient(), subnets.CreateOpts{NetworkID: "foo", CIDR: "bar", IPVersion: 40})
+	res = subnets.Create(context.TODO(), fake.ServiceClient(fakeServer), subnets.CreateOpts{NetworkID: "foo", CIDR: "bar", IPVersion: 40})
 	if res.Err == nil {
 		t.Fatalf("Expected error, got none")
 	}
 }
 
 func TestUpdate(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -423,7 +426,7 @@ func TestUpdate(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetUpdateResponse)
+		fmt.Fprint(w, SubnetUpdateResponse)
 	})
 
 	dnsNameservers := []string{"foo"}
@@ -435,7 +438,7 @@ func TestUpdate(t *testing.T) {
 			{NextHop: "bar"},
 		},
 	}
-	s, err := subnets.Update(context.TODO(), fake.ServiceClient(), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
+	s, err := subnets.Update(context.TODO(), fake.ServiceClient(fakeServer), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "my_new_subnet")
@@ -443,10 +446,10 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestUpdateGateway(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -456,7 +459,7 @@ func TestUpdateGateway(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetUpdateGatewayResponse)
+		fmt.Fprint(w, SubnetUpdateGatewayResponse)
 	})
 
 	var gatewayIP = "10.0.0.1"
@@ -465,7 +468,7 @@ func TestUpdateGateway(t *testing.T) {
 		Name:      &name,
 		GatewayIP: &gatewayIP,
 	}
-	s, err := subnets.Update(context.TODO(), fake.ServiceClient(), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
+	s, err := subnets.Update(context.TODO(), fake.ServiceClient(fakeServer), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "my_new_subnet")
@@ -474,10 +477,10 @@ func TestUpdateGateway(t *testing.T) {
 }
 
 func TestUpdateRemoveGateway(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -487,7 +490,7 @@ func TestUpdateRemoveGateway(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetUpdateRemoveGatewayResponse)
+		fmt.Fprint(w, SubnetUpdateRemoveGatewayResponse)
 	})
 
 	var noGateway = ""
@@ -496,7 +499,7 @@ func TestUpdateRemoveGateway(t *testing.T) {
 		Name:      &name,
 		GatewayIP: &noGateway,
 	}
-	s, err := subnets.Update(context.TODO(), fake.ServiceClient(), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
+	s, err := subnets.Update(context.TODO(), fake.ServiceClient(fakeServer), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "my_new_subnet")
@@ -505,10 +508,10 @@ func TestUpdateRemoveGateway(t *testing.T) {
 }
 
 func TestUpdateHostRoutes(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -518,7 +521,7 @@ func TestUpdateHostRoutes(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetUpdateHostRoutesResponse)
+		fmt.Fprint(w, SubnetUpdateHostRoutesResponse)
 	})
 
 	HostRoutes := []subnets.HostRoute{
@@ -533,7 +536,7 @@ func TestUpdateHostRoutes(t *testing.T) {
 		Name:       &name,
 		HostRoutes: &HostRoutes,
 	}
-	s, err := subnets.Update(context.TODO(), fake.ServiceClient(), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
+	s, err := subnets.Update(context.TODO(), fake.ServiceClient(fakeServer), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "my_new_subnet")
@@ -542,10 +545,10 @@ func TestUpdateHostRoutes(t *testing.T) {
 }
 
 func TestUpdateRemoveHostRoutes(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -555,14 +558,14 @@ func TestUpdateRemoveHostRoutes(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetUpdateRemoveHostRoutesResponse)
+		fmt.Fprint(w, SubnetUpdateRemoveHostRoutesResponse)
 	})
 
 	noHostRoutes := []subnets.HostRoute{}
 	opts := subnets.UpdateOpts{
 		HostRoutes: &noHostRoutes,
 	}
-	s, err := subnets.Update(context.TODO(), fake.ServiceClient(), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
+	s, err := subnets.Update(context.TODO(), fake.ServiceClient(fakeServer), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "my_new_subnet")
@@ -571,10 +574,10 @@ func TestUpdateRemoveHostRoutes(t *testing.T) {
 }
 
 func TestUpdateAllocationPool(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -584,7 +587,7 @@ func TestUpdateAllocationPool(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetUpdateAllocationPoolResponse)
+		fmt.Fprint(w, SubnetUpdateAllocationPoolResponse)
 	})
 
 	name := "my_new_subnet"
@@ -597,7 +600,7 @@ func TestUpdateAllocationPool(t *testing.T) {
 			},
 		},
 	}
-	s, err := subnets.Update(context.TODO(), fake.ServiceClient(), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
+	s, err := subnets.Update(context.TODO(), fake.ServiceClient(fakeServer), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, s.Name, "my_new_subnet")
@@ -611,10 +614,10 @@ func TestUpdateAllocationPool(t *testing.T) {
 }
 
 func TestUpdateRevision(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -625,10 +628,10 @@ func TestUpdateRevision(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetUpdateResponse)
+		fmt.Fprint(w, SubnetUpdateResponse)
 	})
 
-	th.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1c", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1c", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -639,7 +642,7 @@ func TestUpdateRevision(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, SubnetUpdateResponse)
+		fmt.Fprint(w, SubnetUpdateResponse)
 	})
 
 	dnsNameservers := []string{"foo"}
@@ -651,25 +654,25 @@ func TestUpdateRevision(t *testing.T) {
 			{NextHop: "bar"},
 		},
 	}
-	_, err := subnets.Update(context.TODO(), fake.ServiceClient(), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
+	_, err := subnets.Update(context.TODO(), fake.ServiceClient(fakeServer), "08eae331-0402-425a-923c-34f7cfe39c1b", opts).Extract()
 	th.AssertNoErr(t, err)
 
 	revisionNumber := 42
 	opts.RevisionNumber = &revisionNumber
-	_, err = subnets.Update(context.TODO(), fake.ServiceClient(), "08eae331-0402-425a-923c-34f7cfe39c1c", opts).Extract()
+	_, err = subnets.Update(context.TODO(), fake.ServiceClient(fakeServer), "08eae331-0402-425a-923c-34f7cfe39c1c", opts).Extract()
 	th.AssertNoErr(t, err)
 }
 
 func TestDelete(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/subnets/08eae331-0402-425a-923c-34f7cfe39c1b", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	res := subnets.Delete(context.TODO(), fake.ServiceClient(), "08eae331-0402-425a-923c-34f7cfe39c1b")
+	res := subnets.Delete(context.TODO(), fake.ServiceClient(fakeServer), "08eae331-0402-425a-923c-34f7cfe39c1b")
 	th.AssertNoErr(t, res.Err)
 }

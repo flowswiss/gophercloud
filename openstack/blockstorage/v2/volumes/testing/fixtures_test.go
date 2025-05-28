@@ -6,18 +6,18 @@ import (
 	"testing"
 
 	th "github.com/gophercloud/gophercloud/v2/testhelper"
-	fake "github.com/gophercloud/gophercloud/v2/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
-func MockListResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/detail", func(w http.ResponseWriter, r *http.Request) {
+func MockListResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/detail", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
-		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, `
+		fmt.Fprint(w, `
   {
   "volumes": [
     {
@@ -86,14 +86,14 @@ func MockListResponse(t *testing.T) {
 	})
 }
 
-func MockGetResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/d32019d3-bc6e-4319-9c1d-6722fc136a22", func(w http.ResponseWriter, r *http.Request) {
+func MockGetResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/d32019d3-bc6e-4319-9c1d-6722fc136a22", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
-		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `
+		fmt.Fprint(w, `
 {
   "volume": {
     "volume_type": "lvmdriver-1",
@@ -134,10 +134,10 @@ func MockGetResponse(t *testing.T) {
 	})
 }
 
-func MockCreateResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes", func(w http.ResponseWriter, r *http.Request) {
+func MockCreateResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
-		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestJSONRequest(t, r, `
@@ -152,7 +152,7 @@ func MockCreateResponse(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 
-		fmt.Fprintf(w, `
+		fmt.Fprint(w, `
 {
   "volume": {
     "size": 75,
@@ -179,20 +179,20 @@ func MockCreateResponse(t *testing.T) {
 	})
 }
 
-func MockDeleteResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/d32019d3-bc6e-4319-9c1d-6722fc136a22", func(w http.ResponseWriter, r *http.Request) {
+func MockDeleteResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/d32019d3-bc6e-4319-9c1d-6722fc136a22", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
-		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		w.WriteHeader(http.StatusAccepted)
 	})
 }
 
-func MockUpdateResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/d32019d3-bc6e-4319-9c1d-6722fc136a22", func(w http.ResponseWriter, r *http.Request) {
+func MockUpdateResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/d32019d3-bc6e-4319-9c1d-6722fc136a22", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
-		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `
+		fmt.Fprint(w, `
 {
   "volume": {
     "name": "vol-002"
@@ -202,11 +202,11 @@ func MockUpdateResponse(t *testing.T) {
 	})
 }
 
-func MockAttachResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
+func MockAttachResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
 			th.TestJSONRequest(t, r, `
@@ -223,15 +223,15 @@ func MockAttachResponse(t *testing.T) {
 			w.Header().Add("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 
-			fmt.Fprintf(w, `{}`)
+			fmt.Fprint(w, `{}`)
 		})
 }
 
-func MockBeginDetachingResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
+func MockBeginDetachingResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
 			th.TestJSONRequest(t, r, `
@@ -243,15 +243,15 @@ func MockBeginDetachingResponse(t *testing.T) {
 			w.Header().Add("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 
-			fmt.Fprintf(w, `{}`)
+			fmt.Fprint(w, `{}`)
 		})
 }
 
-func MockDetachResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
+func MockDetachResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
 			th.TestJSONRequest(t, r, `
@@ -263,15 +263,15 @@ func MockDetachResponse(t *testing.T) {
 			w.Header().Add("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 
-			fmt.Fprintf(w, `{}`)
+			fmt.Fprint(w, `{}`)
 		})
 }
 
-func MockUploadImageResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
+func MockUploadImageResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
 			th.TestJSONRequest(t, r, `
@@ -288,7 +288,7 @@ func MockUploadImageResponse(t *testing.T) {
 			w.Header().Add("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 
-			fmt.Fprintf(w, `
+			fmt.Fprint(w, `
 {
     "os-volume_upload_image": {
         "container_format": "bare",
@@ -319,11 +319,11 @@ func MockUploadImageResponse(t *testing.T) {
 		})
 }
 
-func MockReserveResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
+func MockReserveResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
 			th.TestJSONRequest(t, r, `
@@ -335,15 +335,15 @@ func MockReserveResponse(t *testing.T) {
 			w.Header().Add("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 
-			fmt.Fprintf(w, `{}`)
+			fmt.Fprint(w, `{}`)
 		})
 }
 
-func MockUnreserveResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
+func MockUnreserveResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
 			th.TestJSONRequest(t, r, `
@@ -355,15 +355,15 @@ func MockUnreserveResponse(t *testing.T) {
 			w.Header().Add("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 
-			fmt.Fprintf(w, `{}`)
+			fmt.Fprint(w, `{}`)
 		})
 }
 
-func MockInitializeConnectionResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
+func MockInitializeConnectionResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
 			th.TestJSONRequest(t, r, `
@@ -386,7 +386,7 @@ func MockInitializeConnectionResponse(t *testing.T) {
 			w.Header().Add("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 
-			fmt.Fprintf(w, `{
+			fmt.Fprint(w, `{
 "connection_info": {
     "data": {
       "target_portals": [
@@ -416,11 +416,11 @@ func MockInitializeConnectionResponse(t *testing.T) {
 		})
 }
 
-func MockTerminateConnectionResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
+func MockTerminateConnectionResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
 			th.TestJSONRequest(t, r, `
@@ -443,15 +443,15 @@ func MockTerminateConnectionResponse(t *testing.T) {
 			w.Header().Add("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 
-			fmt.Fprintf(w, `{}`)
+			fmt.Fprint(w, `{}`)
 		})
 }
 
-func MockExtendSizeResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
+func MockExtendSizeResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
 			th.TestJSONRequest(t, r, `
@@ -466,23 +466,23 @@ func MockExtendSizeResponse(t *testing.T) {
 			w.Header().Add("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 
-			fmt.Fprintf(w, `{}`)
+			fmt.Fprint(w, `{}`)
 		})
 }
 
-func MockForceDeleteResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/d32019d3-bc6e-4319-9c1d-6722fc136a22/action", func(w http.ResponseWriter, r *http.Request) {
+func MockForceDeleteResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/d32019d3-bc6e-4319-9c1d-6722fc136a22/action", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
-		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestBody(t, r, `{"os-force_delete":""}`)
 		w.WriteHeader(http.StatusAccepted)
 	})
 }
 
-func MockSetImageMetadataResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action", func(w http.ResponseWriter, r *http.Request) {
+func MockSetImageMetadataResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
-		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestJSONRequest(t, r, `
@@ -497,14 +497,14 @@ func MockSetImageMetadataResponse(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, `{}`)
+		fmt.Fprint(w, `{}`)
 	})
 }
 
-func MockSetBootableResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action", func(w http.ResponseWriter, r *http.Request) {
+func MockSetBootableResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
-		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestJSONRequest(t, r, `
@@ -520,10 +520,10 @@ func MockSetBootableResponse(t *testing.T) {
 	})
 }
 
-func MockReImageResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action", func(w http.ResponseWriter, r *http.Request) {
+func MockReImageResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
-		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestJSONRequest(t, r, `
@@ -540,11 +540,11 @@ func MockReImageResponse(t *testing.T) {
 	})
 }
 
-func MockChangeTypeResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
+func MockChangeTypeResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestHeader(t, r, "Accept", "application/json")
 			th.TestJSONRequest(t, r, `
@@ -560,15 +560,15 @@ func MockChangeTypeResponse(t *testing.T) {
 			w.Header().Add("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 
-			fmt.Fprintf(w, `{}`)
+			fmt.Fprint(w, `{}`)
 		})
 }
 
-func MockResetStatusResponse(t *testing.T) {
-	th.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
+func MockResetStatusResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/volumes/cd281d77-8217-4830-be95-9528227c105c/action",
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "POST")
-			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+			th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 			th.TestHeader(t, r, "Content-Type", "application/json")
 			th.TestJSONRequest(t, r, `
 {

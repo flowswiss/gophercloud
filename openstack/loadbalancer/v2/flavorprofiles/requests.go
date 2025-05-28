@@ -15,6 +15,10 @@ type ListOptsBuilder interface {
 
 // ListOpts allows to manage the output of the request.
 type ListOpts struct {
+	// The name of the flavor profile to filter by.
+	Name string `q:"name"`
+	// The provider name of the flavor profile to filter by.
+	ProviderName string `q:"provider_name"`
 	// The fields that you want the server to return
 	Fields []string `q:"fields"`
 }
@@ -96,13 +100,13 @@ type UpdateOptsBuilder interface {
 // operation.
 type UpdateOpts struct {
 	// Human-readable name for the Loadbalancer. Does not have to be unique.
-	Name string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty"`
 
 	// Providing the name of the provider supported by the Octavia installation.
-	ProviderName string `json:"provider_name,omitempty"`
+	ProviderName *string `json:"provider_name,omitempty"`
 
 	// Providing the json string containing the flavor metadata.
-	FlavorData string `json:"flavor_data,omitempty"`
+	FlavorData *string `json:"flavor_data,omitempty"`
 }
 
 // ToFlavorProfileUpdateMap builds a request body from UpdateOpts.
@@ -117,7 +121,7 @@ func (opts UpdateOpts) ToFlavorProfileUpdateMap() (map[string]any, error) {
 
 // Update is an operation which modifies the attributes of the specified
 // FlavorProfile.
-func Update(ctx context.Context, c *gophercloud.ServiceClient, id string, opts UpdateOpts) (r UpdateResult) {
+func Update(ctx context.Context, c *gophercloud.ServiceClient, id string, opts UpdateOptsBuilder) (r UpdateResult) {
 	b, err := opts.ToFlavorProfileUpdateMap()
 	if err != nil {
 		r.Err = err

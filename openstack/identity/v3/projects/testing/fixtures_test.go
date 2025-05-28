@@ -277,63 +277,63 @@ var ExpectedProjects = projects.ProjectTags{
 
 // HandleListAvailableProjectsSuccessfully creates an HTTP handler at `/auth/projects`
 // on the test handler mux that responds with a list of two tenants.
-func HandleListAvailableProjectsSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/auth/projects", func(w http.ResponseWriter, r *http.Request) {
+func HandleListAvailableProjectsSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/auth/projects", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ListAvailableOutput)
+		fmt.Fprint(w, ListAvailableOutput)
 	})
 }
 
 // HandleListProjectsSuccessfully creates an HTTP handler at `/projects` on the
 // test handler mux that responds with a list of two tenants.
-func HandleListProjectsSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/projects", func(w http.ResponseWriter, r *http.Request) {
+func HandleListProjectsSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/projects", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ListOutput)
+		fmt.Fprint(w, ListOutput)
 	})
 }
 
 // HandleGetProjectSuccessfully creates an HTTP handler at `/projects` on the
 // test handler mux that responds with a single project.
-func HandleGetProjectSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/projects/1234", func(w http.ResponseWriter, r *http.Request) {
+func HandleGetProjectSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/projects/1234", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetOutput)
+		fmt.Fprint(w, GetOutput)
 	})
 }
 
 // HandleCreateProjectSuccessfully creates an HTTP handler at `/projects` on the
 // test handler mux that tests project creation.
-func HandleCreateProjectSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/projects", func(w http.ResponseWriter, r *http.Request) {
+func HandleCreateProjectSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/projects", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, CreateRequest)
 
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, GetOutput)
+		fmt.Fprint(w, GetOutput)
 	})
 }
 
 // HandleDeleteProjectSuccessfully creates an HTTP handler at `/projects` on the
 // test handler mux that tests project deletion.
-func HandleDeleteProjectSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/projects/1234", func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteProjectSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/projects/1234", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -343,39 +343,39 @@ func HandleDeleteProjectSuccessfully(t *testing.T) {
 
 // HandleUpdateProjectSuccessfully creates an HTTP handler at `/projects` on the
 // test handler mux that tests project updates.
-func HandleUpdateProjectSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/projects/1234", func(w http.ResponseWriter, r *http.Request) {
+func HandleUpdateProjectSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/projects/1234", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PATCH")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, UpdateRequest)
 
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, UpdateOutput)
+		fmt.Fprint(w, UpdateOutput)
 	})
 }
 
-func HandleListProjectTagsSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/projects/966b3c7d36a24facaf20b7e458bf2192/tags", func(w http.ResponseWriter, r *http.Request) {
+func HandleListProjectTagsSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/projects/966b3c7d36a24facaf20b7e458bf2192/tags", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ListTagsOutput)
+		fmt.Fprint(w, ListTagsOutput)
 	})
 }
 
-func HandleModifyProjectTagsSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/projects/966b3c7d36a24facaf20b7e458bf2192/tags", func(w http.ResponseWriter, r *http.Request) {
+func HandleModifyProjectTagsSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/projects/966b3c7d36a24facaf20b7e458bf2192/tags", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, ModifyProjectTagsRequest)
 
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ModifyProjectTagsOutput)
+		fmt.Fprint(w, ModifyProjectTagsOutput)
 	})
 }
-func HandleDeleteProjectTagsSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/projects/966b3c7d36a24facaf20b7e458bf2192/tags", func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteProjectTagsSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/projects/966b3c7d36a24facaf20b7e458bf2192/tags", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 

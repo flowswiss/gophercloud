@@ -75,8 +75,23 @@ var getUsageExpectedJSONBody = `
             "in_use": 40,
             "limit": 41,
             "reserved": 42
+        },
+        "gigabytes_hdd" : {
+            "in_use": 50,
+            "limit": 51,
+            "reserved": 52
+        },
+        "volumes_hdd" : {
+            "in_use": 53,
+            "limit": 54,
+            "reserved": 55
+        },
+        "snapshots_hdd": {
+            "in_use": 56,
+            "limit": 57,
+            "reserved": 58
         }
-	}
+    }
 }`
 
 var getUsageExpectedQuotaSet = quotasets.QuotaUsageSet{
@@ -88,6 +103,11 @@ var getUsageExpectedQuotaSet = quotasets.QuotaUsageSet{
 	Backups:            quotasets.QuotaUsage{InUse: 27, Limit: 28, Reserved: 29},
 	BackupGigabytes:    quotasets.QuotaUsage{InUse: 30, Limit: 31, Reserved: 32},
 	Groups:             quotasets.QuotaUsage{InUse: 40, Limit: 41, Reserved: 42},
+	Extra: map[string]quotasets.QuotaUsage{
+		"gigabytes_hdd": {InUse: 50, Limit: 51, Reserved: 52},
+		"volumes_hdd":   {InUse: 53, Limit: 54, Reserved: 55},
+		"snapshots_hdd": {InUse: 56, Limit: 57, Reserved: 58},
+	},
 }
 
 var fullUpdateExpectedJSONBody = `
@@ -147,15 +167,15 @@ var partialUpdateOpts = quotasets.UpdateOpts{
 	Extra:              make(map[string]any),
 }
 
-var partiualUpdateExpectedQuotaSet = quotasets.QuotaSet{
+var partialUpdateExpectedQuotaSet = quotasets.QuotaSet{
 	Volumes: 200,
 	Extra:   make(map[string]any),
 }
 
 // HandleSuccessfulRequest configures the test server to respond to an HTTP request.
-func HandleSuccessfulRequest(t *testing.T, httpMethod, uriPath, jsonOutput string, uriQueryParams map[string]string) {
+func HandleSuccessfulRequest(t *testing.T, fakeServer th.FakeServer, httpMethod, uriPath, jsonOutput string, uriQueryParams map[string]string) {
 
-	th.Mux.HandleFunc(uriPath, func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc(uriPath, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, httpMethod)
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		w.Header().Add("Content-Type", "application/json")
@@ -164,13 +184,13 @@ func HandleSuccessfulRequest(t *testing.T, httpMethod, uriPath, jsonOutput strin
 			th.TestFormValues(t, r, uriQueryParams)
 		}
 
-		fmt.Fprintf(w, jsonOutput)
+		fmt.Fprint(w, jsonOutput)
 	})
 }
 
 // HandleDeleteSuccessfully tests quotaset deletion.
-func HandleDeleteSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/os-quota-sets/"+FirstTenantID, func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/os-quota-sets/"+FirstTenantID, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 

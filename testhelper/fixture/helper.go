@@ -9,8 +9,8 @@ import (
 	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
-func SetupHandler(t *testing.T, url, method, requestBody, responseBody string, status int) {
-	th.Mux.HandleFunc(url, func(w http.ResponseWriter, r *http.Request) {
+func SetupHandler(t *testing.T, fakeServer th.FakeServer, url, method, requestBody, responseBody string, status int) {
+	fakeServer.Mux.HandleFunc(url, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, method)
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -25,7 +25,7 @@ func SetupHandler(t *testing.T, url, method, requestBody, responseBody string, s
 		w.WriteHeader(status)
 
 		if responseBody != "" {
-			fmt.Fprintf(w, responseBody)
+			fmt.Fprint(w, responseBody)
 		}
 	})
 }

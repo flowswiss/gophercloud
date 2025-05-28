@@ -14,17 +14,17 @@ import (
 )
 
 func TestList(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/networks", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/networks", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, nettest.ListResponse)
+		fmt.Fprint(w, nettest.ListResponse)
 	})
 
 	type NetworkWithExternalExt struct {
@@ -33,7 +33,7 @@ func TestList(t *testing.T) {
 	}
 	var actual []NetworkWithExternalExt
 
-	allPages, err := networks.List(fake.ServiceClient(), networks.ListOpts{}).AllPages(context.TODO())
+	allPages, err := networks.List(fake.ServiceClient(fakeServer), networks.ListOpts{}).AllPages(context.TODO())
 	th.AssertNoErr(t, err)
 
 	err = networks.ExtractNetworksInto(allPages, &actual)
@@ -44,17 +44,17 @@ func TestList(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/networks/d32019d3-bc6e-4319-9c1d-6722fc136a22", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/networks/d32019d3-bc6e-4319-9c1d-6722fc136a22", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, nettest.GetResponse)
+		fmt.Fprint(w, nettest.GetResponse)
 	})
 
 	var s struct {
@@ -62,7 +62,7 @@ func TestGet(t *testing.T) {
 		external.NetworkExternalExt
 	}
 
-	err := networks.Get(context.TODO(), fake.ServiceClient(), "d32019d3-bc6e-4319-9c1d-6722fc136a22").ExtractInto(&s)
+	err := networks.Get(context.TODO(), fake.ServiceClient(fakeServer), "d32019d3-bc6e-4319-9c1d-6722fc136a22").ExtractInto(&s)
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, "d32019d3-bc6e-4319-9c1d-6722fc136a22", s.ID)
@@ -70,10 +70,10 @@ func TestGet(t *testing.T) {
 }
 
 func TestCreate(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/networks", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/networks", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -83,7 +83,7 @@ func TestCreate(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, CreateResponse)
+		fmt.Fprint(w, CreateResponse)
 	})
 
 	iTrue := true
@@ -98,17 +98,17 @@ func TestCreate(t *testing.T) {
 		External:          &iFalse,
 	}
 
-	_, err := networks.Create(context.TODO(), fake.ServiceClient(), externalCreateOpts).Extract()
+	_, err := networks.Create(context.TODO(), fake.ServiceClient(fakeServer), externalCreateOpts).Extract()
 	th.AssertNoErr(t, err)
 
 	th.AssertNoErr(t, err)
 }
 
 func TestUpdate(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/networks/4e8e5957-649f-477b-9e5b-f1f75b21c03c", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/networks/4e8e5957-649f-477b-9e5b-f1f75b21c03c", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -118,7 +118,7 @@ func TestUpdate(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, UpdateResponse)
+		fmt.Fprint(w, UpdateResponse)
 	})
 
 	iTrue := true
@@ -135,6 +135,6 @@ func TestUpdate(t *testing.T) {
 		External:          &iFalse,
 	}
 
-	_, err := networks.Update(context.TODO(), fake.ServiceClient(), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", externalUpdateOpts).Extract()
+	_, err := networks.Update(context.TODO(), fake.ServiceClient(fakeServer), "4e8e5957-649f-477b-9e5b-f1f75b21c03c", externalUpdateOpts).Extract()
 	th.AssertNoErr(t, err)
 }

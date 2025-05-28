@@ -38,8 +38,8 @@ var (
 )
 
 // HandleProviderListSuccessfully sets up the test server to respond to a provider List request.
-func HandleProviderListSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/providers", func(w http.ResponseWriter, r *http.Request) {
+func HandleProviderListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/providers", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -50,7 +50,7 @@ func HandleProviderListSuccessfully(t *testing.T) {
 		marker := r.Form.Get("marker")
 		switch marker {
 		case "":
-			fmt.Fprintf(w, ProvidersListBody)
+			fmt.Fprint(w, ProvidersListBody)
 		default:
 			t.Fatalf("/v2.0/lbaas/providers invoked with unexpected marker=[%s]", marker)
 		}

@@ -6,19 +6,19 @@ import (
 	"testing"
 
 	th "github.com/gophercloud/gophercloud/v2/testhelper"
-	fakeclient "github.com/gophercloud/gophercloud/v2/testhelper/client"
+	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
 
 // HandleCreateImageMemberSuccessfully setup
-func HandleCreateImageMemberSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/images/da3b75d9-3f4a-40e7-8a2c-bfab23927dea/members", func(w http.ResponseWriter, r *http.Request) {
+func HandleCreateImageMemberSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/images/da3b75d9-3f4a-40e7-8a2c-bfab23927dea/members", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
-		th.TestHeader(t, r, "X-Auth-Token", fakeclient.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		th.TestJSONRequest(t, r, `{"member": "8989447062e04a818baf9e073fd04fa7"}`)
 
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{
+		fmt.Fprint(w, `{
 		    "created_at": "2013-09-20T19:22:19Z",
 		    "image_id": "da3b75d9-3f4a-40e7-8a2c-bfab23927dea",
 		    "member_id": "8989447062e04a818baf9e073fd04fa7",
@@ -31,13 +31,13 @@ func HandleCreateImageMemberSuccessfully(t *testing.T) {
 }
 
 // HandleImageMemberList happy path setup
-func HandleImageMemberList(t *testing.T) {
-	th.Mux.HandleFunc("/images/da3b75d9-3f4a-40e7-8a2c-bfab23927dea/members", func(w http.ResponseWriter, r *http.Request) {
+func HandleImageMemberList(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/images/da3b75d9-3f4a-40e7-8a2c-bfab23927dea/members", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
-		th.TestHeader(t, r, "X-Auth-Token", fakeclient.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, `{
+		fmt.Fprint(w, `{
 		    "members": [
 		        {
 		            "created_at": "2013-10-07T17:58:03Z",
@@ -62,13 +62,13 @@ func HandleImageMemberList(t *testing.T) {
 }
 
 // HandleImageMemberEmptyList happy path setup
-func HandleImageMemberEmptyList(t *testing.T) {
-	th.Mux.HandleFunc("/images/da3b75d9-3f4a-40e7-8a2c-bfab23927dea/members", func(w http.ResponseWriter, r *http.Request) {
+func HandleImageMemberEmptyList(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/images/da3b75d9-3f4a-40e7-8a2c-bfab23927dea/members", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
-		th.TestHeader(t, r, "X-Auth-Token", fakeclient.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, `{
+		fmt.Fprint(w, `{
 		    "members": [],
 		    "schema": "/v2/schemas/members"
 		}`)
@@ -76,13 +76,13 @@ func HandleImageMemberEmptyList(t *testing.T) {
 }
 
 // HandleImageMemberDetails setup
-func HandleImageMemberDetails(t *testing.T) {
-	th.Mux.HandleFunc("/images/da3b75d9-3f4a-40e7-8a2c-bfab23927dea/members/8989447062e04a818baf9e073fd04fa7", func(w http.ResponseWriter, r *http.Request) {
+func HandleImageMemberDetails(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/images/da3b75d9-3f4a-40e7-8a2c-bfab23927dea/members/8989447062e04a818baf9e073fd04fa7", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
-		th.TestHeader(t, r, "X-Auth-Token", fakeclient.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{
+		fmt.Fprint(w, `{
 		    "status": "pending",
 		    "created_at": "2013-11-26T07:21:21Z",
 		    "updated_at": "2013-11-26T07:21:21Z",
@@ -94,13 +94,13 @@ func HandleImageMemberDetails(t *testing.T) {
 }
 
 // HandleImageMemberDeleteSuccessfully setup
-func HandleImageMemberDeleteSuccessfully(t *testing.T) *CallsCounter {
+func HandleImageMemberDeleteSuccessfully(t *testing.T, fakeServer th.FakeServer) *CallsCounter {
 	var counter CallsCounter
-	th.Mux.HandleFunc("/images/da3b75d9-3f4a-40e7-8a2c-bfab23927dea/members/8989447062e04a818baf9e073fd04fa7", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/images/da3b75d9-3f4a-40e7-8a2c-bfab23927dea/members/8989447062e04a818baf9e073fd04fa7", func(w http.ResponseWriter, r *http.Request) {
 		counter.Counter = counter.Counter + 1
 
 		th.TestMethod(t, r, "DELETE")
-		th.TestHeader(t, r, "X-Auth-Token", fakeclient.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.WriteHeader(http.StatusNoContent)
 	})
@@ -108,19 +108,19 @@ func HandleImageMemberDeleteSuccessfully(t *testing.T) *CallsCounter {
 }
 
 // HandleImageMemberUpdate setup
-func HandleImageMemberUpdate(t *testing.T) *CallsCounter {
+func HandleImageMemberUpdate(t *testing.T, fakeServer th.FakeServer) *CallsCounter {
 	var counter CallsCounter
-	th.Mux.HandleFunc("/images/da3b75d9-3f4a-40e7-8a2c-bfab23927dea/members/8989447062e04a818baf9e073fd04fa7", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/images/da3b75d9-3f4a-40e7-8a2c-bfab23927dea/members/8989447062e04a818baf9e073fd04fa7", func(w http.ResponseWriter, r *http.Request) {
 		counter.Counter = counter.Counter + 1
 
 		th.TestMethod(t, r, "PUT")
-		th.TestHeader(t, r, "X-Auth-Token", fakeclient.TokenID)
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		th.TestJSONRequest(t, r, `{"status": "accepted"}`)
 
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, `{
+		fmt.Fprint(w, `{
 		    "status": "accepted",
 		    "created_at": "2013-11-26T07:21:21Z",
 		    "updated_at": "2013-11-26T07:21:21Z",

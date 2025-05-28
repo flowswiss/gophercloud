@@ -156,54 +156,54 @@ var ExpectedServicesSlice = []services.Service{FirstService, SecondService}
 
 // HandleListServicesSuccessfully creates an HTTP handler at `/services` on the
 // test handler mux that responds with a list of two services.
-func HandleListServicesSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/services", func(w http.ResponseWriter, r *http.Request) {
+func HandleListServicesSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/services", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ListOutput)
+		fmt.Fprint(w, ListOutput)
 	})
 }
 
 // HandleGetServiceSuccessfully creates an HTTP handler at `/services` on the
 // test handler mux that responds with a single service.
-func HandleGetServiceSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/services/9876", func(w http.ResponseWriter, r *http.Request) {
+func HandleGetServiceSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/services/9876", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetOutput)
+		fmt.Fprint(w, GetOutput)
 	})
 }
 
 // HandleCreateServiceSuccessfully creates an HTTP handler at `/services` on the
 // test handler mux that tests service creation.
-func HandleCreateServiceSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/services", func(w http.ResponseWriter, r *http.Request) {
+func HandleCreateServiceSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/services", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, CreateRequest)
 
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, GetOutput)
+		fmt.Fprint(w, GetOutput)
 	})
 }
 
 // HandleUpdateServiceSuccessfully creates an HTTP handler at `/services` on the
 // test handler mux that tests service update.
-func HandleUpdateServiceSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/services/9876", func(w http.ResponseWriter, r *http.Request) {
+func HandleUpdateServiceSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/services/9876", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PATCH")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, UpdateRequest)
 
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, UpdateOutput)
+		fmt.Fprint(w, UpdateOutput)
 	})
 }

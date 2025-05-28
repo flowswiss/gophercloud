@@ -10,6 +10,7 @@ import (
 	"github.com/gophercloud/gophercloud/v2"
 	"github.com/gophercloud/gophercloud/v2/internal/acceptance/clients"
 	"github.com/gophercloud/gophercloud/v2/internal/acceptance/tools"
+	"github.com/gophercloud/gophercloud/v2/internal/ptr"
 	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/flavorprofiles"
 	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/flavors"
 	"github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/l7policies"
@@ -213,6 +214,7 @@ func CreateLoadBalancerFullyPopulated(t *testing.T, client *gophercloud.ServiceC
 					MaxRetries:     5,
 					MaxRetriesDown: 4,
 					Type:           monitors.TypeHTTP,
+					HTTPVersion:    "1.0",
 				},
 			},
 			L7Policies: []l7policies.CreateOpts{{
@@ -270,6 +272,13 @@ func CreateLoadBalancerFullyPopulated(t *testing.T, client *gophercloud.ServiceC
 	th.AssertEquals(t, lb.Pools[0].Members[0].Name, memberName)
 	th.AssertEquals(t, lb.Pools[0].Members[0].ProtocolPort, memberPort)
 	th.AssertEquals(t, lb.Pools[0].Members[0].Weight, memberWeight)
+
+	th.AssertEquals(t, lb.Pools[0].Monitor.Delay, 10)
+	th.AssertEquals(t, lb.Pools[0].Monitor.Timeout, 5)
+	th.AssertEquals(t, lb.Pools[0].Monitor.MaxRetries, 5)
+	th.AssertEquals(t, lb.Pools[0].Monitor.MaxRetriesDown, 4)
+	th.AssertEquals(t, lb.Pools[0].Monitor.Type, string(monitors.TypeHTTP))
+	th.AssertEquals(t, lb.Pools[0].Monitor.HTTPVersion, "1.0")
 
 	if len(tags) > 0 {
 		th.AssertDeepEquals(t, lb.Tags, tags)
@@ -332,6 +341,7 @@ func CreateMonitor(t *testing.T, client *gophercloud.ServiceClient, lb *loadbala
 		MaxRetries:     5,
 		MaxRetriesDown: 4,
 		Type:           monitors.TypePING,
+		HTTPVersion:    "1.1",
 	}
 
 	monitor, err := monitors.Create(context.TODO(), client, createOpts).Extract()
@@ -351,6 +361,7 @@ func CreateMonitor(t *testing.T, client *gophercloud.ServiceClient, lb *loadbala
 	th.AssertEquals(t, monitor.Timeout, 5)
 	th.AssertEquals(t, monitor.MaxRetries, 5)
 	th.AssertEquals(t, monitor.MaxRetriesDown, 4)
+	th.AssertEquals(t, monitor.HTTPVersion, "1.1")
 
 	return monitor, nil
 }
@@ -724,7 +735,7 @@ func CreateFlavor(t *testing.T, client *gophercloud.ServiceClient, flavorProfile
 		Name:            flavorName,
 		Description:     description,
 		FlavorProfileId: flavorProfile.ID,
-		Enabled:         true,
+		Enabled:         ptr.To(false),
 	}
 
 	flavor, err := flavors.Create(context.TODO(), client, createOpts).Extract()
@@ -737,7 +748,7 @@ func CreateFlavor(t *testing.T, client *gophercloud.ServiceClient, flavorProfile
 	th.AssertEquals(t, flavorName, flavor.Name)
 	th.AssertEquals(t, description, flavor.Description)
 	th.AssertEquals(t, flavorProfile.ID, flavor.FlavorProfileId)
-	th.AssertEquals(t, true, flavor.Enabled)
+	th.AssertEquals(t, false, flavor.Enabled)
 
 	return flavor, nil
 }

@@ -151,29 +151,29 @@ var ImportedKeyPair = keypairs.KeyPair{
 }
 
 // HandleListSuccessfully configures the test server to respond to a List request.
-func HandleListSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/os-keypairs", func(w http.ResponseWriter, r *http.Request) {
+func HandleListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/os-keypairs", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, ListOutput)
+		fmt.Fprint(w, ListOutput)
 	})
 }
 
 // HandleGetSuccessfully configures the test server to respond to a Get request for "firstkey".
-func HandleGetSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/os-keypairs/firstkey", func(w http.ResponseWriter, r *http.Request) {
+func HandleGetSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/os-keypairs/firstkey", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		if r.URL.Query().Get("user_id") == "fake2" {
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprintf(w, GetOutputOtherUser)
+			fmt.Fprint(w, GetOutputOtherUser)
 
 		} else {
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprintf(w, GetOutput)
+			fmt.Fprint(w, GetOutput)
 
 		}
 	})
@@ -181,34 +181,34 @@ func HandleGetSuccessfully(t *testing.T) {
 
 // HandleCreateSuccessfully configures the test server to respond to a Create request for a new
 // keypair called "createdkey".
-func HandleCreateSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/os-keypairs", func(w http.ResponseWriter, r *http.Request) {
+func HandleCreateSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/os-keypairs", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, `{ "keypair": { "name": "createdkey" } }`)
 
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, CreateOutput)
+		fmt.Fprint(w, CreateOutput)
 	})
 }
 
 // HandleCreateSuccessfullyOtherUser configures the test server to respond to a Create request for a new
 // keypair called "createdkey" for another user, different than the current one.
-func HandleCreateSuccessfullyOtherUser(t *testing.T) {
-	th.Mux.HandleFunc("/os-keypairs", func(w http.ResponseWriter, r *http.Request) {
+func HandleCreateSuccessfullyOtherUser(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/os-keypairs", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, `{ "keypair": { "name": "createdkey", "user_id": "fake2" } }`)
 
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, CreateOutputOtherUser)
+		fmt.Fprint(w, CreateOutputOtherUser)
 	})
 }
 
 // HandleImportSuccessfully configures the test server to respond to an Import request for an
 // existing keypair called "importedkey".
-func HandleImportSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/os-keypairs", func(w http.ResponseWriter, r *http.Request) {
+func HandleImportSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/os-keypairs", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, `
@@ -221,14 +221,14 @@ func HandleImportSuccessfully(t *testing.T) {
 		`)
 
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, ImportOutput)
+		fmt.Fprint(w, ImportOutput)
 	})
 }
 
 // HandleDeleteSuccessfully configures the test server to respond to a Delete request for a
 // keypair called "deletedkey".
-func HandleDeleteSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/os-keypairs/deletedkey", func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/os-keypairs/deletedkey", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.AssertEquals(t, r.Form.Get("user_id"), "")
@@ -239,8 +239,8 @@ func HandleDeleteSuccessfully(t *testing.T) {
 
 // HandleDeleteSuccessfully configures the test server to respond to a Delete request for a
 // keypair called "deletedkey" for another user.
-func HandleDeleteSuccessfullyOtherUser(t *testing.T) {
-	th.Mux.HandleFunc("/os-keypairs/deletedkey", func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteSuccessfullyOtherUser(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/os-keypairs/deletedkey", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestFormValues(t, r, map[string]string{"user_id": "fake2"})

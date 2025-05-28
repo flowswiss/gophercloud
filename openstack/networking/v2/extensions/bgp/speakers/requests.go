@@ -43,7 +43,7 @@ func (opts CreateOpts) ToSpeakerCreateMap() (map[string]any, error) {
 }
 
 // Create accepts a CreateOpts and create a BGP Speaker.
-func Create(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOpts) (r CreateResult) {
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
 	b, err := opts.ToSpeakerCreateMap()
 	if err != nil {
 		r.Err = err
@@ -142,7 +142,7 @@ func RemoveBGPPeer(ctx context.Context, c *gophercloud.ServiceClient, bgpSpeaker
 		r.Err = err
 		return
 	}
-	resp, err := c.Put(ctx, removeBGPPeerURL(c, bgpSpeakerID), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := c.Put(ctx, removeBGPPeerURL(c, bgpSpeakerID), b, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
@@ -207,7 +207,7 @@ func RemoveGatewayNetwork(ctx context.Context, c *gophercloud.ServiceClient, bgp
 		r.Err = err
 		return
 	}
-	resp, err := c.Put(ctx, removeGatewayNetworkURL(c, bgpSpeakerID), b, &r.Body, &gophercloud.RequestOpts{
+	resp, err := c.Put(ctx, removeGatewayNetworkURL(c, bgpSpeakerID), b, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{200},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

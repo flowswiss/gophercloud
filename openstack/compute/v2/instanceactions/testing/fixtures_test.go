@@ -34,13 +34,13 @@ var ListExpected = []instanceactions.InstanceAction{
 }
 
 // HandleInstanceActionListSuccessfully sets up the test server to respond to a ListAddresses request.
-func HandleInstanceActionListSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/servers/asdfasdfasdf/os-instance-actions", func(w http.ResponseWriter, r *http.Request) {
+func HandleInstanceActionListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/servers/asdfasdfasdf/os-instance-actions", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, `{
+		fmt.Fprint(w, `{
 			"instanceActions": [
 				{
 					"action": "stop",
@@ -94,13 +94,13 @@ var GetExpected = instanceactions.InstanceActionDetail{
 }
 
 // HandleInstanceActionGetSuccessfully sets up the test server to respond to a Get request.
-func HandleInstanceActionGetSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/servers/asdfasdfasdf/os-instance-actions/okzeorkmkfs", func(w http.ResponseWriter, r *http.Request) {
+func HandleInstanceActionGetSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/servers/asdfasdfasdf/os-instance-actions/okzeorkmkfs", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, `{
+		fmt.Fprint(w, `{
 			"instanceAction": 
 			{
 				"action": "stop",

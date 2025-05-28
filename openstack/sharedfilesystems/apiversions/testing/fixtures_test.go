@@ -178,50 +178,50 @@ var ManilaAllAPIVersionResults = []apiversions.APIVersion{
 	ManilaAPIVersion2Result,
 }
 
-func MockListResponse(t *testing.T) {
-	th.Mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+func MockListResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, ManilaAllAPIVersionsResponse)
+		fmt.Fprint(w, ManilaAllAPIVersionsResponse)
 	})
 }
 
-func MockGetResponse(t *testing.T) {
-	th.Mux.HandleFunc("/v2/", func(w http.ResponseWriter, r *http.Request) {
+func MockGetResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2/", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, ManilaAPIVersionResponse)
+		fmt.Fprint(w, ManilaAPIVersionResponse)
 	})
 }
 
-func MockGetNoResponse(t *testing.T) {
-	th.Mux.HandleFunc("/v2/", func(w http.ResponseWriter, r *http.Request) {
+func MockGetNoResponse(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2/", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, ManilaAPIInvalidVersionResponse_1)
+		fmt.Fprint(w, ManilaAPIInvalidVersionResponse_1)
 	})
 }
 
-func MockGetMultipleResponses(t *testing.T) {
-	th.Mux.HandleFunc("/v2/", func(w http.ResponseWriter, r *http.Request) {
+func MockGetMultipleResponses(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2/", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, ManilaAPIInvalidVersionResponse_2)
+		fmt.Fprint(w, ManilaAPIInvalidVersionResponse_2)
 	})
 }

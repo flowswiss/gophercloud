@@ -34,7 +34,7 @@ jobs:
         if: >
           contains(github.event.pull_request.labels.*.name, 'semver:patch')
           || contains(github.event.label.name, 'semver:patch')
-        uses: kiegroup/git-backporting@c5d7f0ea567c9f997ba4d15e442ad3204abe2030
+        uses: kiegroup/git-backporting@b9ed3ac959d1479e81bf4f0a5e5f0a72251ce895
         with:
           target-branch: v1
           pull-request: ${{ github.event.pull_request.url }}
@@ -60,11 +60,13 @@ jobs:
           || contains(github.event.label.name, 'semver:major')
           || contains(github.event.label.name, 'semver:minor')
           || contains(github.event.label.name, 'semver:unknown')
-        uses: thollander/actions-comment-pull-request@fabd468d3a1a0b97feee5f6b9e499eab0dd903f6
-        with:
-          message: |
-            Labels `semver-major`, `semver-minor` and `semver-unknown` block
-            backports to the legacy branch `v1`.
+        run: gh pr comment "$NUMBER" --body "$BODY"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          BODY: >
+            Labels `semver-major`, `semver-minor` and `semver-unknown` block backports to the legacy branch `v1`.
 
   backport_v2:
     name: "Backport to v2"
@@ -95,7 +97,7 @@ jobs:
           || contains(github.event.pull_request.labels.*.name, 'semver:minor')
           || contains(github.event.label.name, 'semver:patch')
           || contains(github.event.label.name, 'semver:minor')
-        uses: kiegroup/git-backporting@c5d7f0ea567c9f997ba4d15e442ad3204abe2030
+        uses: kiegroup/git-backporting@b9ed3ac959d1479e81bf4f0a5e5f0a72251ce895
         with:
           target-branch: v2
           pull-request: ${{ github.event.pull_request.url }}
@@ -119,8 +121,10 @@ jobs:
           || contains(github.event.pull_request.labels.*.name, 'semver:unknown')
           || contains(github.event.label.name, 'semver:major')
           || contains(github.event.label.name, 'semver:unknown')
-        uses: thollander/actions-comment-pull-request@fabd468d3a1a0b97feee5f6b9e499eab0dd903f6
-        with:
-          message: |
-            Labels `semver-major` and `semver-unknown` block backports to the
-            stable branch `v2`.
+        run: gh pr comment "$NUMBER" --body "$BODY"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          BODY: >
+            Labels `semver-major` and `semver-unknown` block backports to the stable branch `v2`.

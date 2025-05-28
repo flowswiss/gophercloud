@@ -13,23 +13,23 @@ import (
 )
 
 func TestListBandwidthLimitRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/bandwidth_limit_rules", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/bandwidth_limit_rules", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, BandwidthLimitRulesListResult)
+		fmt.Fprint(w, BandwidthLimitRulesListResult)
 	})
 
 	count := 0
 
 	err := rules.ListBandwidthLimitRules(
-		fake.ServiceClient(),
+		fake.ServiceClient(fakeServer),
 		"501005fa-3b56-4061-aaca-3f24995112e1",
 		rules.BandwidthLimitRulesListOpts{},
 	).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
@@ -61,20 +61,20 @@ func TestListBandwidthLimitRule(t *testing.T) {
 }
 
 func TestGetBandwidthLimitRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/bandwidth_limit_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/bandwidth_limit_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, BandwidthLimitRulesGetResult)
+		fmt.Fprint(w, BandwidthLimitRulesGetResult)
 	})
 
-	r, err := rules.GetBandwidthLimitRule(context.TODO(), fake.ServiceClient(), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241").ExtractBandwidthLimitRule()
+	r, err := rules.GetBandwidthLimitRule(context.TODO(), fake.ServiceClient(fakeServer), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241").ExtractBandwidthLimitRule()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, r.ID, "30a57f4a-336b-4382-8275-d708babd2241")
@@ -84,10 +84,10 @@ func TestGetBandwidthLimitRule(t *testing.T) {
 }
 
 func TestCreateBandwidthLimitRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/bandwidth_limit_rules", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/bandwidth_limit_rules", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -97,14 +97,14 @@ func TestCreateBandwidthLimitRule(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, BandwidthLimitRulesCreateResult)
+		fmt.Fprint(w, BandwidthLimitRulesCreateResult)
 	})
 
 	opts := rules.CreateBandwidthLimitRuleOpts{
 		MaxKBps:      2000,
 		MaxBurstKBps: 200,
 	}
-	r, err := rules.CreateBandwidthLimitRule(context.TODO(), fake.ServiceClient(), "501005fa-3b56-4061-aaca-3f24995112e1", opts).ExtractBandwidthLimitRule()
+	r, err := rules.CreateBandwidthLimitRule(context.TODO(), fake.ServiceClient(fakeServer), "501005fa-3b56-4061-aaca-3f24995112e1", opts).ExtractBandwidthLimitRule()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, 200, r.MaxBurstKBps)
@@ -112,10 +112,10 @@ func TestCreateBandwidthLimitRule(t *testing.T) {
 }
 
 func TestUpdateBandwidthLimitRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/bandwidth_limit_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/bandwidth_limit_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -125,7 +125,7 @@ func TestUpdateBandwidthLimitRule(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, BandwidthLimitRulesUpdateResult)
+		fmt.Fprint(w, BandwidthLimitRulesUpdateResult)
 	})
 
 	maxKBps := 500
@@ -134,7 +134,7 @@ func TestUpdateBandwidthLimitRule(t *testing.T) {
 		MaxKBps:      &maxKBps,
 		MaxBurstKBps: &maxBurstKBps,
 	}
-	r, err := rules.UpdateBandwidthLimitRule(context.TODO(), fake.ServiceClient(), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241", opts).ExtractBandwidthLimitRule()
+	r, err := rules.UpdateBandwidthLimitRule(context.TODO(), fake.ServiceClient(fakeServer), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241", opts).ExtractBandwidthLimitRule()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, 0, r.MaxBurstKBps)
@@ -142,37 +142,37 @@ func TestUpdateBandwidthLimitRule(t *testing.T) {
 }
 
 func TestDeleteBandwidthLimitRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/bandwidth_limit_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/bandwidth_limit_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	res := rules.DeleteBandwidthLimitRule(context.TODO(), fake.ServiceClient(), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241")
+	res := rules.DeleteBandwidthLimitRule(context.TODO(), fake.ServiceClient(fakeServer), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241")
 	th.AssertNoErr(t, res.Err)
 }
 
 func TestListDSCPMarkingRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/dscp_marking_rules", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/dscp_marking_rules", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, DSCPMarkingRulesListResult)
+		fmt.Fprint(w, DSCPMarkingRulesListResult)
 	})
 
 	count := 0
 
 	err := rules.ListDSCPMarkingRules(
-		fake.ServiceClient(),
+		fake.ServiceClient(fakeServer),
 		"501005fa-3b56-4061-aaca-3f24995112e1",
 		rules.DSCPMarkingRulesListOpts{},
 	).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
@@ -202,20 +202,20 @@ func TestListDSCPMarkingRule(t *testing.T) {
 }
 
 func TestGetDSCPMarkingRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/dscp_marking_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/dscp_marking_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, DSCPMarkingRuleGetResult)
+		fmt.Fprint(w, DSCPMarkingRuleGetResult)
 	})
 
-	r, err := rules.GetDSCPMarkingRule(context.TODO(), fake.ServiceClient(), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241").ExtractDSCPMarkingRule()
+	r, err := rules.GetDSCPMarkingRule(context.TODO(), fake.ServiceClient(fakeServer), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241").ExtractDSCPMarkingRule()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, r.ID, "30a57f4a-336b-4382-8275-d708babd2241")
@@ -223,10 +223,10 @@ func TestGetDSCPMarkingRule(t *testing.T) {
 }
 
 func TestCreateDSCPMarkingRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/dscp_marking_rules", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/dscp_marking_rules", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -236,13 +236,13 @@ func TestCreateDSCPMarkingRule(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, DSCPMarkingRuleCreateResult)
+		fmt.Fprint(w, DSCPMarkingRuleCreateResult)
 	})
 
 	opts := rules.CreateDSCPMarkingRuleOpts{
 		DSCPMark: 20,
 	}
-	r, err := rules.CreateDSCPMarkingRule(context.TODO(), fake.ServiceClient(), "501005fa-3b56-4061-aaca-3f24995112e1", opts).ExtractDSCPMarkingRule()
+	r, err := rules.CreateDSCPMarkingRule(context.TODO(), fake.ServiceClient(fakeServer), "501005fa-3b56-4061-aaca-3f24995112e1", opts).ExtractDSCPMarkingRule()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, "30a57f4a-336b-4382-8275-d708babd2241", r.ID)
@@ -250,10 +250,10 @@ func TestCreateDSCPMarkingRule(t *testing.T) {
 }
 
 func TestUpdateDSCPMarkingRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/dscp_marking_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/dscp_marking_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -263,14 +263,14 @@ func TestUpdateDSCPMarkingRule(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, DSCPMarkingRuleUpdateResult)
+		fmt.Fprint(w, DSCPMarkingRuleUpdateResult)
 	})
 
 	dscpMark := 26
 	opts := rules.UpdateDSCPMarkingRuleOpts{
 		DSCPMark: &dscpMark,
 	}
-	r, err := rules.UpdateDSCPMarkingRule(context.TODO(), fake.ServiceClient(), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241", opts).ExtractDSCPMarkingRule()
+	r, err := rules.UpdateDSCPMarkingRule(context.TODO(), fake.ServiceClient(fakeServer), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241", opts).ExtractDSCPMarkingRule()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, "30a57f4a-336b-4382-8275-d708babd2241", r.ID)
@@ -278,37 +278,37 @@ func TestUpdateDSCPMarkingRule(t *testing.T) {
 }
 
 func TestDeleteDSCPMarkingRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/dscp_marking_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/dscp_marking_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	res := rules.DeleteDSCPMarkingRule(context.TODO(), fake.ServiceClient(), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241")
+	res := rules.DeleteDSCPMarkingRule(context.TODO(), fake.ServiceClient(fakeServer), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241")
 	th.AssertNoErr(t, res.Err)
 }
 
 func TestListMinimumBandwidthRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/minimum_bandwidth_rules", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/minimum_bandwidth_rules", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, MinimumBandwidthRulesListResult)
+		fmt.Fprint(w, MinimumBandwidthRulesListResult)
 	})
 
 	count := 0
 
 	err := rules.ListMinimumBandwidthRules(
-		fake.ServiceClient(),
+		fake.ServiceClient(fakeServer),
 		"501005fa-3b56-4061-aaca-3f24995112e1",
 		rules.MinimumBandwidthRulesListOpts{},
 	).EachPage(context.TODO(), func(_ context.Context, page pagination.Page) (bool, error) {
@@ -339,20 +339,20 @@ func TestListMinimumBandwidthRule(t *testing.T) {
 }
 
 func TestGetMinimumBandwidthRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/minimum_bandwidth_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/minimum_bandwidth_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, MinimumBandwidthRulesGetResult)
+		fmt.Fprint(w, MinimumBandwidthRulesGetResult)
 	})
 
-	r, err := rules.GetMinimumBandwidthRule(context.TODO(), fake.ServiceClient(), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241").ExtractMinimumBandwidthRule()
+	r, err := rules.GetMinimumBandwidthRule(context.TODO(), fake.ServiceClient(fakeServer), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241").ExtractMinimumBandwidthRule()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, r.ID, "30a57f4a-336b-4382-8275-d708babd2241")
@@ -361,10 +361,10 @@ func TestGetMinimumBandwidthRule(t *testing.T) {
 }
 
 func TestCreateMinimumBandwidthRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/minimum_bandwidth_rules", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/minimum_bandwidth_rules", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -374,23 +374,23 @@ func TestCreateMinimumBandwidthRule(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 
-		fmt.Fprintf(w, MinimumBandwidthRulesCreateResult)
+		fmt.Fprint(w, MinimumBandwidthRulesCreateResult)
 	})
 
 	opts := rules.CreateMinimumBandwidthRuleOpts{
 		MinKBps: 2000,
 	}
-	r, err := rules.CreateMinimumBandwidthRule(context.TODO(), fake.ServiceClient(), "501005fa-3b56-4061-aaca-3f24995112e1", opts).ExtractMinimumBandwidthRule()
+	r, err := rules.CreateMinimumBandwidthRule(context.TODO(), fake.ServiceClient(fakeServer), "501005fa-3b56-4061-aaca-3f24995112e1", opts).ExtractMinimumBandwidthRule()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, 2000, r.MinKBps)
 }
 
 func TestUpdateMinimumBandwidthRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/minimum_bandwidth_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/minimum_bandwidth_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -400,29 +400,29 @@ func TestUpdateMinimumBandwidthRule(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, MinimumBandwidthRulesUpdateResult)
+		fmt.Fprint(w, MinimumBandwidthRulesUpdateResult)
 	})
 
 	minKBps := 500
 	opts := rules.UpdateMinimumBandwidthRuleOpts{
 		MinKBps: &minKBps,
 	}
-	r, err := rules.UpdateMinimumBandwidthRule(context.TODO(), fake.ServiceClient(), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241", opts).ExtractMinimumBandwidthRule()
+	r, err := rules.UpdateMinimumBandwidthRule(context.TODO(), fake.ServiceClient(fakeServer), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241", opts).ExtractMinimumBandwidthRule()
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, 500, r.MinKBps)
 }
 
 func TestDeleteMinimumBandwidthRule(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/minimum_bandwidth_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/qos/policies/501005fa-3b56-4061-aaca-3f24995112e1/minimum_bandwidth_rules/30a57f4a-336b-4382-8275-d708babd2241", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	res := rules.DeleteMinimumBandwidthRule(context.TODO(), fake.ServiceClient(), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241")
+	res := rules.DeleteMinimumBandwidthRule(context.TODO(), fake.ServiceClient(fakeServer), "501005fa-3b56-4061-aaca-3f24995112e1", "30a57f4a-336b-4382-8275-d708babd2241")
 	th.AssertNoErr(t, res.Err)
 }

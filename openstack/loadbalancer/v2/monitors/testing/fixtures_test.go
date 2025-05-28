@@ -31,11 +31,13 @@ const HealthmonitorsListBody = `
 			"admin_state_up":true,
 			"project_id":"83657cfcdfe44cd5920adaf26c48ceea",
 			"delay":5,
+			"domain_name": "www.example.com",
 			"name":"db",
 			"expected_codes":"200",
 			"max_retries":2,
 			"max_retries_down":4,
 			"http_method":"GET",
+			"http_version": 1.1,
 			"timeout":2,
 			"url_path":"/",
 			"type":"HTTP",
@@ -54,11 +56,13 @@ const SingleHealthmonitorBody = `
 		"admin_state_up":true,
 		"project_id":"83657cfcdfe44cd5920adaf26c48ceea",
 		"delay":5,
+		"domain_name": "www.example.com",
 		"name":"db",
 		"expected_codes":"200",
 		"max_retries":2,
 		"max_retries_down":4,
 		"http_method":"GET",
+		"http_version": 1.1,
 		"timeout":2,
 		"url_path":"/",
 		"type":"HTTP",
@@ -76,11 +80,13 @@ const PostUpdateHealthmonitorBody = `
 		"admin_state_up":true,
 		"project_id":"83657cfcdfe44cd5920adaf26c48ceea",
 		"delay":3,
+		"domain_name": "www.example.com",
 		"name":"NewHealthmonitorName",
 		"expected_codes":"301",
 		"max_retries":10,
 		"max_retries_down":8,
 		"http_method":"GET",
+		"http_version": 1.1,
 		"timeout":20,
 		"url_path":"/another_check",
 		"type":"HTTP",
@@ -107,6 +113,7 @@ var (
 	}
 	HealthmonitorDb = monitors.Monitor{
 		AdminStateUp:   true,
+		DomainName:     "www.example.com",
 		Name:           "db",
 		ProjectID:      "83657cfcdfe44cd5920adaf26c48ceea",
 		Delay:          5,
@@ -117,12 +124,14 @@ var (
 		URLPath:        "/",
 		Type:           "HTTP",
 		HTTPMethod:     "GET",
+		HTTPVersion:    "1.1",
 		ID:             "5d4b5228-33b0-4e60-b225-9b727c1a20e7",
 		Pools:          []monitors.PoolID{{ID: "d459f7d8-c6ee-439d-8713-d3fc08aeed8d"}},
 		Tags:           []string{},
 	}
 	HealthmonitorUpdated = monitors.Monitor{
 		AdminStateUp:   true,
+		DomainName:     "www.example.com",
 		Name:           "NewHealthmonitorName",
 		ProjectID:      "83657cfcdfe44cd5920adaf26c48ceea",
 		Delay:          3,
@@ -133,6 +142,7 @@ var (
 		URLPath:        "/another_check",
 		Type:           "HTTP",
 		HTTPMethod:     "GET",
+		HTTPVersion:    "1.1",
 		ID:             "5d4b5228-33b0-4e60-b225-9b727c1a20e7",
 		Pools:          []monitors.PoolID{{ID: "d459f7d8-c6ee-439d-8713-d3fc08aeed8d"}},
 		Tags:           []string{},
@@ -140,8 +150,8 @@ var (
 )
 
 // HandleHealthmonitorListSuccessfully sets up the test server to respond to a healthmonitor List request.
-func HandleHealthmonitorListSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/healthmonitors", func(w http.ResponseWriter, r *http.Request) {
+func HandleHealthmonitorListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/healthmonitors", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -152,9 +162,9 @@ func HandleHealthmonitorListSuccessfully(t *testing.T) {
 		marker := r.Form.Get("marker")
 		switch marker {
 		case "":
-			fmt.Fprintf(w, HealthmonitorsListBody)
+			fmt.Fprint(w, HealthmonitorsListBody)
 		case "556c8345-28d8-4f84-a246-e04380b0461d":
-			fmt.Fprintf(w, `{ "healthmonitors": [] }`)
+			fmt.Fprint(w, `{ "healthmonitors": [] }`)
 		default:
 			t.Fatalf("/v2.0/lbaas/healthmonitors invoked with unexpected marker=[%s]", marker)
 		}
@@ -163,8 +173,8 @@ func HandleHealthmonitorListSuccessfully(t *testing.T) {
 
 // HandleHealthmonitorCreationSuccessfully sets up the test server to respond to a healthmonitor creation request
 // with a given response.
-func HandleHealthmonitorCreationSuccessfully(t *testing.T, response string) {
-	th.Mux.HandleFunc("/v2.0/lbaas/healthmonitors", func(w http.ResponseWriter, r *http.Request) {
+func HandleHealthmonitorCreationSuccessfully(t *testing.T, fakeServer th.FakeServer, response string) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/healthmonitors", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, `{
@@ -173,7 +183,9 @@ func HandleHealthmonitorCreationSuccessfully(t *testing.T, response string) {
 				"pool_id":"84f1b61f-58c4-45bf-a8a9-2dafb9e5214d",
 				"project_id":"453105b9-1754-413f-aab1-55f1af620750",
 				"delay":20,
+				"domain_name": "www.example.com",
 				"name":"db",
+				"http_version": 1.1,
 				"timeout":10,
 				"max_retries":5,
 				"max_retries_down":4,
@@ -184,24 +196,24 @@ func HandleHealthmonitorCreationSuccessfully(t *testing.T, response string) {
 
 		w.WriteHeader(http.StatusAccepted)
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, response)
+		fmt.Fprint(w, response)
 	})
 }
 
 // HandleHealthmonitorGetSuccessfully sets up the test server to respond to a healthmonitor Get request.
-func HandleHealthmonitorGetSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/healthmonitors/5d4b5228-33b0-4e60-b225-9b727c1a20e7", func(w http.ResponseWriter, r *http.Request) {
+func HandleHealthmonitorGetSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/healthmonitors/5d4b5228-33b0-4e60-b225-9b727c1a20e7", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
 
-		fmt.Fprintf(w, SingleHealthmonitorBody)
+		fmt.Fprint(w, SingleHealthmonitorBody)
 	})
 }
 
 // HandleHealthmonitorDeletionSuccessfully sets up the test server to respond to a healthmonitor deletion request.
-func HandleHealthmonitorDeletionSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/healthmonitors/5d4b5228-33b0-4e60-b225-9b727c1a20e7", func(w http.ResponseWriter, r *http.Request) {
+func HandleHealthmonitorDeletionSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/healthmonitors/5d4b5228-33b0-4e60-b225-9b727c1a20e7", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -210,8 +222,8 @@ func HandleHealthmonitorDeletionSuccessfully(t *testing.T) {
 }
 
 // HandleHealthmonitorUpdateSuccessfully sets up the test server to respond to a healthmonitor Update request.
-func HandleHealthmonitorUpdateSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/healthmonitors/5d4b5228-33b0-4e60-b225-9b727c1a20e7", func(w http.ResponseWriter, r *http.Request) {
+func HandleHealthmonitorUpdateSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/healthmonitors/5d4b5228-33b0-4e60-b225-9b727c1a20e7", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
@@ -228,6 +240,6 @@ func HandleHealthmonitorUpdateSuccessfully(t *testing.T) {
 			}
 		}`)
 
-		fmt.Fprintf(w, PostUpdateHealthmonitorBody)
+		fmt.Fprint(w, PostUpdateHealthmonitorBody)
 	})
 }

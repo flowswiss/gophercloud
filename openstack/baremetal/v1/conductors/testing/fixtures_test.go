@@ -138,8 +138,8 @@ var (
 )
 
 // HandleConductorListSuccessfully sets up the test server to respond to a server List request.
-func HandleConductorListSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/conductors", func(w http.ResponseWriter, r *http.Request) {
+func HandleConductorListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/conductors", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		w.Header().Add("Content-Type", "application/json")
@@ -150,10 +150,10 @@ func HandleConductorListSuccessfully(t *testing.T) {
 		marker := r.Form.Get("marker")
 		switch marker {
 		case "":
-			fmt.Fprintf(w, ConductorListBody)
+			fmt.Fprint(w, ConductorListBody)
 
 		case "9e5476bd-a4ec-4653-93d6-72c93aa682ba":
-			fmt.Fprintf(w, `{ "servers": [] }`)
+			fmt.Fprint(w, `{ "servers": [] }`)
 		default:
 			t.Fatalf("/conductors invoked with unexpected marker=[%s]", marker)
 		}
@@ -161,8 +161,8 @@ func HandleConductorListSuccessfully(t *testing.T) {
 }
 
 // HandleConductorListDetailSuccessfully sets up the test server to respond to a server List request.
-func HandleConductorListDetailSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/conductors", func(w http.ResponseWriter, r *http.Request) {
+func HandleConductorListDetailSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/conductors", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		w.Header().Add("Content-Type", "application/json")
@@ -170,16 +170,16 @@ func HandleConductorListDetailSuccessfully(t *testing.T) {
 			t.Errorf("Failed to parse request form %v", err)
 		}
 
-		fmt.Fprintf(w, ConductorListDetailBody)
+		fmt.Fprint(w, ConductorListDetailBody)
 	})
 }
 
-func HandleConductorGetSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/conductors/1234asdf", func(w http.ResponseWriter, r *http.Request) {
+func HandleConductorGetSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/conductors/1234asdf", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
 
-		fmt.Fprintf(w, SingleConductorBody)
+		fmt.Fprint(w, SingleConductorBody)
 	})
 }

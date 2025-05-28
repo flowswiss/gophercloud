@@ -190,62 +190,62 @@ var ExpectedMetadatum = secrets.Metadatum{
 
 // HandleListSecretsSuccessfully creates an HTTP handler at `/secrets` on the
 // test handler mux that responds with a list of two secrets.
-func HandleListSecretsSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/secrets", func(w http.ResponseWriter, r *http.Request) {
+func HandleListSecretsSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/secrets", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ListResponse)
+		fmt.Fprint(w, ListResponse)
 	})
 }
 
 // HandleGetSecretSuccessfully creates an HTTP handler at `/secrets` on the
 // test handler mux that responds with a single secret.
-func HandleGetSecretSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c", func(w http.ResponseWriter, r *http.Request) {
+func HandleGetSecretSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetResponse)
+		fmt.Fprint(w, GetResponse)
 	})
 }
 
 // HandleGetPayloadSuccessfully creates an HTTP handler at `/secrets` on the
 // test handler mux that responds with a single secret.
-func HandleGetPayloadSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/payload", func(w http.ResponseWriter, r *http.Request) {
+func HandleGetPayloadSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/payload", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetPayloadResponse)
+		fmt.Fprint(w, GetPayloadResponse)
 	})
 }
 
 // HandleCreateSecretSuccessfully creates an HTTP handler at `/secrets` on the
 // test handler mux that tests secret creation.
-func HandleCreateSecretSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/secrets", func(w http.ResponseWriter, r *http.Request) {
+func HandleCreateSecretSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/secrets", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, CreateRequest)
 
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, CreateResponse)
+		fmt.Fprint(w, CreateResponse)
 	})
 }
 
 // HandleDeleteSecretSuccessfully creates an HTTP handler at `/secrets` on the
 // test handler mux that tests secret deletion.
-func HandleDeleteSecretSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c", func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteSecretSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -255,8 +255,8 @@ func HandleDeleteSecretSuccessfully(t *testing.T) {
 
 // HandleUpdateSecretSuccessfully creates an HTTP handler at `/secrets` on the
 // test handler mux that tests secret updates.
-func HandleUpdateSecretSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c", func(w http.ResponseWriter, r *http.Request) {
+func HandleUpdateSecretSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestBody(t, r, `foobar`)
@@ -269,23 +269,23 @@ func HandleUpdateSecretSuccessfully(t *testing.T) {
 // HandleGetMetadataSuccessfully creates an HTTP handler at
 // `/secrets/uuid/metadata` on the test handler mux that responds with
 // retrieved metadata.
-func HandleGetMetadataSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/metadata", func(w http.ResponseWriter, r *http.Request) {
+func HandleGetMetadataSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/metadata", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetMetadataResponse)
+		fmt.Fprint(w, GetMetadataResponse)
 	})
 }
 
 // HandleCreateMetadataSuccessfully creates an HTTP handler at
 // `/secrets/uuid/metadata` on the test handler mux that responds with
 // a metadata reference URL.
-func HandleCreateMetadataSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/metadata", func(w http.ResponseWriter, r *http.Request) {
+func HandleCreateMetadataSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/metadata", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
@@ -293,30 +293,30 @@ func HandleCreateMetadataSuccessfully(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, CreateMetadataResponse)
+		fmt.Fprint(w, CreateMetadataResponse)
 	})
 }
 
 // HandleGetMetadatumSuccessfully creates an HTTP handler at
 // `/secrets/uuid/metadata/foo` on the test handler mux that responds with a
 // single metadatum.
-func HandleGetMetadatumSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/metadata/foo", func(w http.ResponseWriter, r *http.Request) {
+func HandleGetMetadatumSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/metadata/foo", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, MetadatumResponse)
+		fmt.Fprint(w, MetadatumResponse)
 	})
 }
 
 // HandleCreateMetadatumSuccessfully creates an HTTP handler at
 // `/secrets/uuid/metadata` on the test handler mux that responds with
 // a single created metadata.
-func HandleCreateMetadatumSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/metadata", func(w http.ResponseWriter, r *http.Request) {
+func HandleCreateMetadatumSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/metadata", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
@@ -324,15 +324,15 @@ func HandleCreateMetadatumSuccessfully(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, MetadatumResponse)
+		fmt.Fprint(w, MetadatumResponse)
 	})
 }
 
 // HandleUpdateMetadatumSuccessfully creates an HTTP handler at
 // `/secrets/uuid/metadata/foo` on the test handler mux that responds with a
 // single updated metadatum.
-func HandleUpdateMetadatumSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/metadata/foo", func(w http.ResponseWriter, r *http.Request) {
+func HandleUpdateMetadatumSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/metadata/foo", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
@@ -340,15 +340,15 @@ func HandleUpdateMetadatumSuccessfully(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, MetadatumResponse)
+		fmt.Fprint(w, MetadatumResponse)
 	})
 }
 
 // HandleDeleteMetadatumSuccessfully creates an HTTP handler at
 // `/secrets/uuid/metadata/key` on the test handler mux that tests metadata
 // deletion.
-func HandleDeleteMetadatumSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/metadata/foo", func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteMetadatumSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/secrets/1b8068c4-3bb6-4be6-8f1e-da0d1ea0b67c/metadata/foo", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 

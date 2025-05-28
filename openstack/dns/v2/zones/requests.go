@@ -178,3 +178,87 @@ func Delete(ctx context.Context, client *gophercloud.ServiceClient, zoneID strin
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
 }
+
+// ListSharesOptsBuilder allows extensions to add additional parameters to the List
+// request.
+type ListSharesOptsBuilder interface {
+	ToZoneListSharesHeadersMap() (map[string]string, error)
+}
+
+// ListSharesOpts is a structure that holds parameters for listing zone shares.
+type ListSharesOpts struct {
+	AllProjects bool `h:"X-Auth-All-Projects"`
+}
+
+// ToZoneListSharesHeadersMap formats a ListSharesOpts into header parameters.
+func (opts ListSharesOpts) ToZoneListSharesHeadersMap() (map[string]string, error) {
+	return gophercloud.BuildHeaders(opts)
+}
+
+// ListShares implements a zone list shares request.
+func ListShares(client *gophercloud.ServiceClient, zoneID string, opts ListSharesOptsBuilder) pagination.Pager {
+	var h map[string]string
+	var err error
+
+	if opts != nil {
+		h, err = opts.ToZoneListSharesHeadersMap()
+		if err != nil {
+			return pagination.Pager{Err: err}
+		}
+	}
+
+	pager := pagination.NewPager(client, sharesBaseURL(client, zoneID), func(r pagination.PageResult) pagination.Page {
+		return ZoneSharePage{pagination.LinkedPageBase{PageResult: r}}
+	})
+	pager.Headers = h
+	return pager
+}
+
+// GetShare returns information about a shared zone, given its ID.
+func GetShare(ctx context.Context, client *gophercloud.ServiceClient, zoneID, shareID string) (r ZoneShareResult) {
+	resp, err := client.Get(ctx, shareURL(client, zoneID, shareID), &r.Body, nil)
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// request body for sharing a zone.
+type ShareOptsBuilder interface {
+	ToShareMap() (map[string]interface{}, error)
+}
+
+// ShareZoneOpts specifies the target project for sharing a zone.
+type ShareZoneOpts struct {
+	// TargetProjectID is the ID of the project to share the zone with.
+	TargetProjectID string `json:"target_project_id" required:"true"`
+}
+
+// ToShareMap constructs a request body from a ShareZoneOpts.
+func (opts ShareZoneOpts) ToShareMap() (map[string]interface{}, error) {
+	return map[string]interface{}{
+		"target_project_id": opts.TargetProjectID,
+	}, nil
+}
+
+// Share shares a zone with another project.
+func Share(ctx context.Context, client *gophercloud.ServiceClient, zoneID string, opts ShareOptsBuilder) (r ZoneShareResult) {
+	body, err := gophercloud.BuildRequestBody(opts, "")
+	if err != nil {
+		r.Err = err
+		return
+	}
+
+	resp, err := client.Post(ctx, sharesBaseURL(client, zoneID), body, &r.Body, &gophercloud.RequestOpts{
+		OkCodes: []int{201},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}
+
+// Unshare removes a share for a zone.
+func Unshare(ctx context.Context, client *gophercloud.ServiceClient, zoneID, shareID string) (r gophercloud.ErrResult) {
+	resp, err := client.Delete(ctx, shareURL(client, zoneID, shareID), &gophercloud.RequestOpts{
+		OkCodes: []int{204},
+	})
+	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
+	return
+}

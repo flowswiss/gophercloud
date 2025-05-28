@@ -116,8 +116,8 @@ var (
 
 // HandleL7PolicyCreationSuccessfully sets up the test server to respond to a l7policy creation request
 // with a given response.
-func HandleL7PolicyCreationSuccessfully(t *testing.T, response string) {
-	th.Mux.HandleFunc("/v2.0/lbaas/l7policies", func(w http.ResponseWriter, r *http.Request) {
+func HandleL7PolicyCreationSuccessfully(t *testing.T, fakeServer th.FakeServer, response string) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/l7policies", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, `{
@@ -131,7 +131,7 @@ func HandleL7PolicyCreationSuccessfully(t *testing.T, response string) {
 
 		w.WriteHeader(http.StatusAccepted)
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, response)
+		fmt.Fprint(w, response)
 	})
 }
 
@@ -206,8 +206,8 @@ const PostUpdateL7PolicyNullRedirectURLBody = `
 `
 
 // HandleL7PolicyListSuccessfully sets up the test server to respond to a l7policy List request.
-func HandleL7PolicyListSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/l7policies", func(w http.ResponseWriter, r *http.Request) {
+func HandleL7PolicyListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/l7policies", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -218,9 +218,9 @@ func HandleL7PolicyListSuccessfully(t *testing.T) {
 		marker := r.Form.Get("marker")
 		switch marker {
 		case "":
-			fmt.Fprintf(w, L7PoliciesListBody)
+			fmt.Fprint(w, L7PoliciesListBody)
 		case "45e08a3e-a78f-4b40-a229-1e7e23eee1ab":
-			fmt.Fprintf(w, `{ "l7policies": [] }`)
+			fmt.Fprint(w, `{ "l7policies": [] }`)
 		default:
 			t.Fatalf("/v2.0/lbaas/l7policies invoked with unexpected marker=[%s]", marker)
 		}
@@ -228,19 +228,19 @@ func HandleL7PolicyListSuccessfully(t *testing.T) {
 }
 
 // HandleL7PolicyGetSuccessfully sets up the test server to respond to a l7policy Get request.
-func HandleL7PolicyGetSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd", func(w http.ResponseWriter, r *http.Request) {
+func HandleL7PolicyGetSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
 
-		fmt.Fprintf(w, SingleL7PolicyBody)
+		fmt.Fprint(w, SingleL7PolicyBody)
 	})
 }
 
 // HandleL7PolicyDeletionSuccessfully sets up the test server to respond to a l7policy deletion request.
-func HandleL7PolicyDeletionSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd", func(w http.ResponseWriter, r *http.Request) {
+func HandleL7PolicyDeletionSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -249,8 +249,8 @@ func HandleL7PolicyDeletionSuccessfully(t *testing.T) {
 }
 
 // HandleL7PolicyUpdateSuccessfully sets up the test server to respond to a l7policy Update request.
-func HandleL7PolicyUpdateSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd", func(w http.ResponseWriter, r *http.Request) {
+func HandleL7PolicyUpdateSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
@@ -263,13 +263,13 @@ func HandleL7PolicyUpdateSuccessfully(t *testing.T) {
 			}
 		}`)
 
-		fmt.Fprintf(w, PostUpdateL7PolicyBody)
+		fmt.Fprint(w, PostUpdateL7PolicyBody)
 	})
 }
 
 // HandleL7PolicyUpdateNullRedirectURLSuccessfully sets up the test server to respond to a l7policy Update request.
-func HandleL7PolicyUpdateNullRedirectURLSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd", func(w http.ResponseWriter, r *http.Request) {
+func HandleL7PolicyUpdateNullRedirectURLSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
@@ -281,7 +281,7 @@ func HandleL7PolicyUpdateNullRedirectURLSuccessfully(t *testing.T) {
 			}
 		}`)
 
-		fmt.Fprintf(w, PostUpdateL7PolicyNullRedirectURLBody)
+		fmt.Fprint(w, PostUpdateL7PolicyNullRedirectURLBody)
 	})
 }
 
@@ -303,8 +303,8 @@ const SingleRuleBody = `
 
 // HandleRuleCreationSuccessfully sets up the test server to respond to a rule creation request
 // with a given response.
-func HandleRuleCreationSuccessfully(t *testing.T, response string) {
-	th.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd/rules", func(w http.ResponseWriter, r *http.Request) {
+func HandleRuleCreationSuccessfully(t *testing.T, fakeServer th.FakeServer, response string) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd/rules", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, `{
@@ -317,7 +317,7 @@ func HandleRuleCreationSuccessfully(t *testing.T, response string) {
 
 		w.WriteHeader(http.StatusAccepted)
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, response)
+		fmt.Fprint(w, response)
 	})
 }
 
@@ -350,8 +350,8 @@ const RulesListBody = `
 `
 
 // HandleRuleListSuccessfully sets up the test server to respond to a rule List request.
-func HandleRuleListSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd/rules", func(w http.ResponseWriter, r *http.Request) {
+func HandleRuleListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd/rules", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -362,9 +362,9 @@ func HandleRuleListSuccessfully(t *testing.T) {
 		marker := r.Form.Get("marker")
 		switch marker {
 		case "":
-			fmt.Fprintf(w, RulesListBody)
+			fmt.Fprint(w, RulesListBody)
 		case "45e08a3e-a78f-4b40-a229-1e7e23eee1ab":
-			fmt.Fprintf(w, `{ "rules": [] }`)
+			fmt.Fprint(w, `{ "rules": [] }`)
 		default:
 			t.Fatalf("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd/rules invoked with unexpected marker=[%s]", marker)
 		}
@@ -372,19 +372,19 @@ func HandleRuleListSuccessfully(t *testing.T) {
 }
 
 // HandleRuleGetSuccessfully sets up the test server to respond to a rule Get request.
-func HandleRuleGetSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd/rules/16621dbb-a736-4888-a57a-3ecd53df784c", func(w http.ResponseWriter, r *http.Request) {
+func HandleRuleGetSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd/rules/16621dbb-a736-4888-a57a-3ecd53df784c", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
 
-		fmt.Fprintf(w, SingleRuleBody)
+		fmt.Fprint(w, SingleRuleBody)
 	})
 }
 
 // HandleRuleDeletionSuccessfully sets up the test server to respond to a rule deletion request.
-func HandleRuleDeletionSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd/rules/16621dbb-a736-4888-a57a-3ecd53df784c", func(w http.ResponseWriter, r *http.Request) {
+func HandleRuleDeletionSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd/rules/16621dbb-a736-4888-a57a-3ecd53df784c", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -409,8 +409,8 @@ const PostUpdateRuleBody = `
 `
 
 // HandleRuleUpdateSuccessfully sets up the test server to respond to a rule Update request.
-func HandleRuleUpdateSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd/rules/16621dbb-a736-4888-a57a-3ecd53df784c", func(w http.ResponseWriter, r *http.Request) {
+func HandleRuleUpdateSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/l7policies/8a1412f0-4c32-4257-8b07-af4770b604fd/rules/16621dbb-a736-4888-a57a-3ecd53df784c", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
@@ -425,6 +425,6 @@ func HandleRuleUpdateSuccessfully(t *testing.T) {
 			}
 		}`)
 
-		fmt.Fprintf(w, PostUpdateRuleBody)
+		fmt.Fprint(w, PostUpdateRuleBody)
 	})
 }

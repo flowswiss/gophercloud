@@ -7,6 +7,7 @@ import (
 	"github.com/gophercloud/gophercloud/v2"
 	"github.com/gophercloud/gophercloud/v2/internal/acceptance/tools"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/external"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/addressgroups"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
@@ -43,8 +44,8 @@ func CreateExternalNetwork(t *testing.T, client *gophercloud.ServiceClient) (*ne
 
 	t.Logf("Created external network: %s", networkName)
 
-	th.AssertEquals(t, network.Name, networkName)
-	th.AssertEquals(t, network.Description, networkDescription)
+	th.AssertEquals(t, networkName, network.Name)
+	th.AssertEquals(t, networkDescription, network.Description)
 
 	return network, nil
 }
@@ -74,9 +75,9 @@ func CreatePortWithSecurityGroup(t *testing.T, client *gophercloud.ServiceClient
 
 	t.Logf("Successfully created port: %s", portName)
 
-	th.AssertEquals(t, port.Name, portName)
-	th.AssertEquals(t, port.Description, portDescription)
-	th.AssertEquals(t, port.NetworkID, networkID)
+	th.AssertEquals(t, portName, port.Name)
+	th.AssertEquals(t, portDescription, port.Description)
+	th.AssertEquals(t, networkID, port.NetworkID)
 
 	return port, nil
 }
@@ -101,8 +102,8 @@ func CreateSecurityGroup(t *testing.T, client *gophercloud.ServiceClient) (*grou
 
 	t.Logf("Created security group: %s", secGroup.ID)
 
-	th.AssertEquals(t, secGroup.Name, secGroupName)
-	th.AssertEquals(t, secGroup.Description, secGroupDescription)
+	th.AssertEquals(t, secGroupName, secGroup.Name)
+	th.AssertEquals(t, secGroupDescription, secGroup.Description)
 
 	return secGroup, nil
 }
@@ -140,6 +141,42 @@ func CreateSecurityGroupRule(t *testing.T, client *gophercloud.ServiceClient, se
 	return rule, nil
 }
 
+// CreateSecurityGroupRulesBulk will create 3 security group rules with ports between 1080 and 1099.
+// An error will be returned if one was failed to be created.
+func CreateSecurityGroupRulesBulk(t *testing.T, client *gophercloud.ServiceClient, secGroupID string) ([]rules.SecGroupRule, error) {
+	t.Logf("Attempting to bulk create security group rules in group: %s", secGroupID)
+
+	sgRulesCreateOpts := make([]rules.CreateOpts, 3)
+	for i := range sgRulesCreateOpts {
+		fromPort := 1080 + i
+		toPort := tools.RandomInt(fromPort, 1099)
+
+		sgRulesCreateOpts[i] = rules.CreateOpts{
+			Description:  "Rule description",
+			Direction:    "ingress",
+			EtherType:    "IPv4",
+			SecGroupID:   secGroupID,
+			PortRangeMin: fromPort,
+			PortRangeMax: toPort,
+			Protocol:     rules.ProtocolTCP,
+		}
+	}
+
+	rules, err := rules.CreateBulk(context.TODO(), client, sgRulesCreateOpts).Extract()
+	if err != nil {
+		return rules, err
+	}
+
+	for i, rule := range rules {
+		t.Logf("Created security group rule: %s", rule.ID)
+
+		th.AssertEquals(t, sgRulesCreateOpts[i].SecGroupID, rule.SecGroupID)
+		th.AssertEquals(t, sgRulesCreateOpts[i].Description, rule.Description)
+	}
+
+	return rules, nil
+}
+
 // DeleteSecurityGroup will delete a security group of a specified ID.
 // A fatal error will occur if the deletion failed. This works best as a
 // deferred function
@@ -161,5 +198,47 @@ func DeleteSecurityGroupRule(t *testing.T, client *gophercloud.ServiceClient, ru
 	err := rules.Delete(context.TODO(), client, ruleID).ExtractErr()
 	if err != nil {
 		t.Fatalf("Unable to delete security group rule: %v", err)
+	}
+}
+
+// CreateSecurityAddressGroup will create a security address group with a random name.
+func CreateSecurityAddressGroup(t *testing.T, client *gophercloud.ServiceClient) (*addressgroups.AddressGroup, error) {
+	addressGroupName := tools.RandomString("TESTACC-", 8)
+	addressGroupDescription := tools.RandomString("TESTACC-DESC-", 8)
+
+	t.Logf("Attempting to create security address group: %s", addressGroupName)
+
+	addresses := []string{
+		"192.168.1.1/32",
+	}
+	createOpts := addressgroups.CreateOpts{
+		Name:        addressGroupName,
+		Description: addressGroupDescription,
+		Addresses:   addresses,
+	}
+
+	addressGroup, err := addressgroups.Create(context.TODO(), client, createOpts).Extract()
+	if err != nil {
+		return addressGroup, err
+	}
+
+	t.Logf("Created security address group: %s", addressGroup.ID)
+
+	th.AssertEquals(t, addressGroupName, addressGroup.Name)
+	th.AssertEquals(t, addressGroupDescription, addressGroup.Description)
+	th.AssertDeepEquals(t, addresses, addressGroup.Addresses)
+
+	return addressGroup, nil
+}
+
+// DeleteSecurityAddressGroup will delete a security address group of a specified ID.
+// A fatal error will occur if the deletion failed. This works best as a
+// deferred function
+func DeleteSecurityAddressGroup(t *testing.T, client *gophercloud.ServiceClient, addressGroupID string) {
+	t.Logf("Attempting to delete security address group: %s", addressGroupID)
+
+	err := addressgroups.Delete(context.TODO(), client, addressGroupID).ExtractErr()
+	if err != nil {
+		t.Fatalf("Unable to delete security address group: %v", err)
 	}
 }

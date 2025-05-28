@@ -138,8 +138,8 @@ var SecondAmphora = amphorae.Amphora{
 var ExpectedAmphoraeSlice = []amphorae.Amphora{FirstAmphora, SecondAmphora}
 
 // HandleAmphoraListSuccessfully sets up the test server to respond to a amphorae List request.
-func HandleAmphoraListSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/octavia/amphorae", func(w http.ResponseWriter, r *http.Request) {
+func HandleAmphoraListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/octavia/amphorae", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -150,9 +150,9 @@ func HandleAmphoraListSuccessfully(t *testing.T) {
 		marker := r.Form.Get("marker")
 		switch marker {
 		case "":
-			fmt.Fprintf(w, AmphoraeListBody)
+			fmt.Fprint(w, AmphoraeListBody)
 		case "7f890893-ced0-46ed-8697-33415d070e5a":
-			fmt.Fprintf(w, `{ "amphorae": [] }`)
+			fmt.Fprint(w, `{ "amphorae": [] }`)
 		default:
 			t.Fatalf("/v2.0/octavia/amphorae invoked with unexpected marker=[%s]", marker)
 		}
@@ -160,19 +160,19 @@ func HandleAmphoraListSuccessfully(t *testing.T) {
 }
 
 // HandleAmphoraGetSuccessfully sets up the test server to respond to am amphora Get request.
-func HandleAmphoraGetSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/octavia/amphorae/45f40289-0551-483a-b089-47214bc2a8a4", func(w http.ResponseWriter, r *http.Request) {
+func HandleAmphoraGetSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/octavia/amphorae/45f40289-0551-483a-b089-47214bc2a8a4", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
 
-		fmt.Fprintf(w, SingleAmphoraBody)
+		fmt.Fprint(w, SingleAmphoraBody)
 	})
 }
 
 // HandleAmphoraFailoverSuccessfully sets up the test server to respond to an amphora failover request.
-func HandleAmphoraFailoverSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/octavia/amphorae/36e08a3e-a78f-4b40-a229-1e7e23eee1ab/failover", func(w http.ResponseWriter, r *http.Request) {
+func HandleAmphoraFailoverSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/octavia/amphorae/36e08a3e-a78f-4b40-a229-1e7e23eee1ab/failover", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 

@@ -152,62 +152,62 @@ var ExpectedGroupsSlice = []groups.Group{FirstGroup, SecondGroup}
 
 // HandleListGroupsSuccessfully creates an HTTP handler at `/groups` on the
 // test handler mux that responds with a list of two groups.
-func HandleListGroupsSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/groups", func(w http.ResponseWriter, r *http.Request) {
+func HandleListGroupsSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/groups", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ListOutput)
+		fmt.Fprint(w, ListOutput)
 	})
 }
 
 // HandleGetGroupSuccessfully creates an HTTP handler at `/groups` on the
 // test handler mux that responds with a single group.
-func HandleGetGroupSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/groups/9fe1d3", func(w http.ResponseWriter, r *http.Request) {
+func HandleGetGroupSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/groups/9fe1d3", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetOutput)
+		fmt.Fprint(w, GetOutput)
 	})
 }
 
 // HandleCreateGroupSuccessfully creates an HTTP handler at `/groups` on the
 // test handler mux that tests group creation.
-func HandleCreateGroupSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/groups", func(w http.ResponseWriter, r *http.Request) {
+func HandleCreateGroupSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/groups", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, CreateRequest)
 
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, GetOutput)
+		fmt.Fprint(w, GetOutput)
 	})
 }
 
 // HandleUpdateGroupSuccessfully creates an HTTP handler at `/groups` on the
 // test handler mux that tests group update.
-func HandleUpdateGroupSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/groups/9fe1d3", func(w http.ResponseWriter, r *http.Request) {
+func HandleUpdateGroupSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/groups/9fe1d3", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PATCH")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, UpdateRequest)
 
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, UpdateOutput)
+		fmt.Fprint(w, UpdateOutput)
 	})
 }
 
 // HandleDeleteGroupSuccessfully creates an HTTP handler at `/groups` on the
 // test handler mux that tests group deletion.
-func HandleDeleteGroupSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/groups/9fe1d3", func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteGroupSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/groups/9fe1d3", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 

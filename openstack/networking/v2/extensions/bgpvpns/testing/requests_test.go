@@ -13,8 +13,8 @@ import (
 )
 
 func TestList(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	filterProjectID := []string{"b7549121395844bea941bb92feb3fad9"}
 	fields := []string{"id", "name"}
@@ -22,22 +22,24 @@ func TestList(t *testing.T) {
 		Fields:    fields,
 		ProjectID: filterProjectID[0],
 	}
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns",
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns",
 		func(w http.ResponseWriter, r *http.Request) {
 			th.TestMethod(t, r, "GET")
 			th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
-			r.ParseForm()
+			if err := r.ParseForm(); err != nil {
+				t.Errorf("Failed to parse request form %v", err)
+			}
 			th.AssertDeepEquals(t, r.Form["fields"], fields)
 			th.AssertDeepEquals(t, r.Form["project_id"], filterProjectID)
 
 			w.Header().Add("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprintf(w, ListBGPVPNsResult)
+			fmt.Fprint(w, ListBGPVPNsResult)
 		})
 	count := 0
 
-	err := bgpvpns.List(fake.ServiceClient(), listOpts).EachPage(
+	err := bgpvpns.List(fake.ServiceClient(fakeServer), listOpts).EachPage(
 		context.TODO(),
 		func(_ context.Context, page pagination.Page) (bool, error) {
 			count++
@@ -56,28 +58,28 @@ func TestList(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	bgpVpnID := "460ac411-3dfb-45bb-8116-ed1a7233d143"
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID, func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetBGPVPNResult)
+		fmt.Fprint(w, GetBGPVPNResult)
 	})
 
-	r, err := bgpvpns.Get(context.TODO(), fake.ServiceClient(), bgpVpnID).Extract()
+	r, err := bgpvpns.Get(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID).Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, GetBGPVPN, *r)
 }
 
 func TestCreate(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -85,7 +87,7 @@ func TestCreate(t *testing.T) {
 		th.TestJSONRequest(t, r, CreateRequest)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, CreateResponse)
+		fmt.Fprint(w, CreateResponse)
 	})
 
 	opts := bgpvpns.CreateOpts{
@@ -108,17 +110,17 @@ func TestCreate(t *testing.T) {
 		VNI:  1000,
 	}
 
-	r, err := bgpvpns.Create(context.TODO(), fake.ServiceClient(), opts).Extract()
+	r, err := bgpvpns.Create(context.TODO(), fake.ServiceClient(fakeServer), opts).Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, CreateBGPVPN, *r)
 }
 
 func TestDelete(t *testing.T) {
 	bgpVpnID := "0f9d472a-908f-40f5-8574-b4e8a63ccbf0"
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID, func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
@@ -127,16 +129,16 @@ func TestDelete(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := bgpvpns.Delete(context.TODO(), fake.ServiceClient(), bgpVpnID).ExtractErr()
+	err := bgpvpns.Delete(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID).ExtractErr()
 	th.AssertNoErr(t, err)
 }
 
 func TestUpdate(t *testing.T) {
 	bgpVpnID := "4d627abf-06dd-45ab-920b-8e61422bb984"
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID, func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -146,7 +148,7 @@ func TestUpdate(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Fprintf(w, UpdateBGPVPNResponse)
+		fmt.Fprint(w, UpdateBGPVPNResponse)
 	})
 
 	name := "foo"
@@ -159,34 +161,36 @@ func TestUpdate(t *testing.T) {
 		ExportTargets: &emptyTarget,
 	}
 
-	r, err := bgpvpns.Update(context.TODO(), fake.ServiceClient(), bgpVpnID, opts).Extract()
+	r, err := bgpvpns.Update(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID, opts).Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, *opts.Name, r.Name)
 }
 
 func TestListNetworkAssociations(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	bgpVpnID := "460ac411-3dfb-45bb-8116-ed1a7233d143"
 	fields := []string{"id", "name"}
 	listOpts := bgpvpns.ListNetworkAssociationsOpts{
 		Fields: fields,
 	}
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/network_associations", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/network_associations", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
-		r.ParseForm()
+		if err := r.ParseForm(); err != nil {
+			t.Errorf("Failed to parse request form %v", err)
+		}
 		th.AssertDeepEquals(t, fields, r.Form["fields"])
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ListNetworkAssociationsResult)
+		fmt.Fprint(w, ListNetworkAssociationsResult)
 	})
 
 	count := 0
-	err := bgpvpns.ListNetworkAssociations(fake.ServiceClient(), bgpVpnID, listOpts).EachPage(
+	err := bgpvpns.ListNetworkAssociations(fake.ServiceClient(fakeServer), bgpVpnID, listOpts).EachPage(
 		context.TODO(),
 		func(_ context.Context, page pagination.Page) (bool, error) {
 			count++
@@ -207,11 +211,11 @@ func TestListNetworkAssociations(t *testing.T) {
 }
 
 func TestCreateNetworkAssociation(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	bgpVpnID := "460ac411-3dfb-45bb-8116-ed1a7233d143"
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/network_associations", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/network_associations", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -219,75 +223,77 @@ func TestCreateNetworkAssociation(t *testing.T) {
 		th.TestJSONRequest(t, r, CreateNetworkAssociationRequest)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, CreateNetworkAssociationResponse)
+		fmt.Fprint(w, CreateNetworkAssociationResponse)
 	})
 
 	opts := bgpvpns.CreateNetworkAssociationOpts{
 		NetworkID: "8c5d88dc-60ac-4b02-a65a-36b65888ddcd",
 	}
-	r, err := bgpvpns.CreateNetworkAssociation(context.TODO(), fake.ServiceClient(), bgpVpnID, opts).Extract()
+	r, err := bgpvpns.CreateNetworkAssociation(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID, opts).Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, CreateNetworkAssociation, *r)
 }
 
 func TestGetNetworkAssociation(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	bgpVpnID := "460ac411-3dfb-45bb-8116-ed1a7233d143"
 	networkAssociationID := "73238ca1-e05d-4c7a-b4d4-70407b4b8730"
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/network_associations/"+networkAssociationID, func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/network_associations/"+networkAssociationID, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetNetworkAssociationResult)
+		fmt.Fprint(w, GetNetworkAssociationResult)
 	})
 
-	r, err := bgpvpns.GetNetworkAssociation(context.TODO(), fake.ServiceClient(), bgpVpnID, networkAssociationID).Extract()
+	r, err := bgpvpns.GetNetworkAssociation(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID, networkAssociationID).Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, GetNetworkAssociation, *r)
 }
 
 func TestDeleteNetworkAssociation(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	bgpVpnID := "460ac411-3dfb-45bb-8116-ed1a7233d143"
 	networkAssociationID := "73238ca1-e05d-4c7a-b4d4-70407b4b8730"
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/network_associations/"+networkAssociationID, func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/network_associations/"+networkAssociationID, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := bgpvpns.DeleteNetworkAssociation(context.TODO(), fake.ServiceClient(), bgpVpnID, networkAssociationID).ExtractErr()
+	err := bgpvpns.DeleteNetworkAssociation(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID, networkAssociationID).ExtractErr()
 	th.AssertNoErr(t, err)
 }
 
 func TestListRouterAssociations(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	bgpVpnID := "460ac411-3dfb-45bb-8116-ed1a7233d143"
 	fields := []string{"id", "name"}
 	listOpts := bgpvpns.ListRouterAssociationsOpts{
 		Fields: fields,
 	}
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/router_associations", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/router_associations", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
-		r.ParseForm()
+		if err := r.ParseForm(); err != nil {
+			t.Errorf("Failed to parse request form %v", err)
+		}
 		th.AssertDeepEquals(t, fields, r.Form["fields"])
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ListRouterAssociationsResult)
+		fmt.Fprint(w, ListRouterAssociationsResult)
 	})
 
 	count := 0
-	err := bgpvpns.ListRouterAssociations(fake.ServiceClient(), bgpVpnID, listOpts).EachPage(
+	err := bgpvpns.ListRouterAssociations(fake.ServiceClient(fakeServer), bgpVpnID, listOpts).EachPage(
 		context.TODO(),
 		func(_ context.Context, page pagination.Page) (bool, error) {
 			count++
@@ -308,11 +314,11 @@ func TestListRouterAssociations(t *testing.T) {
 }
 
 func TestCreateRouterAssociation(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	bgpVpnID := "460ac411-3dfb-45bb-8116-ed1a7233d143"
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/router_associations", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/router_associations", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -320,32 +326,32 @@ func TestCreateRouterAssociation(t *testing.T) {
 		th.TestJSONRequest(t, r, CreateRouterAssociationRequest)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, CreateRouterAssociationResponse)
+		fmt.Fprint(w, CreateRouterAssociationResponse)
 	})
 
 	opts := bgpvpns.CreateRouterAssociationOpts{
 		RouterID: "8c5d88dc-60ac-4b02-a65a-36b65888ddcd",
 	}
-	r, err := bgpvpns.CreateRouterAssociation(context.TODO(), fake.ServiceClient(), bgpVpnID, opts).Extract()
+	r, err := bgpvpns.CreateRouterAssociation(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID, opts).Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, CreateRouterAssociation, *r)
 }
 
 func TestGetRouterAssociation(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	bgpVpnID := "460ac411-3dfb-45bb-8116-ed1a7233d143"
 	routerAssociationID := "73238ca1-e05d-4c7a-b4d4-70407b4b8730"
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/router_associations/"+routerAssociationID, func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/router_associations/"+routerAssociationID, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetRouterAssociationResult)
+		fmt.Fprint(w, GetRouterAssociationResult)
 	})
 
-	r, err := bgpvpns.GetRouterAssociation(context.TODO(), fake.ServiceClient(), bgpVpnID, routerAssociationID).Extract()
+	r, err := bgpvpns.GetRouterAssociation(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID, routerAssociationID).Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, GetRouterAssociation, *r)
 }
@@ -353,10 +359,10 @@ func TestGetRouterAssociation(t *testing.T) {
 func TestUpdateRouterAssociation(t *testing.T) {
 	bgpVpnID := "4d627abf-06dd-45ab-920b-8e61422bb984"
 	routerAssociationID := "73238ca1-e05d-4c7a-b4d4-70407b4b8730"
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/router_associations/"+routerAssociationID, func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/router_associations/"+routerAssociationID, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -364,56 +370,58 @@ func TestUpdateRouterAssociation(t *testing.T) {
 		th.TestJSONRequest(t, r, UpdateRouterAssociationRequest)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, UpdateRouterAssociationResponse)
+		fmt.Fprint(w, UpdateRouterAssociationResponse)
 	})
 
 	opts := bgpvpns.UpdateRouterAssociationOpts{
 		AdvertiseExtraRoutes: new(bool),
 	}
-	r, err := bgpvpns.UpdateRouterAssociation(context.TODO(), fake.ServiceClient(), bgpVpnID, routerAssociationID, opts).Extract()
+	r, err := bgpvpns.UpdateRouterAssociation(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID, routerAssociationID, opts).Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, UpdateRouterAssociation, *r)
 }
 
 func TestDeleteRouterAssociation(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	bgpVpnID := "460ac411-3dfb-45bb-8116-ed1a7233d143"
 	routerAssociationID := "73238ca1-e05d-4c7a-b4d4-70407b4b8730"
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/router_associations/"+routerAssociationID, func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/router_associations/"+routerAssociationID, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := bgpvpns.DeleteRouterAssociation(context.TODO(), fake.ServiceClient(), bgpVpnID, routerAssociationID).ExtractErr()
+	err := bgpvpns.DeleteRouterAssociation(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID, routerAssociationID).ExtractErr()
 	th.AssertNoErr(t, err)
 }
 
 func TestListPortAssociations(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	bgpVpnID := "460ac411-3dfb-45bb-8116-ed1a7233d143"
 	fields := []string{"id", "name"}
 	listOpts := bgpvpns.ListPortAssociationsOpts{
 		Fields: fields,
 	}
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/port_associations", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/port_associations", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 
-		r.ParseForm()
+		if err := r.ParseForm(); err != nil {
+			t.Errorf("Failed to parse request form %v", err)
+		}
 		th.AssertDeepEquals(t, fields, r.Form["fields"])
 
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ListPortAssociationsResult)
+		fmt.Fprint(w, ListPortAssociationsResult)
 	})
 
 	count := 0
-	err := bgpvpns.ListPortAssociations(fake.ServiceClient(), bgpVpnID, listOpts).EachPage(
+	err := bgpvpns.ListPortAssociations(fake.ServiceClient(fakeServer), bgpVpnID, listOpts).EachPage(
 		context.TODO(),
 		func(_ context.Context, page pagination.Page) (bool, error) {
 			count++
@@ -434,11 +442,11 @@ func TestListPortAssociations(t *testing.T) {
 }
 
 func TestCreatePortAssociation(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	bgpVpnID := "460ac411-3dfb-45bb-8116-ed1a7233d143"
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/port_associations", func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/port_associations", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -446,32 +454,32 @@ func TestCreatePortAssociation(t *testing.T) {
 		th.TestJSONRequest(t, r, CreatePortAssociationRequest)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, CreatePortAssociationResponse)
+		fmt.Fprint(w, CreatePortAssociationResponse)
 	})
 
 	opts := bgpvpns.CreatePortAssociationOpts{
 		PortID: "8c5d88dc-60ac-4b02-a65a-36b65888ddcd",
 	}
-	r, err := bgpvpns.CreatePortAssociation(context.TODO(), fake.ServiceClient(), bgpVpnID, opts).Extract()
+	r, err := bgpvpns.CreatePortAssociation(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID, opts).Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, CreatePortAssociation, *r)
 }
 
 func TestGetPortAssociation(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	bgpVpnID := "460ac411-3dfb-45bb-8116-ed1a7233d143"
 	portAssociationID := "73238ca1-e05d-4c7a-b4d4-70407b4b8730"
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/port_associations/"+portAssociationID, func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/port_associations/"+portAssociationID, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetPortAssociationResult)
+		fmt.Fprint(w, GetPortAssociationResult)
 	})
 
-	r, err := bgpvpns.GetPortAssociation(context.TODO(), fake.ServiceClient(), bgpVpnID, portAssociationID).Extract()
+	r, err := bgpvpns.GetPortAssociation(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID, portAssociationID).Extract()
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, GetPortAssociation, *r)
 }
@@ -479,10 +487,10 @@ func TestGetPortAssociation(t *testing.T) {
 func TestUpdatePortAssociation(t *testing.T) {
 	bgpVpnID := "4d627abf-06dd-45ab-920b-8e61422bb984"
 	portAssociationID := "73238ca1-e05d-4c7a-b4d4-70407b4b8730"
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/port_associations/"+portAssociationID, func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/port_associations/"+portAssociationID, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		th.TestHeader(t, r, "Content-Type", "application/json")
@@ -490,29 +498,29 @@ func TestUpdatePortAssociation(t *testing.T) {
 		th.TestJSONRequest(t, r, UpdatePortAssociationRequest)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, UpdatePortAssociationResponse)
+		fmt.Fprint(w, UpdatePortAssociationResponse)
 	})
 
 	opts := bgpvpns.UpdatePortAssociationOpts{
 		AdvertiseFixedIPs: new(bool),
 	}
-	r, err := bgpvpns.UpdatePortAssociation(context.TODO(), fake.ServiceClient(), bgpVpnID, portAssociationID, opts).Extract()
+	r, err := bgpvpns.UpdatePortAssociation(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID, portAssociationID, opts).Extract()
 	th.AssertNoErr(t, err)
 	th.AssertDeepEquals(t, UpdatePortAssociation, *r)
 }
 
 func TestDeletePortAssociation(t *testing.T) {
-	th.SetupHTTP()
-	defer th.TeardownHTTP()
+	fakeServer := th.SetupHTTP()
+	defer fakeServer.Teardown()
 
 	bgpVpnID := "460ac411-3dfb-45bb-8116-ed1a7233d143"
 	portAssociationID := "73238ca1-e05d-4c7a-b4d4-70407b4b8730"
-	th.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/port_associations/"+portAssociationID, func(w http.ResponseWriter, r *http.Request) {
+	fakeServer.Mux.HandleFunc("/v2.0/bgpvpn/bgpvpns/"+bgpVpnID+"/port_associations/"+portAssociationID, func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := bgpvpns.DeletePortAssociation(context.TODO(), fake.ServiceClient(), bgpVpnID, portAssociationID).ExtractErr()
+	err := bgpvpns.DeletePortAssociation(context.TODO(), fake.ServiceClient(fakeServer), bgpVpnID, portAssociationID).ExtractErr()
 	th.AssertNoErr(t, err)
 }

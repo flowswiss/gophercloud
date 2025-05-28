@@ -111,49 +111,49 @@ var ExpectedEC2CredentialsSlice = []ec2credentials.Credential{EC2Credential, Sec
 
 // HandleListEC2CredentialsSuccessfully creates an HTTP handler at `/users` on the
 // test handler mux that responds with a list of two applicationcredentials.
-func HandleListEC2CredentialsSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/users/2844b2a08be147a08ef58317d6471f1f/credentials/OS-EC2", func(w http.ResponseWriter, r *http.Request) {
+func HandleListEC2CredentialsSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/users/2844b2a08be147a08ef58317d6471f1f/credentials/OS-EC2", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, ListOutput)
+		fmt.Fprint(w, ListOutput)
 	})
 }
 
 // HandleGetEC2CredentialSuccessfully creates an HTTP handler at `/users` on the
 // test handler mux that responds with a single application credential.
-func HandleGetEC2CredentialSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/users/2844b2a08be147a08ef58317d6471f1f/credentials/OS-EC2/f741662395b249c9b8acdebf1722c5ae", func(w http.ResponseWriter, r *http.Request) {
+func HandleGetEC2CredentialSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/users/2844b2a08be147a08ef58317d6471f1f/credentials/OS-EC2/f741662395b249c9b8acdebf1722c5ae", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, GetOutput)
+		fmt.Fprint(w, GetOutput)
 	})
 }
 
 // HandleCreateEC2CredentialSuccessfully creates an HTTP handler at `/users` on the
 // test handler mux that tests application credential creation.
-func HandleCreateEC2CredentialSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/users/2844b2a08be147a08ef58317d6471f1f/credentials/OS-EC2", func(w http.ResponseWriter, r *http.Request) {
+func HandleCreateEC2CredentialSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/users/2844b2a08be147a08ef58317d6471f1f/credentials/OS-EC2", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, CreateRequest)
 
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, CreateResponse)
+		fmt.Fprint(w, CreateResponse)
 	})
 }
 
 // HandleDeleteEC2CredentialSuccessfully creates an HTTP handler at `/users` on the
 // test handler mux that tests application credential deletion.
-func HandleDeleteEC2CredentialSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/users/2844b2a08be147a08ef58317d6471f1f/credentials/OS-EC2/f741662395b249c9b8acdebf1722c5ae", func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteEC2CredentialSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/users/2844b2a08be147a08ef58317d6471f1f/credentials/OS-EC2/f741662395b249c9b8acdebf1722c5ae", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 

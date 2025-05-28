@@ -44,6 +44,18 @@ const SingleFlavorBody = `
 }
 `
 
+const SingleFlavorDisabledBody = `
+{
+	"flavor": {
+		"id": "5548c807-e6e8-43d7-9ea4-b38d34dd74a0",
+		"name": "Basic",
+		"description": "A basic standalone Octavia load balancer.",
+		"enabled": false,
+		"flavor_profile_id": "9daa2768-74e7-4d13-bf5d-1b8e0dc239e1"
+	}
+}
+`
+
 const PostUpdateFlavorBody = `
 {
 	"flavor": {
@@ -81,6 +93,14 @@ var (
 		FlavorProfileId: "9daa2768-74e7-4d13-bf5d-1b8e0dc239e1",
 	}
 
+	FlavorDisabled = flavors.Flavor{
+		ID:              "5548c807-e6e8-43d7-9ea4-b38d34dd74a0",
+		Name:            "Basic",
+		Description:     "A basic standalone Octavia load balancer.",
+		Enabled:         false,
+		FlavorProfileId: "9daa2768-74e7-4d13-bf5d-1b8e0dc239e1",
+	}
+
 	FlavorUpdated = flavors.Flavor{
 		ID:              "5548c807-e6e8-43d7-9ea4-b38d34dd74a0",
 		Name:            "Basic v2",
@@ -90,8 +110,8 @@ var (
 	}
 )
 
-func HandleFlavorListSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/flavors", func(w http.ResponseWriter, r *http.Request) {
+func HandleFlavorListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/flavors", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -102,17 +122,17 @@ func HandleFlavorListSuccessfully(t *testing.T) {
 		marker := r.Form.Get("marker")
 		switch marker {
 		case "":
-			fmt.Fprintf(w, FlavorsListBody)
+			fmt.Fprint(w, FlavorsListBody)
 		case "3a0d060b-fcec-4250-9ab6-940b806a12dd":
-			fmt.Fprintf(w, `{ "flavors": [] }`)
+			fmt.Fprint(w, `{ "flavors": [] }`)
 		default:
 			t.Fatalf("/v2.0/lbaas/flavors invoked with unexpected marker=[%s]", marker)
 		}
 	})
 }
 
-func HandleFlavorCreationSuccessfully(t *testing.T, response string) {
-	th.Mux.HandleFunc("/v2.0/lbaas/flavors", func(w http.ResponseWriter, r *http.Request) {
+func HandleFlavorCreationSuccessfully(t *testing.T, fakeServer th.FakeServer, response string) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/flavors", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "POST")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestJSONRequest(t, r, `{
@@ -126,22 +146,41 @@ func HandleFlavorCreationSuccessfully(t *testing.T, response string) {
 
 		w.WriteHeader(http.StatusAccepted)
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, response)
+		fmt.Fprint(w, response)
 	})
 }
 
-func HandleFlavorGetSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/flavors/5548c807-e6e8-43d7-9ea4-b38d34dd74a0", func(w http.ResponseWriter, r *http.Request) {
+func HandleFlavorCreationSuccessfullyDisabled(t *testing.T, fakeServer th.FakeServer, response string) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/flavors", func(w http.ResponseWriter, r *http.Request) {
+		th.TestMethod(t, r, "POST")
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
+		th.TestJSONRequest(t, r, `{
+			"flavor": {
+				"name": "Basic",
+				"description": "A basic standalone Octavia load balancer.",
+				"enabled": false,
+				"flavor_profile_id": "9daa2768-74e7-4d13-bf5d-1b8e0dc239e1"
+			}
+		}`)
+
+		w.WriteHeader(http.StatusAccepted)
+		w.Header().Add("Content-Type", "application/json")
+		fmt.Fprint(w, response)
+	})
+}
+
+func HandleFlavorGetSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/flavors/5548c807-e6e8-43d7-9ea4-b38d34dd74a0", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
 
-		fmt.Fprintf(w, SingleFlavorBody)
+		fmt.Fprint(w, SingleFlavorBody)
 	})
 }
 
-func HandleFlavorDeletionSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/flavors/5548c807-e6e8-43d7-9ea4-b38d34dd74a0", func(w http.ResponseWriter, r *http.Request) {
+func HandleFlavorDeletionSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/flavors/5548c807-e6e8-43d7-9ea4-b38d34dd74a0", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
@@ -149,8 +188,8 @@ func HandleFlavorDeletionSuccessfully(t *testing.T) {
 	})
 }
 
-func HandleFlavorUpdateSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/v2.0/lbaas/flavors/5548c807-e6e8-43d7-9ea4-b38d34dd74a0", func(w http.ResponseWriter, r *http.Request) {
+func HandleFlavorUpdateSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/v2.0/lbaas/flavors/5548c807-e6e8-43d7-9ea4-b38d34dd74a0", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
@@ -163,6 +202,6 @@ func HandleFlavorUpdateSuccessfully(t *testing.T) {
 			}
 		}`)
 
-		fmt.Fprintf(w, PostUpdateFlavorBody)
+		fmt.Fprint(w, PostUpdateFlavorBody)
 	})
 }

@@ -253,46 +253,46 @@ var FakeServiceUpdateBody = services.Service{
 
 // HandleListPre253Successfully configures the test server to respond to a List
 // request to a Compute server API pre 2.53 microversion release.
-func HandleListPre253Successfully(t *testing.T) {
-	th.Mux.HandleFunc("/os-services", func(w http.ResponseWriter, r *http.Request) {
+func HandleListPre253Successfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/os-services", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, ServiceListBodyPre253)
+		fmt.Fprint(w, ServiceListBodyPre253)
 	})
 }
 
 // HandleListSuccessfully configures the test server to respond to a List
 // request to a Compute server with Pike+ release.
-func HandleListSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/os-services", func(w http.ResponseWriter, r *http.Request) {
+func HandleListSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/os-services", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "GET")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, ServiceListBody)
+		fmt.Fprint(w, ServiceListBody)
 	})
 }
 
 // HandleUpdateSuccessfully configures the test server to respond to a Update
 // request to a Compute server with Pike+ release.
-func HandleUpdateSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/os-services/fake-service-id", func(w http.ResponseWriter, r *http.Request) {
+func HandleUpdateSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/os-services/fake-service-id", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "PUT")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		th.TestHeader(t, r, "Accept", "application/json")
 		th.TestHeader(t, r, "Content-Type", "application/json")
 		th.TestJSONRequest(t, r, `{"status": "disabled"}`)
 
-		fmt.Fprintf(w, ServiceUpdate)
+		fmt.Fprint(w, ServiceUpdate)
 	})
 }
 
 // HandleDeleteSuccessfully configures the test server to respond to a Delete
 // request to a Compute server with Pike+ release.
-func HandleDeleteSuccessfully(t *testing.T) {
-	th.Mux.HandleFunc("/os-services/fake-service-id", func(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteSuccessfully(t *testing.T, fakeServer th.FakeServer) {
+	fakeServer.Mux.HandleFunc("/os-services/fake-service-id", func(w http.ResponseWriter, r *http.Request) {
 		th.TestMethod(t, r, "DELETE")
 		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
 		w.WriteHeader(http.StatusNoContent)
